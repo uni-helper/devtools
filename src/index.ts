@@ -41,41 +41,32 @@ function insertBeforeScript(originalString: string, contentToInsert: string) {
   return newString
 }
 
-function getUniDevtoolsPath() {
-  const pluginPath = normalizePath(path.dirname(fileURLToPath(import.meta.url)))
-  return pluginPath.replace(/\/dist$/, '/\/src/node')
-}
-
 export default function vitePluginPages(): Plugin {
-  let pages: Pages[]
-  const uniDevtoolsPath = getUniDevtoolsPath()
+  const pages: Pages[] = [{
+    path: 'src/pages/index',
+    type: 'page',
+  }]
 
   return {
     name: 'uni-devtools',
     enforce: 'pre',
-    buildStart() {
-      const file = globSync(
-        '**/pages.json',
-        {
-          ignore: ['**/node_modules/**'],
-        },
-      )
-      const pagesJson = readJsonSync(file[0]) as PagesJson
-      pages = pagesJson.pages
-    },
-    resolveId(id) {
-      if (id.startsWith('virtual:uni-devtools-path:')) {
-        const resolved = id.replace('virtual:uni-devtools-path:', `${uniDevtoolsPath}/`)
-        return resolved
-      }
-    },
+    // buildStart() {
+    //   const file = globSync(
+    //     '**/pages.json',
+    //     {
+    //       ignore: ['**/node_modules/**'],
+    //     },
+    //   )
+    //   const pagesJson = readJsonSync(file[0]) as PagesJson
+    //   pages = pagesJson.pages
+    // },
     transform(src, id) {
       let code = src
       pages.forEach((page) => {
         if (id.includes(page.path)) {
           const contentToInsert = '<UniDevTools />'
           const template = insertBeforeTemplate(src, contentToInsert)
-          const contentImport = `import UniDevTools from 'virtual:uni-devtools-path:UniDevTools.vue';`
+          const contentImport = `import UniDevTools from 'uni-devtools/src/UniDevTools.vue';`
           code = insertBeforeScript(template, contentImport)
         }
       })

@@ -74,6 +74,7 @@
     "miniprogram-api-typings": "^3.12.2",
     "sass": "1.64.2",
     "typescript": "^5.4.5",
+    "uni-devtools": "workspace:*",
     "vite": "5.2.8",
     "vite-plugin-inspect": "^0.8.4",
     "vue-tsc": "^2.0.16"

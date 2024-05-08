@@ -150,6 +150,9 @@ importers:
       typescript:
         specifier: ^5.4.5
         version: 5.4.5
+      uni-devtools:
+        specifier: workspace:*
+        version: link:..
       vite:
         specifier: 5.2.8
         version: 5.2.8(@types/node@20.12.8)(sass@1.64.2)(terser@5.31.0)

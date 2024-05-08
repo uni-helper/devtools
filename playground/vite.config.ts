@@ -4,17 +4,19 @@ import { defineConfig } from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
 import Inspect from 'vite-plugin-inspect'
 
-// import DevTools from '../src/index'
+import DevTools from 'uni-devtools'
 
-export default defineConfig({
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+export default async () => {
+  return defineConfig({
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
     },
-  },
-  plugins: [
-    // DevTools(),
-    uni(),
-    Inspect(),
-  ],
-})
+    plugins: [
+      DevTools(),
+      uni(),
+      Inspect(),
+    ],
+  })
+}
