@@ -1,0 +1,82 @@
+{
+  "name": "uni-devtools",
+  "type": "module",
+  "version": "0.1.0",
+  "packageManager": "pnpm@8.6.12",
+  "description": "",
+  "license": "MIT",
+  "homepage": "https://github.com/flippedround/uni-devtools#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flippedround/uni-devtools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/flippedround/uni-devtools/issues"
+  },
+  "keywords": [
+    "unplugin",
+    "vite",
+    "webpack",
+    "rollup",
+    "transform"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./*": "./*"
+  },
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*",
+        "./*"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch src",
+    "build:fix": "esno scripts/postbuild.ts",
+    "lint": "eslint .",
+    "play": "npm -C playground run dev",
+    "prepublishOnly": "npm run build",
+    "release": "bumpp && npm publish",
+    "start": "esno src/index.ts",
+    "test": "vitest"
+  },
+  "peerDependencies": {
+    "vite": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^2.2.2",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.10.3",
+    "bumpp": "^9.2.0",
+    "chalk": "^5.3.0",
+    "eslint": "^8.55.0",
+    "esno": "^4.0.0",
+    "fast-glob": "^3.3.2",
+    "fs-extra": "^11.2.0",
+    "nodemon": "^3.0.2",
+    "rimraf": "^5.0.5",
+    "rollup": "^4.6.1",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2",
+    "vite": "^5.0.4",
+    "vitest": "^0.34.6"
+  }
+}
