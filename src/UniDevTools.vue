@@ -24,10 +24,15 @@ function handleTouchEnd() {
   dragging.value = false
 }
 
+const show = ref(false)
 function handleTap() {
-  uni.navigateTo({
-    url: '/pages/test',
-  })
+  show.value = !show.value
+  console.log('Tap!')
+}
+
+function handleChange(event) {
+  console.log('Message from webview:', event.detail.data)
+  show.value = !show.value
 }
 </script>
 
@@ -40,6 +45,7 @@ function handleTap() {
     @touchend="handleTouchEnd"
     @tap="handleTap"
   />
+  <web-view v-if="show" src="http://localhost:5173/" @message="(e) => handleChange(e)" />
 </template>
 
 <style>

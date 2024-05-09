@@ -54,11 +54,6 @@ export default function vitePluginPages(): Plugin {
       )
       const pagesJson = readJsonSync(files[0]) as PagesJson
       pages = pagesJson.pages
-
-      const pagesFiles = globSync(
-        'node_modules/**/uni-devtools/src/**/test.*',
-      )
-      console.log(pagesFiles)
     },
     transform(src, id) {
       let code = src
@@ -70,30 +65,9 @@ export default function vitePluginPages(): Plugin {
           code = insertBeforeScript(template, contentImport)
         }
       })
-
-      if (id.includes('pages-json-js')) {
-        const pagesJson = JSON.parse(src)
-        pagesJson.pages.push(
-          {
-            path: 'virtual:uni-devtools-pages',
-          },
-        )
-        code = JSON.stringify(pagesJson, null, 2)
-      }
-
       return {
         code,
       }
-    },
-    resolveId(id) {
-      if (id === 'virtual:uni-devtools-pages') {
-        console.log('11111111111111111111')
-        return '\0virtual:uni-devtools-pages'
-      }
-    },
-    load(id) {
-      if (id === '\0virtual:uni-devtools-pages')
-        return `export const msg = "from virtual module"`
     },
   }
 }
