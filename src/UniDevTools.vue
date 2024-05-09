@@ -1,7 +1,57 @@
-<script setup lang="ts">
+<script setup>
+import { ref } from 'vue'
+
+const x = ref(0)
+const y = ref(0)
+const dragging = ref(false)
+let startX = 0
+let startY = 0
+
+function handleTouchStart(event) {
+  dragging.value = true
+  startX = event.touches[0].clientX - x.value
+  startY = event.touches[0].clientY - y.value
+}
+
+function handleTouchMove(event) {
+  if (dragging.value) {
+    x.value = event.touches[0].clientX - startX
+    y.value = event.touches[0].clientY - startY
+  }
+}
+
+function handleTouchEnd() {
+  dragging.value = false
+}
+
+function handleTap() {
+  uni.navigateTo({
+    url: '/pages/test',
+  })
+}
 </script>
 
 <template>
-  <view>aaaasdasdaa</view>
-  <button>aa</button>
+  <view
+    class="draggable"
+    :style="{ left: `${x}px`, top: `${y}px`, opacity: dragging ? 1 : 0.5 }"
+    @touchstart="handleTouchStart"
+    @touchmove.stop.prevent="handleTouchMove"
+    @touchend="handleTouchEnd"
+    @tap="handleTap"
+  />
 </template>
+
+<style>
+.draggable {
+  position: absolute;
+  background-color: #42b983;
+  width: 32px;
+  height: 32px;
+  color: white;
+  padding: 10px;
+  border-radius: 50%;
+  cursor: grab;
+  user-select: none;
+}
+</style>
