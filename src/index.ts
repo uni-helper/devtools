@@ -1,7 +1,5 @@
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { type Plugin, normalizePath } from 'vite'
-import { globSync } from 'fast-glob'
+import type { Plugin } from 'vite'
+import { globSync } from 'glob'
 import { readJsonSync } from 'fs-extra'
 import type { Pages, PagesJson } from './types'
 
@@ -42,24 +40,21 @@ function insertBeforeScript(originalString: string, contentToInsert: string) {
 }
 
 export default function vitePluginPages(): Plugin {
-  const pages: Pages[] = [{
-    path: 'src/pages/index',
-    type: 'page',
-  }]
+  let pages: Pages[]
 
   return {
     name: 'uni-devtools',
     enforce: 'pre',
-    // buildStart() {
-    //   const file = globSync(
-    //     '**/pages.json',
-    //     {
-    //       ignore: ['**/node_modules/**'],
-    //     },
-    //   )
-    //   const pagesJson = readJsonSync(file[0]) as PagesJson
-    //   pages = pagesJson.pages
-    // },
+    buildStart() {
+      const files = globSync(
+        '**/pages.json',
+        {
+          ignore: ['**/node_modules/**'],
+        },
+      )
+      const pagesJson = readJsonSync(files[0]) as PagesJson
+      pages = pagesJson.pages
+    },
     transform(src, id) {
       let code = src
       pages.forEach((page) => {
