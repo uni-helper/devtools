@@ -45,7 +45,7 @@ function handleChange(event) {
     @touchend="handleTouchEnd"
     @tap="handleTap"
   />
-  <web-view v-if="show" src="http://localhost:5173/" @message="(e) => handleChange(e)" />
+  <web-view v-if="show" src="http://localhost:5173/__devtools/" @message="(e) => handleChange(e)" />
 </template>
 
 <style>

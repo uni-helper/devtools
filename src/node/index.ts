@@ -1,7 +1,10 @@
-import type { Plugin } from 'vite'
+import type { Plugin, ViteDevServer } from 'vite'
 import { globSync } from 'glob'
 import { readJsonSync } from 'fs-extra'
+import sirv from 'sirv'
+import { createRPCServer } from 'vite-dev-rpc'
 import type { Pages, PagesJson } from './types'
+import { DIR_CLIENT } from './dir'
 
 function insertBeforeTemplate(originalString: string, contentToInsert: string) {
   // 检查是否存在</template>标签
@@ -45,6 +48,15 @@ export default function vitePluginPages(): Plugin {
   return {
     name: 'uni-devtools',
     enforce: 'pre',
+    configureServer(server) {
+      server.middlewares.use(
+        `/__devtools`,
+        sirv(DIR_CLIENT, {
+          single: true,
+          dev: true,
+        }),
+      )
+    },
     buildStart() {
       const files = globSync(
         '**/pages.json',
@@ -61,7 +73,7 @@ export default function vitePluginPages(): Plugin {
         if (id.includes(page.path)) {
           const contentToInsert = '<UniDevTools />'
           const template = insertBeforeTemplate(src, contentToInsert)
-          const contentImport = `import UniDevTools from 'uni-devtools/src/UniDevTools.vue';`
+          const contentImport = `import UniDevTools from 'uni-devtools/src/node/UniDevTools.vue';`
           code = insertBeforeScript(template, contentImport)
         }
       })

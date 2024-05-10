@@ -1,7 +1,7 @@
 {
   "name": "uni-devtools",
-  "type": "module",
   "version": "0.1.0",
+  "type": "module",
   "packageManager": "pnpm@8.6.12",
   "description": "",
   "author": "FliPPeDround <flippedround@qq.com>",
@@ -43,11 +43,16 @@
   },
   "files": [
     "dist",
-    "src/UniDevTools.vue"
+    "src/node/UniDevTools.vue"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch src",
+    "build": "rimraf dist && run-s build:*",
+    "build:node": "tsup",
+    "build:client": "vite build src/client",
+    "dev": "run-s dev:*",
+    "dev:node": "tsup --watch src",
+    "preview": "vite preview src/client",
+    "dev:client": "vite build src/client --watch",
     "build:fix": "esno scripts/postbuild.ts",
     "lint": "eslint .",
     "play": "npm -C playground run dev",
@@ -64,23 +69,52 @@
       "optional": true
     }
   },
+  "dependencies": {
+    "@vueuse/core": "^10.9.0",
+    "sirv": "^2.0.4",
+    "vite-dev-rpc": "^0.1.4",
+    "vue-router": "^4.3.2"
+  },
   "devDependencies": {
-    "@antfu/eslint-config": "^2.2.2",
+    "@antfu/eslint-config": "^2.15.0",
+    "@iconify-json/carbon": "^1.1.31",
+    "@nuxt/devtools-ui-kit": "^1.2.0",
     "@swc/core": "^1.5.5",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^20.10.3",
+    "@types/node": "^20.12.7",
+    "@unocss/eslint-config": "^0.59.4",
+    "@unocss/eslint-plugin": "^0.59.4",
+    "@unocss/reset": "^0.59.4",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vue-macros/volar": "^0.18.18",
+    "@vue/test-utils": "^2.4.5",
     "bumpp": "^9.2.0",
     "chalk": "^5.3.0",
-    "eslint": "^8.55.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-format": "^0.1.1",
     "esno": "^4.0.0",
     "fs-extra": "^11.2.0",
     "glob": "^10.3.12",
+    "jsdom": "^24.0.0",
+    "lint-staged": "^15.2.2",
     "nodemon": "^3.0.2",
+    "pinia": "^2.1.7",
+    "pnpm": "^9.0.2",
     "rimraf": "^5.0.5",
     "rollup": "^4.6.1",
+    "simple-git-hooks": "^2.11.1",
+    "taze": "^0.13.6",
     "tsup": "^8.0.1",
-    "typescript": "^5.3.2",
-    "vite": "^5.0.4",
-    "vitest": "^0.34.6"
+    "typescript": "^5.4.5",
+    "unocss": "^0.59.4",
+    "unplugin-auto-import": "^0.17.5",
+    "unplugin-vue-components": "^0.26.0",
+    "unplugin-vue-macros": "^2.9.1",
+    "unplugin-vue-router": "^0.8.6",
+    "vite": "^5.2.9",
+    "vite-plugin-pages": "^0.32.1",
+    "vitest": "^1.5.0",
+    "vue": "^3.4.23",
+    "vue-tsc": "^2.0.13"
   }
 }

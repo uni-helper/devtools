@@ -2,11 +2,11 @@ import { defineConfig } from 'tsup'
 
 export default defineConfig({
   entryPoints: [
-    'src/index.ts',
+    'src/node/index.ts',
   ],
-  clean: true,
+  clean: false,
   target: 'es5',
   format: ['cjs', 'esm'],
-  dts: true,
+  // dts: true,
   onSuccess: 'npm run build:fix',
 })

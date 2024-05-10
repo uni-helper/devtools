@@ -6,13 +6,18 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "types": [
-      "vite/client"
+      "vite/client",
+      "unplugin-vue-router/client",
     ],
+    "allowJs": true,
     "strict": true,
     "strictNullChecks": true,
+    "noUnusedLocals": true,
     "esModuleInterop": true,
-    "skipDefaultLibCheck": true,
-    "skipLibCheck": true
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "jsx": "preserve",
   },
-  "exclude": ["dist", "eslint.config.js"]
+  "include": ["src/client/typed-router.d.ts"],
+  "exclude": ["dist", "eslint.config.js",  "node_modules"]
 }
