@@ -49,6 +49,7 @@ export default function vitePluginPages(): Plugin {
     name: 'uni-devtools',
     enforce: 'pre',
     configureServer(server) {
+      console.log('======configureServer========')
       server.middlewares.use(
         `/__devtools`,
         sirv(DIR_CLIENT, {
@@ -58,6 +59,7 @@ export default function vitePluginPages(): Plugin {
       )
     },
     buildStart() {
+      console.log("======buildStart========")
       const files = globSync(
         '**/pages.json',
         {
@@ -66,6 +68,9 @@ export default function vitePluginPages(): Plugin {
       )
       const pagesJson = readJsonSync(files[0]) as PagesJson
       pages = pagesJson.pages
+    },
+    buildEnd() {
+      console.log("======buildEnd========")
     },
     transform(src, id) {
       let code = src
