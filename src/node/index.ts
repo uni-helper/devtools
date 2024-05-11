@@ -1,4 +1,5 @@
-import type { Plugin, ViteDevServer } from 'vite'
+import http from 'node:http'
+import type { Plugin } from 'vite'
 import { globSync } from 'glob'
 import { readJsonSync } from 'fs-extra'
 import sirv from 'sirv'
@@ -48,16 +49,22 @@ export default function vitePluginPages(): Plugin {
   return {
     name: 'uni-devtools',
     enforce: 'pre',
-    configureServer(server) {
-      server.middlewares.use(
-        `/__devtools`,
-        sirv(DIR_CLIENT, {
-          single: true,
-          dev: true,
-        }),
-      )
-    },
     buildStart() {
+      const serve = sirv(DIR_CLIENT, {
+        single: true,
+        dev: true,
+      })
+
+      const server = http.createServer((req, res) => {
+        serve(req, res, () => {
+          res.statusCode = 404
+          res.end('Not found')
+        })
+      })
+
+      server.listen(3000, () => {
+        console.log('Server listening on http://localhost:3000')
+      })
       const files = globSync(
         '**/pages.json',
         {
