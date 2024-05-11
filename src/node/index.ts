@@ -75,7 +75,7 @@ export default function vitePluginPages(): Plugin {
       pages = pagesJson.pages
     },
     buildEnd() {
-      console.log("======buildEnd========")
+      console.log('======buildEnd========')
     },
     transform(src, id) {
       let code = src
@@ -87,8 +87,28 @@ export default function vitePluginPages(): Plugin {
           code = insertBeforeScript(template, contentImport)
         }
       })
+      if (id.endsWith('pages-json-js')) {
+        const pages = JSON.parse(src)
+        pages.pages.push({
+          path: '__uni_devtools_page/index',
+        })
+        code = JSON.stringify(pages, null, 2)
+      }
       return {
         code,
+      }
+    },
+    resolveId(source, importer, options) {
+      if (importer?.includes('__uni_devtools_page'))
+        console.log(source, options, importer)
+    },
+    load(id) {
+      if (id.endsWith('__uni_devtools_page/index.vue')) {
+        return `
+      <template>
+        <web-view src="http://localhost:3000" />
+      </template>
+      `
       }
     },
   }

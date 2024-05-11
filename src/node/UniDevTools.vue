@@ -26,8 +26,15 @@ function handleTouchEnd() {
 
 const show = ref(false)
 function handleTap() {
-  show.value = !show.value
-  console.log('Tap!')
+  // show.value = !show.value
+  // console.log('Tap!')
+  // 5秒后自动关闭
+  // setTimeout(() => {
+  //   show.value = !show.value
+  // }, 5000)
+  uni.navigateTo({
+    url: '/__uni_devtools_page/index'
+  })
 }
 
 function handleChange(event) {
@@ -45,7 +52,7 @@ function handleChange(event) {
     @touchend="handleTouchEnd"
     @tap="handleTap"
   />
-  <web-view v-if="show" src="http://localhost:3000" @message="(e) => handleChange(e)" />
+  <!-- <web-view v-if="show" src="http://localhost:3000" @message="(e) => handleChange(e)" /> -->
 </template>
 
 <style>

@@ -7,9 +7,18 @@ const name = ref('')
 
 const router = useRouter()
 function go() {
-  if (name.value)
-    router.push(`/hi/${encodeURIComponent(name.value)}`)
+  // console.log(uni.getEnv())
+  // // if (name.value)
+  // //   router.push(`/hi/${encodeURIComponent(name.value)}`)
+  // // uni.postMessage({
+  // //   data: 'xxxx',
+  // // })
+  // // uni.navigateBack()
+  // uni.reLaunch({
+  //   url: '/pages/index',
+  // })
 }
+
 </script>
 
 <template>
