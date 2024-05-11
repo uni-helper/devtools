@@ -74,6 +74,9 @@ export default function vitePluginPages(): Plugin {
       const pagesJson = readJsonSync(files[0]) as PagesJson
       pages = pagesJson.pages
     },
+    buildEnd() {
+      console.log("======buildEnd========")
+    },
     transform(src, id) {
       let code = src
       pages.forEach((page) => {

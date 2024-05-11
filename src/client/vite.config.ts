@@ -5,9 +5,9 @@ import Vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import UnoCSS from 'unocss/vite'
-import VueRouter from 'unplugin-vue-router/vite'
 import { VueRouterAutoImports } from 'unplugin-vue-router'
-import { join, resolve } from 'path'
+import {  resolve } from 'path'
+import Pages from 'vite-plugin-pages'
 
 export default defineConfig({
   resolve: {
@@ -16,11 +16,6 @@ export default defineConfig({
     },
   },
   plugins: [
-    VueRouter({
-      routesFolder: 'src/client/pages',
-      dts: join(__dirname, 'typed-router.d.ts')
-    }),
-
     Vue({
       script: {
         propsDestructure: true,
@@ -43,6 +38,10 @@ export default defineConfig({
         './composables',
       ],
       vueTemplate: true,
+    }),
+
+    Pages({
+      pagesDir: 'pages',
     }),
 
     Components({
