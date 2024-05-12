@@ -1,7 +1,7 @@
 import http from 'node:http'
 import type { Plugin } from 'vite'
 import { globSync } from 'glob'
-import { readJsonSync } from 'fs-extra'
+import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
 import sirv from 'sirv'
 import { createRPCServer } from 'vite-dev-rpc'
 import type { Pages, PagesJson } from './types'
@@ -43,8 +43,9 @@ function insertBeforeScript(originalString: string, contentToInsert: string) {
   return newString
 }
 
-export default function vitePluginPages(): Plugin {
+export default function UniDevToolsPlugin(): Plugin {
   let pages: Pages[]
+  let rootPath: string
 
   return {
     name: 'uni-devtools',
@@ -73,9 +74,11 @@ export default function vitePluginPages(): Plugin {
       )
       const pagesJson = readJsonSync(files[0]) as PagesJson
       pages = pagesJson.pages
+      rootPath = files[0].replace('pages.json', '')
+      outputFileSync(`${rootPath}__uni_devtools_page__temp/index.vue`, '')
     },
     buildEnd() {
-      console.log('======buildEnd========')
+      removeSync(`${rootPath}__uni_devtools_page__temp`)
     },
     transform(src, id) {
       let code = src
@@ -90,7 +93,7 @@ export default function vitePluginPages(): Plugin {
       if (id.endsWith('pages-json-js')) {
         const pages = JSON.parse(src)
         pages.pages.push({
-          path: '__uni_devtools_page/index',
+          path: '__uni_devtools_page__temp/index',
         })
         code = JSON.stringify(pages, null, 2)
       }
@@ -98,12 +101,8 @@ export default function vitePluginPages(): Plugin {
         code,
       }
     },
-    resolveId(source, importer, options) {
-      if (importer?.includes('__uni_devtools_page'))
-        console.log(source, options, importer)
-    },
     load(id) {
-      if (id.endsWith('__uni_devtools_page/index.vue')) {
+      if (id.endsWith('__uni_devtools_page__temp/index.vue')) {
         return `
       <template>
         <web-view src="http://localhost:3000" />
