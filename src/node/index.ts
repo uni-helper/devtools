@@ -3,7 +3,9 @@ import type { Plugin } from 'vite'
 import { globSync } from 'glob'
 import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
 import sirv from 'sirv'
-import { createRPCServer } from 'vite-dev-rpc'
+import { createBirpc } from 'birpc'
+import { parse } from '@vue/compiler-sfc'
+import { WebSocketServer } from 'ws'
 import type { Pages, PagesJson } from './types'
 import { DIR_CLIENT } from './dir'
 
@@ -25,24 +27,17 @@ function insertBeforeTemplate(originalString: string, contentToInsert: string) {
   return newString
 }
 
-function insertBeforeScript(originalString: string, contentToInsert: string) {
-  // 检查是否存在</template>标签
-  const templateTagIndex = originalString.indexOf('</script>')
-  if (templateTagIndex === -1) {
-    // 如果不存在</template>，直接返回原始字符串
-    return originalString
+export function parseSFC(code: string, id: string) {
+  const { descriptor } = parse(code, {
+    filename: id,
+  })
+  const isTs = (descriptor.script || descriptor.scriptSetup)?.lang === 'ts'
+
+  return {
+    templateContent: descriptor.template?.content,
+    isTs,
   }
-
-  // 将原始字符串分为两部分：插入点之前和之后
-  const partBeforeTemplate = originalString.substring(0, templateTagIndex)
-  const partAfterTemplate = originalString.substring(templateTagIndex)
-
-  // 将新内容插入到</template>标签前面
-  const newString = `${partBeforeTemplate + contentToInsert}\n${partAfterTemplate}`
-
-  return newString
 }
-
 export default function UniDevToolsPlugin(): Plugin {
   let pages: Pages[]
   let rootPath: string
@@ -50,6 +45,12 @@ export default function UniDevToolsPlugin(): Plugin {
   return {
     name: 'uni-devtools',
     enforce: 'pre',
+    configurePreviewServer() {
+      console.log('===================')
+    },
+    configureServer() {
+      console.log('===================')
+    },
     buildStart() {
       const serve = sirv(DIR_CLIENT, {
         single: true,
@@ -61,6 +62,26 @@ export default function UniDevToolsPlugin(): Plugin {
           res.statusCode = 404
           res.end('Not found')
         })
+      })
+
+      const wss = new WebSocketServer({ server })
+      const serverFunctions = {
+        hi(name: string) {
+          return `Hi ${name} from server`
+        },
+      }
+      wss.on('connection', async (ws) => {
+        const rpc = createBirpc(
+          serverFunctions,
+          {
+            post: data => ws.send(data),
+            on: data => ws.on('message', data),
+            serialize: v => JSON.stringify(v),
+            deserialize: v => JSON.parse(v),
+          },
+        )
+
+        await rpc.hey('Server') // Hey Server from client
       })
 
       server.listen(3000, () => {
@@ -83,11 +104,15 @@ export default function UniDevToolsPlugin(): Plugin {
     transform(src, id) {
       let code = src
       pages.forEach((page) => {
-        if (id.includes(page.path)) {
+        if (id.endsWith(`${page.path}.vue`)) {
+          const { isTs } = parseSFC(src, id)
           const contentToInsert = '<UniDevTools />'
           const template = insertBeforeTemplate(src, contentToInsert)
-          const contentImport = `import UniDevTools from 'uni-devtools/src/node/UniDevTools.vue';`
-          code = insertBeforeScript(template, contentImport)
+          const contentImport = `
+          <script ${isTs && 'lang="ts"'}>
+          import UniDevTools from 'uni-devtools/src/node/UniDevTools.vue'
+          </script>`
+          code = contentImport + template
         }
       })
       if (id.endsWith('pages-json-js')) {

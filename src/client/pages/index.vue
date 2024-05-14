@@ -1,55 +1,34 @@
 <script setup lang="ts" generic="T extends any, O extends any">
-defineOptions({
-  name: 'IndexPage',
-})
+import { createBirpc } from 'birpc'
 
-const name = ref('')
+const ws = new WebSocket('ws://localhost:3000')
 
-const router = useRouter()
-function go() {
-  // console.log(uni.getEnv())
-  // // if (name.value)
-  // //   router.push(`/hi/${encodeURIComponent(name.value)}`)
-  // // uni.postMessage({
-  // //   data: 'xxxx',
-  // // })
-  // // uni.navigateBack()
-  // uni.reLaunch({
-  //   url: '/pages/index',
-  // })
+const clientFunctions = {
+  hey(name: string) {
+    return `Hey ${name} from client`
+  },
 }
 
+const rpc = createBirpc(
+  clientFunctions,
+  {
+    post: data => ws.send(data),
+    on: data => ws.onmessage('message', data),
+    // these are required when using WebSocket
+    serialize: v => JSON.stringify(v),
+    deserialize: v => JSON.parse(v),
+  },
+)
+
+onMounted(async () => {
+  // call server function
+  const result = await rpc.hey('Client')
+  console.log(result) // Hey Client from server
+})
 </script>
 
 <template>
   <div>
-    <div i-carbon-campsite inline-block text-4xl />
-    <p>
-      <a rel="noreferrer" href="https://github.com/antfu/vitesse-lite" target="_blank">
-        Vitesse Lite
-      </a>
-    </p>
-    <p>
-      <em text-sm op75>Opinionated Vite Starter Template</em>
-    </p>
-
-    <div py-4 />
-
-    <TheInput
-      v-model="name"
-      placeholder="What's your name?"
-      autocomplete="false"
-      @keydown.enter="go"
-    />
-
-    <div>
-      <button
-        class="m-3 text-sm btn"
-        :disabled="!name"
-        @click="go"
-      >
-        Go
-      </button>
-    </div>
+    {{ createHotContext('/___', `${location.pathname.split('/__devtools')[0] || ''}/`.replace(/\/\//g, '/')) }}
   </div>
 </template>

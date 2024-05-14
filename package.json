@@ -70,10 +70,14 @@
     }
   },
   "dependencies": {
+    "@vue/compiler-sfc": "^3.4.27",
     "@vueuse/core": "^10.9.0",
+    "birpc": "^0.2.17",
     "sirv": "^2.0.4",
     "vite-dev-rpc": "^0.1.4",
-    "vue-router": "^4.3.2"
+    "vite-hot-client": "^0.2.3",
+    "vue-router": "^4.3.2",
+    "ws": "^8.17.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.15.0",
@@ -82,6 +86,7 @@
     "@swc/core": "^1.5.5",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.12.7",
+    "@types/ws": "^8.5.10",
     "@unocss/eslint-config": "^0.59.4",
     "@unocss/eslint-plugin": "^0.59.4",
     "@unocss/reset": "^0.59.4",
