@@ -19,7 +19,7 @@ function handleClickGithub() {
 </template>
 
 <style>
-.footer{
+.footer {
   position: absolute;
   bottom: 1rem;
   left: 50%;

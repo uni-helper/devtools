@@ -1,13 +1,10 @@
-import http from 'node:http'
 import type { Plugin } from 'vite'
 import { globSync } from 'glob'
 import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
-import sirv from 'sirv'
-import { createBirpc } from 'birpc'
 import { parse } from '@vue/compiler-sfc'
-import { WebSocketServer } from 'ws'
 import type { Pages, PagesJson } from './types'
 import { DIR_CLIENT } from './dir'
+import { createDevtoolServe } from './DevtoolServer'
 
 function insertBeforeTemplate(originalString: string, contentToInsert: string) {
   // 检查是否存在</template>标签
@@ -52,47 +49,10 @@ export default function UniDevToolsPlugin(): Plugin {
       console.log('===================')
     },
     buildStart() {
-      const serve = sirv(DIR_CLIENT, {
-        single: true,
-        dev: true,
+      createDevtoolServe(DIR_CLIENT)
+      const files = globSync('**/pages.json', {
+        ignore: ['**/node_modules/**'],
       })
-
-      const server = http.createServer((req, res) => {
-        serve(req, res, () => {
-          res.statusCode = 404
-          res.end('Not found')
-        })
-      })
-
-      const wss = new WebSocketServer({ server })
-      const serverFunctions = {
-        hi(name: string) {
-          return `Hi ${name} from server`
-        },
-      }
-      wss.on('connection', async (ws) => {
-        const rpc = createBirpc(
-          serverFunctions,
-          {
-            post: data => ws.send(data),
-            on: data => ws.on('message', data),
-            serialize: v => JSON.stringify(v),
-            deserialize: v => JSON.parse(v),
-          },
-        )
-
-        await rpc.hey('Server') // Hey Server from client
-      })
-
-      server.listen(3000, () => {
-        console.log('Server listening on http://localhost:3000')
-      })
-      const files = globSync(
-        '**/pages.json',
-        {
-          ignore: ['**/node_modules/**'],
-        },
-      )
       const pagesJson = readJsonSync(files[0]) as PagesJson
       pages = pagesJson.pages
       rootPath = files[0].replace('pages.json', '')

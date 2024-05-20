@@ -3,7 +3,6 @@
   "compilerOptions": {
     "ignoreDeprecations": "5.0",
     "lib": ["esnext", "dom"],
-    "sourceMap": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
@@ -14,7 +13,8 @@
       "mini-types",
       "@uni-helper/uni-cloud-types",
       "@uni-helper/uni-app-types"
-    ]
+    ],
+    "sourceMap": true
   },
   "include": [
     "**/*.d.ts",

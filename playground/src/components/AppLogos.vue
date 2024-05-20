@@ -43,7 +43,7 @@
   }
   .green {
     color: #22c55e;
-  };
+  }
   .purple {
     color: #a855f7;
   }

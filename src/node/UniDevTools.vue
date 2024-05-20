@@ -33,7 +33,7 @@ function handleTap() {
   //   show.value = !show.value
   // }, 5000)
   uni.navigateTo({
-    url: '/__uni_devtools_page__temp/index'
+    url: '/__uni_devtools_page__temp/index',
   })
 }
 

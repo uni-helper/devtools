@@ -55,6 +55,7 @@
     "dev:client": "vite build src/client --watch",
     "build:fix": "esno scripts/postbuild.ts",
     "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "play": "npm -C playground run dev",
     "prepublishOnly": "npm run build",
     "release": "bumpp && npm publish",
