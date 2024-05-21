@@ -2,6 +2,7 @@ import type { Plugin } from 'vite'
 import { globSync } from 'glob'
 import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
 import { parse } from '@vue/compiler-sfc'
+import c from 'picocolors'
 import type { Pages, PagesJson } from './types'
 import { DIR_CLIENT } from './dir'
 import { createDevtoolServe } from './DevtoolServer'
@@ -42,11 +43,12 @@ export default function UniDevToolsPlugin(): Plugin {
   return {
     name: 'uni-devtools',
     enforce: 'pre',
-    configurePreviewServer() {
-      console.log('===================')
-    },
-    configureServer() {
-      console.log('===================')
+    configureServer(server) {
+      const _print = server.printUrls
+      server.printUrls = () => {
+        _print()
+        console.log(`  ${c.green('➜')}  ${c.bold('uni-devtools')}: ${c.magenta(`http://localhost:3000`)}`)
+      }
     },
     buildStart() {
       createDevtoolServe(DIR_CLIENT)
@@ -60,6 +62,9 @@ export default function UniDevToolsPlugin(): Plugin {
     },
     buildEnd() {
       removeSync(`${rootPath}__uni_devtools_page__temp`)
+      console.log()
+      console.log(`  ${c.green('➜')}  ${c.bold('uni-devtools')}: ${c.green(`http://localhost:3000`)}`)
+      console.log()
     },
     transform(src, id) {
       let code = src
