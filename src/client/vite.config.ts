@@ -8,6 +8,7 @@ import AutoImport from 'unplugin-auto-import/vite'
 import UnoCSS from 'unocss/vite'
 import { VueRouterAutoImports } from 'unplugin-vue-router'
 import Pages from 'vite-plugin-pages'
+import { VarletImportResolver } from '@varlet/import-resolver'
 
 export default defineConfig({
   resolve: {
@@ -38,6 +39,7 @@ export default defineConfig({
         './composables',
       ],
       vueTemplate: true,
+      resolvers: [VarletImportResolver({ autoImport: true })],
     }),
 
     Pages({
@@ -47,6 +49,7 @@ export default defineConfig({
     Components({
       dirs: ['components'],
       dts: true,
+      resolvers: [VarletImportResolver()],
     }),
 
     UnoCSS(),
