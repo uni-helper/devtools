@@ -23,4 +23,5 @@ const active = ref(0)
     <var-tab>选项7</var-tab>
     <var-tab>选项8</var-tab>
   </var-tabs>
+  <router-view />
 </template>

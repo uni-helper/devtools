@@ -47,7 +47,7 @@ export default function UniDevToolsPlugin(): Plugin {
       const _print = server.printUrls
       server.printUrls = () => {
         _print()
-        console.log(`  ${c.green('➜')}  ${c.bold('uni-devtools')}: ${c.magenta(`http://localhost:3000`)}`)
+        console.log(`  ${c.green('➜')}  ${c.bold('Uni Devtools')}: ${c.magenta(`http://localhost:3000`)}`)
       }
     },
     buildStart() {
@@ -63,7 +63,7 @@ export default function UniDevToolsPlugin(): Plugin {
     buildEnd() {
       removeSync(`${rootPath}__uni_devtools_page__temp`)
       console.log()
-      console.log(`  ${c.green('➜')}  ${c.bold('uni-devtools')}: ${c.green(`http://localhost:3000`)}`)
+      console.log(`  ${c.green('➜')}  ${c.bold('Uni Devtools')}: ${c.green(`http://localhost:3000`)}`)
       console.log()
     },
     transform(src, id) {

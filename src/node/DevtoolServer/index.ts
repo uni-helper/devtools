@@ -1,6 +1,6 @@
 import http from 'node:http'
 import sirv from 'sirv'
-import WebSocket from 'ws'
+import { Rpc } from './rpc'
 
 export function createDevtoolServe(path: string) {
   const serve = sirv(path, {
@@ -15,16 +15,14 @@ export function createDevtoolServe(path: string) {
     })
   })
 
-  const wss = new WebSocket.Server({ server })
+  // createWebSocketServer(server)
+  const rpc = new Rpc(server)
 
-  wss.on('connection', (ws) => {
-    // 当有客户端连接时，发送一条消息
-    ws.send('Hello! Message from the server.')
-
-    // 你可以在这里监听客户端发来的消息
-    ws.on('message', (message) => {
-      console.log('received: %s', message)
-    })
+  rpc.send({
+    method: 'init',
+    params: {
+      port: 3000,
+    },
   })
 
   server.listen(3000)
