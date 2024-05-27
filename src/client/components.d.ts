@@ -9,10 +9,11 @@ declare module 'vue' {
   export interface GlobalComponents {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    TheCounter: typeof import('./components/TheCounter.vue')['default']
-    TheFooter: typeof import('./components/TheFooter.vue')['default']
-    TheInput: typeof import('./components/TheInput.vue')['default']
+    SideNav: typeof import('./components/SideNav.vue')['default']
+    SideNavItem: typeof import('./components/SideNavItem.vue')['default']
     VarTab: typeof import('@varlet/ui')['_TabComponent']
+    VarTabItem: typeof import('@varlet/ui')['_TabItemComponent']
     VarTabs: typeof import('@varlet/ui')['_TabsComponent']
+    VarTabsItems: typeof import('@varlet/ui')['_TabsItemsComponent']
   }
 }

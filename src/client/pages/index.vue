@@ -9,10 +9,6 @@ onMounted(async () => {
 </script>
 
 <template>
-  <VueBadge
-    bg-green-400:10 text-green-400
-    title="active"
-  />
   <div>
     {{ data }}
   </div>
