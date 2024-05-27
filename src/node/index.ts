@@ -39,6 +39,7 @@ export function parseSFC(code: string, id: string) {
 export default function UniDevToolsPlugin(): Plugin {
   let pages: Pages[]
   let rootPath: string
+  const app = createDevtoolServe(DIR_CLIENT)
 
   return {
     name: 'uni-devtools',
@@ -51,12 +52,14 @@ export default function UniDevToolsPlugin(): Plugin {
       }
     },
     buildStart() {
-      createDevtoolServe(DIR_CLIENT)
       const files = globSync('**/pages.json', {
         ignore: ['**/node_modules/**'],
       })
       const pagesJson = readJsonSync(files[0]) as PagesJson
       pages = pagesJson.pages
+      app.get('/api/getPages', (req, res) => {
+        res.end(JSON.stringify(pages))
+      })
       rootPath = files[0].replace('pages.json', '')
       outputFileSync(`${rootPath}__uni_devtools_page__temp/index.vue`, '')
     },

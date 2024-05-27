@@ -1,29 +1,15 @@
-import http from 'node:http'
+import polka from 'polka'
 import sirv from 'sirv'
-import { Rpc } from './rpc'
 
 export function createDevtoolServe(path: string) {
   const serve = sirv(path, {
-    single: true,
     dev: true,
   })
 
-  const server = http.createServer((req, res) => {
-    serve(req, res, () => {
-      res.statusCode = 404
-      res.end('Not found')
-    })
-  })
+  const app = polka()
 
-  // createWebSocketServer(server)
-  const rpc = new Rpc(server)
+  app.use(serve)
+  app.listen(3000)
 
-  rpc.send({
-    method: 'init',
-    params: {
-      port: 3000,
-    },
-  })
-
-  server.listen(3000)
+  return app
 }
