@@ -2,7 +2,7 @@ import os from 'node:os'
 import path from 'node:path'
 import type { Plugin } from 'vite'
 import { globSync } from 'glob'
-import { outputFileSync, readFileSync, readJsonSync, removeSync } from 'fs-extra'
+import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
 import { parse } from '@vue/compiler-sfc'
 import c from 'picocolors'
 import Inspect from 'vite-plugin-inspect'
@@ -49,6 +49,7 @@ export default function UniDevToolsPlugin(): Plugin {
     outputDir: dir,
   })
 
+  console.log(dir)
   const app = createDevtoolServe(DIR_CLIENT)
 
   const plugin = <Plugin>{

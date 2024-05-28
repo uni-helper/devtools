@@ -1,5 +1,6 @@
 import { useDevToolsSettings } from './settings'
 
+// @unocss-include
 const builtinTabs = [
   {
     path: 'overview',
