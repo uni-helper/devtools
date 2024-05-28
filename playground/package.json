@@ -17,7 +17,7 @@
     "dev:mp-lark": "uni -p mp-lark",
     "dev:mp-qq": "uni -p mp-qq",
     "dev:mp-toutiao": "uni -p mp-toutiao",
-    "dev:mp-weixin": "nodemon -w '../dist/**/*.js' -e js -x uni -p mp-weixin",
+    "dev:mp-weixin": "nodemon -w '../dist/**/*.js' -w '../src/**/*.ts' -e .js -x uni -p mp-weixin",
     "dev:quickapp-webview": "uni -p quickapp-webview",
     "dev:quickapp-webview-huawei": "uni -p quickapp-webview-huawei",
     "dev:quickapp-webview-union": "uni -p quickapp-webview-union",

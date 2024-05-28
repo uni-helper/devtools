@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@antfu/ni':
-        specifier: ^0.21.12
-        version: 0.21.12
       '@varlet/ui':
         specifier: ^3.2.10
         version: 3.2.10(vue@3.4.27)
@@ -409,6 +406,7 @@ packages:
   /@antfu/ni@0.21.12:
     resolution: {integrity: sha512-2aDL3WUv8hMJb2L3r/PIQWsTLyq7RQr3v9xD16fiz6O8ys1xEyLhhTOv8gxtZvJiTzjTF5pHoArvRdesGL1DMQ==}
     hasBin: true
+    dev: true
 
   /@antfu/utils@0.7.7:
     resolution: {integrity: sha512-gFPqTG7otEJ8uP6wrhDv6mqwGWYZKNvAcCq6u9hOj0c+IKCEsY4L1oC9trPq2SaWIzAfHvqfBDxF591JkMf+kg==}

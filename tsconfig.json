@@ -7,7 +7,8 @@
     "module": "esnext",
     "moduleResolution": "node",
     "paths": {
-      "~/*": ["src/client/*"]
+      "~/*": ["src/client/*"],
+      "@/*": ["src/node/*"]
     },
     "resolveJsonModule": true,
     "types": [
@@ -22,6 +23,5 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  // "include": ["src/client/typed-router.d.ts"],
-  "exclude": ["**/dist", "eslint.config.js", "node_modules", "uniJs.js"]
+  "exclude": ["**/dist", "eslint.config.js", "**/uniJs.js"]
 }

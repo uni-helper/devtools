@@ -1,14 +1,12 @@
-import os from 'node:os'
-import path from 'node:path'
 import type { Plugin } from 'vite'
 import { globSync } from 'glob'
 import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
 import { parse } from '@vue/compiler-sfc'
-import c from 'picocolors'
-import Inspect from 'vite-plugin-inspect'
 import type { Pages, PagesJson } from './types'
-import { DIR_CLIENT } from './dir'
-import { createDevtoolServe } from './DevtoolServer'
+import { DIR_CLIENT, DIR_INSPECT_LIST } from './utils/dir'
+import { uniDevToolsPrint } from './utils/print'
+import { createDevtoolServe } from './devtoolServer'
+import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
 
 function insertBeforeTemplate(originalString: string, contentToInsert: string) {
   // 检查是否存在</template>标签
@@ -39,18 +37,14 @@ export function parseSFC(code: string, id: string) {
     isTs,
   }
 }
-export default function UniDevToolsPlugin(): Plugin {
+export default function UniDevToolsPlugin(): Plugin[] {
   let pages: Pages[]
   let rootPath: string
-  const dir = path.join(os.tmpdir(), 'uni-devtools')
+  const port = 1023
 
-  const inspect = Inspect({
-    build: true,
-    outputDir: dir,
-  })
-
-  console.log(dir)
-  const app = createDevtoolServe(DIR_CLIENT)
+  const inspect = loadInspectPlugin()
+  // console.log(DIR_CLIENT)
+  const app = createDevtoolServe(DIR_CLIENT, port)
 
   const plugin = <Plugin>{
     name: 'uni-devtools',
@@ -59,12 +53,12 @@ export default function UniDevToolsPlugin(): Plugin {
       const _print = server.printUrls
       server.printUrls = () => {
         _print()
-        console.log(`  ${c.green('➜')}  ${c.bold('Uni Devtools')}: ${c.magenta(`http://localhost:3000`)}`)
+        uniDevToolsPrint(port)
       }
     },
     buildStart() {
-      app.get('/api/component', async (req, res) => {
-        const json = readJsonSync(path.join(dir, 'reports', 'list.json'))
+      app.get('/api/component', async (_req, res) => {
+        const json = readJsonSync(DIR_INSPECT_LIST)
         res.end(JSON.stringify(json.modules))
       })
       const files = globSync('**/pages.json', {
@@ -80,9 +74,7 @@ export default function UniDevToolsPlugin(): Plugin {
     },
     buildEnd() {
       removeSync(`${rootPath}__uni_devtools_page__temp`)
-      console.log()
-      console.log(`  ${c.green('➜')}  ${c.bold('Uni Devtools')}: ${c.green(`http://localhost:3000`)}`)
-      console.log()
+      uniDevToolsPrint(port)
     },
     transform(src, id) {
       let code = src
@@ -113,7 +105,7 @@ export default function UniDevToolsPlugin(): Plugin {
       if (id.endsWith('__uni_devtools_page__temp/index.vue')) {
         return `
       <template>
-        <web-view src="http://localhost:3000" />
+        <web-view src="http://localhost:${port}" />
       </template>
       `
       }

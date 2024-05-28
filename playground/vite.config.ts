@@ -2,7 +2,6 @@ import { URL, fileURLToPath } from 'node:url'
 
 import { defineConfig } from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
-import Inspect from 'vite-plugin-inspect'
 
 import DevTools from 'uni-devtools'
 
@@ -16,7 +15,6 @@ export default async () => {
     plugins: [
       DevTools(),
       uni(),
-      Inspect(),
     ],
   })
 }
