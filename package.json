@@ -81,6 +81,7 @@
     "sirv": "^2.0.4",
     "vite-dev-rpc": "^0.1.4",
     "vite-hot-client": "^0.2.3",
+    "vite-plugin-inspect": "^0.8.4",
     "vue-router": "^4.3.2",
     "ws": "^8.17.0"
   },

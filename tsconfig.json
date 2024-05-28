@@ -3,8 +3,12 @@
     "target": "ESNext",
     "jsx": "preserve",
     "lib": ["esnext", "DOM"],
+    "baseUrl": ".",
     "module": "esnext",
     "moduleResolution": "node",
+    "paths": {
+      "~/*": ["src/client/*"]
+    },
     "resolveJsonModule": true,
     "types": [
       "vite/client",
@@ -19,5 +23,5 @@
     "skipLibCheck": true
   },
   // "include": ["src/client/typed-router.d.ts"],
-  "exclude": ["**/dist", "eslint.config.js", "node_modules"]
+  "exclude": ["**/dist", "eslint.config.js", "node_modules", "uniJs.js"]
 }

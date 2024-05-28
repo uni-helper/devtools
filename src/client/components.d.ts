@@ -11,9 +11,6 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SideNav: typeof import('./components/SideNav.vue')['default']
     SideNavItem: typeof import('./components/SideNavItem.vue')['default']
-    VarTab: typeof import('@varlet/ui')['_TabComponent']
-    VarTabItem: typeof import('@varlet/ui')['_TabItemComponent']
-    VarTabs: typeof import('@varlet/ui')['_TabsComponent']
-    VarTabsItems: typeof import('@varlet/ui')['_TabsItemsComponent']
+    TabIcon: typeof import('./components/TabIcon.vue')['default']
   }
 }

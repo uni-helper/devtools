@@ -9,7 +9,7 @@ export function createDevtoolServe(path: string) {
   const app = polka()
 
   app.use(serve)
-  app.listen(3000)
+  app.listen(3020)
 
   return app
 }

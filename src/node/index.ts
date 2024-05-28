@@ -1,8 +1,11 @@
+import os from 'node:os'
+import path from 'node:path'
 import type { Plugin } from 'vite'
 import { globSync } from 'glob'
-import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
+import { outputFileSync, readFileSync, readJsonSync, removeSync } from 'fs-extra'
 import { parse } from '@vue/compiler-sfc'
 import c from 'picocolors'
+import Inspect from 'vite-plugin-inspect'
 import type { Pages, PagesJson } from './types'
 import { DIR_CLIENT } from './dir'
 import { createDevtoolServe } from './DevtoolServer'
@@ -39,9 +42,16 @@ export function parseSFC(code: string, id: string) {
 export default function UniDevToolsPlugin(): Plugin {
   let pages: Pages[]
   let rootPath: string
+  const dir = path.join(os.tmpdir(), 'uni-devtools')
+
+  const inspect = Inspect({
+    build: true,
+    outputDir: dir,
+  })
+
   const app = createDevtoolServe(DIR_CLIENT)
 
-  return {
+  const plugin = <Plugin>{
     name: 'uni-devtools',
     enforce: 'pre',
     configureServer(server) {
@@ -52,6 +62,10 @@ export default function UniDevToolsPlugin(): Plugin {
       }
     },
     buildStart() {
+      app.get('/api/component', async (req, res) => {
+        const json = readJsonSync(path.join(dir, 'reports', 'list.json'))
+        res.end(JSON.stringify(json.modules))
+      })
       const files = globSync('**/pages.json', {
         ignore: ['**/node_modules/**'],
       })
@@ -104,4 +118,9 @@ export default function UniDevToolsPlugin(): Plugin {
       }
     },
   }
+
+  return [
+    plugin,
+    inspect,
+  ]
 }

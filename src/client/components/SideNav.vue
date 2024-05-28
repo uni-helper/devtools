@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { VueDropdown } from '@vue/devtools-ui'
+import { useCategorizedTabs } from '../composables/tab.ts'
+import SideNavItem from './SideNavItem.vue'
+
+const categories = useCategorizedTabs()
 </script>
 
 <template>
@@ -24,6 +28,19 @@ import { VueDropdown } from '@vue/devtools-ui'
         <DockingPanel />
       </template> -->
       </VueDropdown>
+    </div>
+    <div flex="~ auto col gap-0.5 items-center" of-auto class="no-scrollbar" py1>
+      <template v-for="[name, tabs], idx of categories" :key="name">
+        <template v-if="tabs.length">
+          <div v-if="idx" my1 h-1px w-8 border="b base" />
+          <SideNavItem
+            v-for="tab of tabs"
+            :key="tab.path"
+            :tab="tab"
+          />
+        </template>
+      </template>
+      <div flex-auto />
     </div>
   </div>
 </template>

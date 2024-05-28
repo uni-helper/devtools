@@ -1,14 +1,31 @@
 <script setup lang="ts">
-import { VueTooltip } from '@vue/devtools-ui'
-import type { ModuleBuiltinTab } from '~/types'
+import TabIcon from './TabIcon.vue'
 
-const props = defineProps<{
-  tab: ModuleBuiltinTab
+defineProps<{
+  tab: BuiltinTab
 }>()
 </script>
 
 <template>
-  <VueTooltip placement="right">
-    slot
-  </VueTooltip>
+  <VTooltip placement="right">
+    <Component
+      :is="tab.path ? 'RouterLink' : 'button'"
+      :to="`/${tab.path}`"
+      flex="~"
+      hover="bg-active"
+      h-10 w-10 select-none items-center justify-center rounded-xl p1 text-secondary
+      exact-active-class="!text-primary bg-active"
+      @click="tab.event?.(client, router)"
+    >
+      <TabIcon
+        text-xl
+        :icon="tab.icon" :title="tab.title"
+      />
+    </Component>
+    <template #popper>
+      <div>
+        {{ tab.title }}
+      </div>
+    </template>
+  </VTooltip>
 </template>
