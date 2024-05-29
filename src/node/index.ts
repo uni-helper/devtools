@@ -45,7 +45,6 @@ export default function UniDevToolsPlugin(): Plugin[] {
   const port = 9322
 
   const inspect = loadInspectPlugin()
-  console.log(DIR_CLIENT)
   const app = createDevtoolServe(port)
 
   app.get('api/dependencies', async (res, req) => {

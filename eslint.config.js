@@ -5,4 +5,7 @@ export default antfu(
     unocss: false,
     formatters: true,
   },
+  {
+    ignores: ['**/uniJs.js'],
+  },
 )

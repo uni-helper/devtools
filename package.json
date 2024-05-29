@@ -106,6 +106,7 @@
     "@vue/test-utils": "^2.4.5",
     "bumpp": "^9.2.0",
     "chalk": "^5.3.0",
+    "concurrently": "^8.2.2",
     "eslint": "^9.0.0",
     "eslint-plugin-format": "^0.1.1",
     "esno": "^4.0.0",
