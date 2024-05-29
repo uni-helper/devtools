@@ -11,6 +11,8 @@ import Pages from 'vite-plugin-pages'
 import { VarletImportResolver } from '@varlet/import-resolver'
 
 export default defineConfig({
+  base: './',
+
   resolve: {
     alias: {
       '~/': __dirname,
@@ -54,10 +56,6 @@ export default defineConfig({
 
     UnoCSS(),
   ],
-
-  test: {
-    environment: 'jsdom',
-  },
 
   build: {
     target: 'esnext',

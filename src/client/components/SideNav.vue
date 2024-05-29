@@ -2,6 +2,7 @@
 import { VueDropdown } from '@vue/devtools-ui'
 import { useCategorizedTabs } from '../composables/tab.ts'
 import SideNavItem from './SideNavItem.vue'
+// import Icon from '/icon.png'
 
 const categories = useCategorizedTabs()
 </script>
@@ -23,13 +24,14 @@ const categories = useCategorizedTabs()
           class="rounded-xl"
         >
           <div i-logos-vue h-6 w-6 />
+          <!-- <img :src="Icon" alt=""> -->
         </button>
       <!-- <template #popper>
         <DockingPanel />
       </template> -->
       </VueDropdown>
     </div>
-    <div flex="~ auto col gap-0.5 items-center" of-auto class="no-scrollbar" py1>
+    <div flex="~ auto col gap-0.5 items-center" w-full of-x-hidden of-y-auto p1 class="no-scrollbar">
       <template v-for="[name, tabs], idx of categories" :key="name">
         <template v-if="tabs.length">
           <div v-if="idx" my1 h-1px w-8 border="b base" />

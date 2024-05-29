@@ -1,9 +1,11 @@
+import { cwd } from 'node:process'
 import type { Plugin } from 'vite'
 import { globSync } from 'glob'
 import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
 import { parse } from '@vue/compiler-sfc'
+import { getPackageInfo } from 'local-pkg'
 import type { Pages, PagesJson } from './types'
-import { DIR_CLIENT, DIR_INSPECT_LIST } from './utils/dir'
+import { DIR_CLIENT, DIR_DIST, DIR_INSPECT_LIST, DIR_ROOT } from './dir'
 import { uniDevToolsPrint } from './utils/print'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
@@ -40,12 +42,16 @@ export function parseSFC(code: string, id: string) {
 export default function UniDevToolsPlugin(): Plugin[] {
   let pages: Pages[]
   let rootPath: string
-  const port = 1023
+  const port = 9322
 
   const inspect = loadInspectPlugin()
-  // console.log(DIR_CLIENT)
-  const app = createDevtoolServe(DIR_CLIENT, port)
+  console.log(DIR_CLIENT)
+  const app = createDevtoolServe(port)
 
+  app.get('api/dependencies', async (res, req) => {
+    const pkg = await getPackageInfo(cwd())
+    req.end(JSON.stringify(pkg))
+  })
   const plugin = <Plugin>{
     name: 'uni-devtools',
     enforce: 'pre',
