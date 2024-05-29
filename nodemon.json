@@ -1,0 +1,5 @@
+{
+  "watch": ["src/**/*.ts", "dist/**/*.js"],
+  "ext": "js,ts",
+  "exec": "pnpm play:wx"
+}
