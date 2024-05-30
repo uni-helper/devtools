@@ -1,25 +1,31 @@
 <script setup lang="ts">
 import { VueInput } from '@vue/devtools-ui'
-import type { RouteLocationNormalizedLoaded, RouteRecordNormalized } from 'vue-router'
+// import type { RouteLocationNormalizedLoaded, RouteRecordNormalized } from 'vue-router'
 import PanelGrids from '../components/common/PanelGrids.vue'
+import SectionBlock from '../components/common/SectionBlock.vue'
+import { usePagesState } from './../stores/pages'
 
-const routeInput = ref('')
-const currentRoute = ref<RouteLocationNormalizedLoaded | null>(null)
-const matchedRoutes = ref<RouteRecordNormalized[]>([])
-const routeInputMatched = computed(() => {
-  if (routeInput.value === currentRoute.value?.path)
-    return []
-  else
-    return matchedRoutes.value
-})
-function navigate() {
-  if (routeInputMatched.value.length)
-    navigateToRoute(routeInput.value)
-}
+const params = new URLSearchParams(window.location.search)
+const currentPage = params.get('from')
+const routeInput = ref(currentPage)
+const { pageCount, getPages, pagesState } = usePagesState()
+await getPages()
+// const currentRoute = ref<RouteLocationNormalizedLoaded | null>(null)
+// const matchedRoutes = ref<RouteRecordNormalized[]>([])
+// const routeInputMatched = computed(() => {
+//   if (routeInput.value === currentRoute.value?.path)
+//     return []
+//   else
+//     return matchedRoutes.value
+// })
+// function navigate() {
+//   if (routeInputMatched.value.length)
+//     navigateToRoute(routeInput.value)
+// }
 
-function navigateToRoute(path: string) {
-  console.log(path)
-}
+// function navigateToRoute(path: string) {
+//   console.log(path)
+// }
 </script>
 
 <template>
@@ -39,10 +45,22 @@ function navigateToRoute(path: string) {
         <VueInput
           v-model="routeInput"
           left-icon="i-carbon-direction-right-01 scale-y--100"
-          :class="currentRoute?.path === routeInput ? '' : routeInputMatched.length ? 'text-green!' : 'text-orange!'"
-          @keydown.enter="navigate"
+          class="text-green!"
         />
       </div>
+      <SectionBlock
+        icon="i-carbon-tree-view-alt"
+        text="All Routes"
+        :description="`${pageCount} routes registered in your application`"
+        :padding="false"
+      >
+        <RoutesTable
+          :pages="pagesState"
+          :matched="currentRoute?.matched ?? []"
+          :matched-pending="routeInputMatched"
+          @navigate="navigateToRoute"
+        />
+      </SectionBlock>
     </div>
   </PanelGrids>
 </template>

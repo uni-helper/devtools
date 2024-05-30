@@ -14,6 +14,7 @@ export const usePagesState = createGlobalState(
     }
 
     return {
+      pagesState,
       getPages,
       pageCount,
     }

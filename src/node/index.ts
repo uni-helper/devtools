@@ -108,9 +108,20 @@ export default function UniDevToolsPlugin(): Plugin[] {
     },
     load(id) {
       if (id.endsWith('__uni_devtools_page__temp/index.vue')) {
-        return `
+        return `<script setup>
+      import { onLoad } from '@dcloudio/uni-app'
+      import { computed, ref } from 'vue'
+      
+      const from = ref('')
+      onLoad((params) => {
+        console.log('params', params)
+        from.value = params.from
+      })
+      const src = computed(() => 'http://localhost:${port}?from='+from.value)
+      </script>
+      
       <template>
-        <web-view src="http://localhost:${port}" />
+        <web-view :src="src" />
       </template>
       `
       }
