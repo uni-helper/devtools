@@ -42,7 +42,7 @@ export function parseSFC(code: string, id: string) {
 export default function UniDevToolsPlugin(): Plugin[] {
   let pages: Pages[]
   let rootPath: string
-  const port = 9322
+  const port = 4498
 
   const inspect = loadInspectPlugin()
   const app = createDevtoolServe(port)

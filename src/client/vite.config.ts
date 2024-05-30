@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import Vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
@@ -8,7 +8,6 @@ import AutoImport from 'unplugin-auto-import/vite'
 import UnoCSS from 'unocss/vite'
 import { VueRouterAutoImports } from 'unplugin-vue-router'
 import Pages from 'vite-plugin-pages'
-import { VarletImportResolver } from '@varlet/import-resolver'
 
 export default defineConfig({
   base: './',
@@ -19,12 +18,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    Vue({
-      script: {
-        propsDestructure: true,
-        defineModel: true,
-      },
-    }),
+    Vue(),
 
     AutoImport({
       imports: [
@@ -36,12 +30,13 @@ export default defineConfig({
           'vue-router/auto': ['useLink'],
         },
       ],
-      dts: true,
+      dts: join(__dirname, 'auto-imports.d.ts'),
+
       dirs: [
-        './composables',
+        './src/utils',
+        './src/composables',
+        './src/constants',
       ],
-      vueTemplate: true,
-      resolvers: [VarletImportResolver({ autoImport: true })],
     }),
 
     Pages({
@@ -49,9 +44,8 @@ export default defineConfig({
     }),
 
     Components({
-      dirs: ['components'],
-      dts: true,
-      resolvers: [VarletImportResolver()],
+      dirs: ['./src/components/**'],
+      dts: join(__dirname, 'components.d.ts'),
     }),
 
     UnoCSS(),

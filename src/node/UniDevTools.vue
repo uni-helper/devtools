@@ -32,8 +32,11 @@ function handleTap() {
   // setTimeout(() => {
   //   show.value = !show.value
   // }, 5000)
+  const pages = getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  console.log(currentPage)
   uni.navigateTo({
-    url: '/__uni_devtools_page__temp/index',
+    url: `__uni_devtools_page__temp/index?from=${currentPage.route}`,
   })
 }
 
