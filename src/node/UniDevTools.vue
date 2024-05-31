@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, version } from 'vue'
 
 const x = ref(0)
 const y = ref(0)
@@ -34,9 +34,18 @@ function handleTap() {
   // }, 5000)
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
-  console.log(currentPage)
+  const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
+
+  const data = {
+    from: currentPage.route,
+    vueVersion: version,
+    uniPlatform,
+    uniCompileVersion,
+    uniRuntimeVersion,
+  }
+  uni.$emit('uniDevtoolsMessage', data)
   uni.navigateTo({
-    url: `/__uni_devtools_page__temp/index?from=${currentPage.route}`,
+    url: `/__uni_devtools_page__temp/index`,
   })
 }
 

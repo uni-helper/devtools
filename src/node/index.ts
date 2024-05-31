@@ -112,12 +112,13 @@ export default function UniDevToolsPlugin(): Plugin[] {
       import { onLoad } from '@dcloudio/uni-app'
       import { computed, ref } from 'vue'
       
-      const from = ref('')
-      onLoad((params) => {
-        console.log('params', params)
-        from.value = params.from
+      const data = ref()
+      uni.$on('uniDevtoolsMessage',function(message){
+        console.log(message)
+        data.value = message
       })
-      const src = computed(() => 'http://localhost:${port}?from='+from.value)
+      const src = computed(() => 'http://localhost:${port}?data='+encodeURIComponent(JSON.stringify(data.value)))
+    
       </script>
       
       <template>
