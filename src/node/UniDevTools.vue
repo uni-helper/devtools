@@ -1,5 +1,5 @@
 <script setup>
-import { ref, version } from 'vue'
+import { getCurrentInstance, ref, version } from 'vue'
 
 const x = ref(0)
 const y = ref(0)
@@ -26,26 +26,30 @@ function handleTouchEnd() {
 
 const show = ref(false)
 function handleTap() {
-  // show.value = !show.value
-  // console.log('Tap!')
-  // 5秒后自动关闭
-  // setTimeout(() => {
-  //   show.value = !show.value
-  // }, 5000)
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
+  const names = currentPage.$vm.$children.map((child) => {
+    const { type } = child.$
+    return type.__name ? type.__name : type.__file.slice(type.__file.lastIndexOf('/') + 1)
+  })
+
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
 
   const data = {
-    from: currentPage.route,
+    currentPage: currentPage.route,
     vueVersion: version,
     uniPlatform,
     uniCompileVersion,
     uniRuntimeVersion,
+    components: names,
   }
   uni.$emit('uniDevtoolsMessage', data)
   uni.navigateTo({
     url: `/__uni_devtools_page__temp/index`,
+    success(res) {
+    // 通过eventChannel向被打开页面传送数据
+      res.eventChannel.emit('uniDevtoolsMessage', data)
+    },
   })
 }
 

@@ -1,5 +1,9 @@
 <script setup>
 import SideNav from './components/SideNav.vue'
+import { useInitState } from './stores/init'
+
+const { init } = useInitState()
+init()
 </script>
 
 <template>
