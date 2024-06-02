@@ -24,7 +24,9 @@ function handleTouchEnd() {
   dragging.value = false
 }
 
-const show = ref(false)
+const instance = getCurrentInstance()
+console.log(instance)
+
 function handleTap() {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
@@ -32,6 +34,7 @@ function handleTap() {
     const { type } = child.$
     return type.__name ? type.__name : type.__file.slice(type.__file.lastIndexOf('/') + 1)
   })
+  console.log(currentPage.$vm)
 
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
 
@@ -52,11 +55,6 @@ function handleTap() {
     },
   })
 }
-
-function handleChange(event) {
-  console.log('Message from webview:', event.detail.data)
-  show.value = !show.value
-}
 </script>
 
 <template>
@@ -68,7 +66,6 @@ function handleChange(event) {
     @touchend="handleTouchEnd"
     @tap="handleTap"
   />
-  <!-- <web-view v-if="show" src="http://localhost:3000" @message="(e) => handleChange(e)" /> -->
 </template>
 
 <style>
