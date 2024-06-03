@@ -7,7 +7,15 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    ComponentTreeNode: typeof import('./components/components/ComponentTreeNode.vue')['default']
+    IconTitle: typeof import('./components/common/IconTitle.vue')['default']
+    PanelGrids: typeof import('./components/common/PanelGrids.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    RoutesTable: typeof import('./components/pages/RoutesTable.vue')['default']
+    SectionBlock: typeof import('./components/common/SectionBlock.vue')['default']
+    SideNav: typeof import('./components/SideNav.vue')['default']
+    SideNavItem: typeof import('./components/SideNavItem.vue')['default']
+    TabIcon: typeof import('./components/TabIcon.vue')['default']
   }
 }

@@ -1,5 +1,3 @@
-/// <reference types="vitest" />
-
 import { join, resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import Vue from '@vitejs/plugin-vue'
@@ -33,9 +31,9 @@ export default defineConfig({
       dts: join(__dirname, 'auto-imports.d.ts'),
 
       dirs: [
-        './src/utils',
-        './src/composables',
-        './src/constants',
+        './utils',
+        './composables',
+        './constants',
       ],
     }),
 
@@ -44,7 +42,7 @@ export default defineConfig({
     }),
 
     Components({
-      dirs: ['./src/components/**'],
+      dirs: ['./components'],
       dts: join(__dirname, 'components.d.ts'),
     }),
 

@@ -109,18 +109,19 @@ export default function UniDevToolsPlugin(): Plugin[] {
     load(id) {
       if (id.endsWith('__uni_devtools_page__temp/index.vue')) {
         return `<script setup>
-      import { computed, ref, onMounted, getCurrentInstance } from 'vue'
-      
-      const data = ref()
-      onMounted(() => {
+      import { onLoad } from '@dcloudio/uni-app'
+      import { computed, ref, getCurrentInstance } from 'vue'
+
+      const src = ref('')
+      onLoad(() => {
         const instance = getCurrentInstance().proxy
         const eventChannel = instance.getOpenerEventChannel();
         
-        eventChannel.on('uniDevtoolsMessage', function(message) {
-          data.value = message
+        eventChannel.on('uniDevtoolsMessage', function(data) {
+          console.log('uniDevtoolsMessage', data)
+          src.value = 'http://localhost:${port}/?data='+encodeURIComponent(JSON.stringify(data))
         })
       })
-      const src = computed(() => 'http://localhost:${port}/?data='+encodeURIComponent(JSON.stringify(data.value)))
       </script>
       
       <template>

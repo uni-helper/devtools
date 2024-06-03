@@ -34,7 +34,6 @@ function handleTap() {
     const { type } = child.$
     return type.__name ? type.__name : type.__file.slice(type.__file.lastIndexOf('/') + 1)
   })
-  console.log(currentPage.$vm)
 
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
 
@@ -46,11 +45,10 @@ function handleTap() {
     uniRuntimeVersion,
     components: names,
   }
-  uni.$emit('uniDevtoolsMessage', data)
   uni.navigateTo({
     url: `/__uni_devtools_page__temp/index`,
     success(res) {
-    // 通过eventChannel向被打开页面传送数据
+      // 通过eventChannel向被打开页面传送数据
       res.eventChannel.emit('uniDevtoolsMessage', data)
     },
   })

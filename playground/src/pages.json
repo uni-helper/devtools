@@ -3,6 +3,9 @@
     {
       "path": "pages/index",
       "type": "home"
+    },
+    {
+      "path": "pages/test"
     }
   ],
   "globalStyle": {
