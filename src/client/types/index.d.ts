@@ -5,6 +5,13 @@ export interface ModuleInfo {
   virtual: boolean
 }
 
+export interface ComponentTreeNode {
+  name: string
+  file: string
+  children?: ComponentTreeNode[]
+}
+
+
 /** 初始化状态 */
 export interface InitState {
   /** 当前页面 */
@@ -23,5 +30,5 @@ export interface InitState {
   vueVersion: string
 
   /** 当前页面组件 */
-  components: string[]
+  components: ComponentTreeNode[]
 }

@@ -1,22 +1,12 @@
 <script setup lang="ts">
 import { VueInput } from '@vue/devtools-ui'
+import { useInitState } from './../stores/init'
+import ComponentTreeNode from './../components/components/ComponentTreeNode.vue'
+
+const { initState } = useInitState()
 
 const filterName = ref('')
-const [filtered, toggleFiltered] = useToggle(true)
-
-const treeNode = {
-  name: 'App',
-  children: [
-    {
-      name: 'HelloWorld',
-      children: [
-        {
-          name: 'World',
-        },
-      ],
-    },
-  ],
-}
+const [filtered] = useToggle(true)
 </script>
 
 <template>
@@ -32,7 +22,7 @@ const treeNode = {
     </div>
     <div h-screen select-none overflow-scroll p-2 class="no-scrollbar">
       <ComponentTreeNode
-        v-for="item in treeNode"
+        v-for="item in initState!.components"
         :key="item.name"
         :data="item"
       />

@@ -2,7 +2,7 @@ import type { InitState } from '~/types'
 
 export const useInitState = createGlobalState(
   () => {
-    const initState = ref<InitState[]>()
+    const initState = ref<InitState>()
     function init() {
       const params = new URLSearchParams(window.location.search)
       const data = params.get('data')!

@@ -24,17 +24,35 @@ function handleTouchEnd() {
   dragging.value = false
 }
 
-const instance = getCurrentInstance()
-console.log(instance)
+/** 递归获取组件名称和地址 */
+function getComponents(vm) {
+  const components = []
+  for (const child of vm.$children) {
+    const { type } = child.$
+    const name = type.__name ? type.__name : type.__file.slice(type.__file.lastIndexOf('/') + 1)
+    if (name === 'UniDevTools')
+      continue
+
+    const file = type.__file
+    if (child.$children?.length > 0) {
+      const childComponents = getComponents(child)
+      components.push({
+        name,
+        file,
+        children: childComponents,
+      })
+    }
+    else {
+      components.push({ name, file })
+    }
+  }
+  return components
+}
 
 function handleTap() {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
-  const names = currentPage.$vm.$children.map((child) => {
-    const { type } = child.$
-    return type.__name ? type.__name : type.__file.slice(type.__file.lastIndexOf('/') + 1)
-  })
-
+  const components = getComponents(currentPage.$vm)
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
 
   const data = {
@@ -43,7 +61,7 @@ function handleTap() {
     uniPlatform,
     uniCompileVersion,
     uniRuntimeVersion,
-    components: names,
+    components,
   }
   uni.navigateTo({
     url: `/__uni_devtools_page__temp/index`,

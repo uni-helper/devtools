@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AppTest from './AppTest.vue'
+
 function handleClickGithub() {
   if (window?.open) {
     window.open('https://github.com/uni-helper/create-uni')
@@ -15,6 +17,7 @@ function handleClickGithub() {
 <template>
   <view class="footer" @click="handleClickGithub">
     <image class="uni-helper-github__image" src="/static/github.svg" />
+    <AppTest />
   </view>
 </template>
 
