@@ -8,7 +8,7 @@ import UnoCSS from 'unocss/vite'
 export default defineConfig({
   resolve: {
     alias: {
-      '~': resolve(__dirname, '..'),
+      '~': resolve(__dirname),
     },
   },
   plugins: [
