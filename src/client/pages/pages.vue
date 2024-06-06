@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { VueInput } from '@vue/devtools-ui'
-// import type { RouteLocationNormalizedLoaded, RouteRecordNormalized } from 'vue-router'
-import PanelGrids from '../components/common/PanelGrids.vue'
-import SectionBlock from '../components/common/SectionBlock.vue'
-import { usePagesState } from './../stores/pages'
 
-const params = new URLSearchParams(window.location.search)
-const currentPage = params.get('from')
-const routeInput = ref(currentPage)
-const { pageCount, getPages, pagesState } = usePagesState()
-await getPages()
+// const params = new URLSearchParams(window.location.search)
+// const currentPage = params.get('from')
+// const routeInput = ref(currentPage)
+// const { pageCount, getPages, pagesState } = usePagesState()
+// await getPages()
 // const currentRoute = ref<RouteLocationNormalizedLoaded | null>(null)
 // const matchedRoutes = ref<RouteRecordNormalized[]>([])
 // const routeInputMatched = computed(() => {
@@ -54,12 +50,12 @@ await getPages()
         :description="`${pageCount} routes registered in your application`"
         :padding="false"
       >
-        <RoutesTable
+        <!-- <RoutesTable
           :pages="pagesState"
           :matched="currentRoute?.matched ?? []"
           :matched-pending="routeInputMatched"
           @navigate="navigateToRoute"
-        />
+        /> -->
       </SectionBlock>
     </div>
   </PanelGrids>

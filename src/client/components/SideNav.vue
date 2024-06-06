@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import { VueDropdown } from '@vue/devtools-ui'
-import { useCategorizedTabs } from '../composables/tab'
-import SideNavItem from './SideNavItem.vue'
-// import Icon from '/icon.png'
 
 const categories = useCategorizedTabs()
 </script>

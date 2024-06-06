@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { VueInput } from '@vue/devtools-ui'
-import { useInitState } from './../stores/init'
-import ComponentTreeNode from './../components/components/ComponentTreeNode.vue'
 
 const { initState } = useInitState()
 

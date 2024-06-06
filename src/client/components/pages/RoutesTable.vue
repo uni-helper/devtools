@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<!-- <script setup lang="ts">
 import { VueBadge } from '@vue/devtools-ui'
 import type { RouteRecordNormalized } from 'vue-router'
 import { openInEditor, useDevToolsState } from '@vue/devtools-core'
@@ -80,4 +80,4 @@ const state = useDevToolsState()
       </tbody>
     </table>
   </div>
-</template>
+</template> -->

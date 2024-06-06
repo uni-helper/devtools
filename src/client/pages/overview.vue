@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { useOverviewState } from '../stores/overview'
-import { usePagesState } from '../stores/pages'
-
 import { version } from './../../../package.json'
 
 const {

@@ -4,15 +4,11 @@ import Vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import UnoCSS from 'unocss/vite'
-import { VueRouterAutoImports } from 'unplugin-vue-router'
-import Pages from 'vite-plugin-pages'
 
 export default defineConfig({
-  base: './',
-
   resolve: {
     alias: {
-      '~/': __dirname,
+      '~': resolve(__dirname, '..'),
     },
   },
   plugins: [
@@ -22,11 +18,7 @@ export default defineConfig({
       imports: [
         'vue',
         '@vueuse/core',
-        VueRouterAutoImports,
-        {
-          // add any other imports you were relying on
-          'vue-router/auto': ['useLink'],
-        },
+        'vue-router',
       ],
       dts: join(__dirname, 'auto-imports.d.ts'),
 
@@ -34,15 +26,12 @@ export default defineConfig({
         './utils',
         './composables',
         './constants',
+        './stores',
       ],
     }),
 
-    Pages({
-      pagesDir: 'pages',
-    }),
-
     Components({
-      dirs: ['./components'],
+      dirs: ['components'],
       dts: join(__dirname, 'components.d.ts'),
     }),
 

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import TabIcon from './TabIcon.vue'
-
 defineProps<{
   tab: BuiltinTab
 }>()
