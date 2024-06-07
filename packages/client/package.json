@@ -1,0 +1,41 @@
+{
+  "name": "@uni-helper/devtools-client",
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@9.1.1",
+  "author": "FliPPeDround <flippedround@qq.com>",
+  "license": "MIT",
+  "funding": "https://afdian.net/a/flippedround",
+  "homepage": "https://github.com/flippedround/uni-devtools#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flippedround/uni-devtools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/flippedround/uni-devtools/issues"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "typecheck": "vue-tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vue/devtools-ui": "^7.2.1",
+    "@vueuse/core": "^10.9.0",
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.2"
+  },
+  "devDependencies": {
+    "@iconify-json/carbon": "^1.1.33",
+    "@iconify-json/logos": "^1.1.42",
+    "@unocss/reset": "^0.60.2",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "unocss": "^0.60.2",
+    "unplugin-auto-import": "^0.17.6",
+    "unplugin-vue-components": "^0.27.0",
+    "unplugin-vue-router": "^0.8.6",
+    "vite": "^5.2.11",
+    "vue-tsc": "^2.0.19"
+  }
+}
