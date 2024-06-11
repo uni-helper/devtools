@@ -1,5 +1,0 @@
-{
-  "watch": ["src/**/*", "dist/**/*.js"],
-  "ext": "js,ts,vue",
-  "exec": "npm -C playground run dev:mp-weixin"
-}

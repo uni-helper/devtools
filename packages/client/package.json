@@ -1,8 +1,10 @@
 {
   "name": "@uni-helper/devtools-client",
   "type": "module",
+  "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@9.1.1",
+  "description": "uni-app 开发者工具客户端",
   "author": "FliPPeDround <flippedround@qq.com>",
   "license": "MIT",
   "funding": "https://afdian.net/a/flippedround",
@@ -16,7 +18,7 @@
   },
   "scripts": {
     "build": "vite build",
-    "dev": "vite build --watch",
+    "stub": "vite build --watch",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview"
   },

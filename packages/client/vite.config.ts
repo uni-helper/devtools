@@ -37,6 +37,10 @@ export default defineConfig({
       dts: true,
       dirs: [
         './src/composables',
+        './src/utils',
+        './src/composables',
+        './src/constants',
+        './src/stores',
       ],
       vueTemplate: true,
     }),
@@ -49,7 +53,7 @@ export default defineConfig({
   ],
   build: {
     target: 'esnext',
-    outDir: path.resolve(__dirname, '../../dist/client'),
+    outDir: path.resolve(__dirname, '../plugin/client'),
     minify: false, // 'esbuild',
     emptyOutDir: true,
   },

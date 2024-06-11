@@ -25,6 +25,9 @@
     "dx"
   ],
   "scripts": {
+    "dev": "turbo stub",
+    "play": "turbo dev:mp-weixin --filter=./packages/playground",
+    "build": "turbo build",
     "preinstall": "npx only-allow pnpm"
   },
   "devDependencies": {
@@ -41,7 +44,7 @@
     "nodemon": "^3.0.2",
     "pnpm": "^9.0.2",
     "rimraf": "^5.0.5",
-    "turbo": "^1.12.5",
+    "turbo": "^1.13.4",
     "typescript": "^5.4.5",
     "vitest": "^1.5.0"
   }
