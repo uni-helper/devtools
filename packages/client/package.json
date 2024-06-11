@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@9.1.1",
+  "packageManager": "pnpm@9.0.2",
   "description": "uni-app 开发者工具客户端",
   "author": "FliPPeDround <flippedround@qq.com>",
   "license": "MIT",

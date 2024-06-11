@@ -2,7 +2,7 @@
 
 ## TODO
 
-- [ ] Monorepo改造
+- [x] Monorepo改造
 - [ ] 小程序与viewview通讯包封装
 - [ ] pages页面
   - [ ] 区分不同类型page

@@ -3,9 +3,6 @@
     "stub": {
       "cache": false
     },
-    "dev:mp-weixin": {
-      "cache": false
-    },
     "build": {
       "dependsOn": ["^build"]
     }

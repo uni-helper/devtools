@@ -26,7 +26,7 @@
   ],
   "scripts": {
     "dev": "turbo stub",
-    "play": "turbo dev:mp-weixin --filter=./packages/playground",
+    "play": "nodemon",
     "build": "turbo build",
     "preinstall": "npx only-allow pnpm"
   },

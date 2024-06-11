@@ -1,0 +1,5 @@
+{
+  "watch": ["packages/plugin/**/*"],
+  "ext": "js,ts,vue",
+  "exec": "npm -C playground run dev:mp-weixin"
+}

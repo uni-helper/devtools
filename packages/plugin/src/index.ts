@@ -9,6 +9,7 @@ import { DIR_INSPECT_LIST } from './dir'
 import { uniDevToolsPrint } from './utils/print'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
+import { getDevtoolsPage } from './utils/getDevtoolsPage'
 
 function insertBeforeTemplate(originalString: string, contentToInsert: string) {
   // 检查是否存在</template>标签
@@ -107,28 +108,8 @@ export default function UniDevToolsPlugin(): Plugin[] {
       }
     },
     load(id) {
-      if (id.endsWith('__uni_devtools_page__temp/index.vue')) {
-        return /* html */`<script setup>
-      import { onLoad } from '@dcloudio/uni-app'
-      import { computed, ref, getCurrentInstance, onMounted } from 'vue'
-
-      const src = ref('')
-      onLoad(() => {
-        const instance = getCurrentInstance().proxy
-        const eventChannel = instance.getOpenerEventChannel();
-        eventChannel.on('uniDevtoolsMessage', function(data) {
-          console.log('uniDevtoolsMessage', data)
-          src.value = 'http://localhost:${port}/?data='+encodeURIComponent(JSON.stringify(data))
-        })
-      })
-
-      </script>
-      
-      <template>
-        <web-view :src="src" id="id" />
-      </template>
-      `
-      }
+      if (id.endsWith('__uni_devtools_page__temp/index.vue'))
+        return getDevtoolsPage(port)
     },
   }
 

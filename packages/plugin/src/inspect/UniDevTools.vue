@@ -1,5 +1,5 @@
 <script setup>
-import { getCurrentInstance, ref, version } from 'vue'
+import { ref, version } from 'vue'
 
 const x = ref(0)
 const y = ref(0)
