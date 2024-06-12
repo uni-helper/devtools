@@ -6,6 +6,6 @@ export default antfu(
     formatters: true,
   },
   {
-    ignores: ['**/uniJs.js'],
+    ignores: ['**/uniJs.js', 'playground/**'],
   },
 )
