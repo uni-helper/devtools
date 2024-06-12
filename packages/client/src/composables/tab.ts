@@ -1,6 +1,7 @@
 import type { BuiltinTab } from '../../types'
 import { useDevToolsSettings } from './settings'
 
+// @unocss-include
 const builtinTabs: BuiltinTab[] = [
   {
     path: 'overview',

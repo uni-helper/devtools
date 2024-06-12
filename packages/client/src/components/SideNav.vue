@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { VueDropdown } from '@vue/devtools-ui'
+import Logo from '/icon.png'
 
 const categories = useCategorizedTabs()
 </script>
@@ -20,7 +21,7 @@ const categories = useCategorizedTabs()
           exact-active-class="!text-primary bg-active"
           class="rounded-xl"
         >
-          <div i-logos-vue h-6 w-6 />
+          <img :src="Logo" h-6 w-6>
           <!-- <img :src="Icon" alt=""> -->
         </button>
       <!-- <template #popper>

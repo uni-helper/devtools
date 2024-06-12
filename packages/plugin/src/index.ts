@@ -6,7 +6,6 @@ import { parse } from '@vue/compiler-sfc'
 import { getPackageInfo } from 'local-pkg'
 import type { Pages, PagesJson } from './types'
 import { DIR_INSPECT_LIST } from './dir'
-import { uniDevToolsPrint } from './utils/print'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
 import { getDevtoolsPage } from './utils/getDevtoolsPage'
@@ -55,13 +54,6 @@ export default function UniDevToolsPlugin(): Plugin[] {
   const plugin = <Plugin>{
     name: 'uni-devtools',
     enforce: 'pre',
-    configureServer(server) {
-      const _print = server.printUrls
-      server.printUrls = () => {
-        _print()
-        uniDevToolsPrint(port)
-      }
-    },
     buildStart() {
       app.get('/api/component', async (_req, res) => {
         const json = readJsonSync(DIR_INSPECT_LIST)
@@ -80,7 +72,6 @@ export default function UniDevToolsPlugin(): Plugin[] {
     },
     buildEnd() {
       removeSync(`${rootPath}__uni_devtools_page__temp`)
-      uniDevToolsPrint(port)
     },
     transform(src, id) {
       let code = src

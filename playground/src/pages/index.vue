@@ -1,6 +1,9 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const a = ref('test')
+</script>
 
 <template>
+  {{ a }}
   <AppLogos />
   <InputEntry />
 </template>

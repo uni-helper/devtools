@@ -63,6 +63,7 @@ function handleTap() {
     uniRuntimeVersion,
     components,
   }
+  console.log(data)
   uni.navigateTo({
     url: `/__uni_devtools_page__temp/index`,
     success(res) {

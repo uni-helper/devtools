@@ -1,28 +1,24 @@
 <script setup lang="ts">
 import { version } from './../../package.json'
+import UniIcon from '/icon/uni_icon.png'
 
 const {
   getModules,
-  getVueVersion,
-  vueVersion,
   vueModules,
 } = useOverviewState()
 
 const { pageCount, getPages } = usePagesState()
-
+const { initState } = useInitState()
 await getModules()
-await getVueVersion()
 await getPages()
 </script>
 
 <template>
   <PanelGrids h-screen w-full flex of-auto>
-    <div flex="~ col gap2 justify-center" ma h-full max-w-300 w-full px20>
+    <div flex="~ col gap2 justify-center" ma h-full w-full px10>
       <!-- Banner -->
-      <div flex="~ col" items-center>
-        <!-- <div flex="~" mt--10 items-center justify-center>
-          <DevToolsLogo h-18 />
-        </div> -->
+      <div flex="~ col" items-center mt-10>
+        <DevToolsLogo h-18 mb2 />
         <div mb6 mt--1 text-center text-sm flex="~ gap-1">
           <span op40>
             Uni DevTools
@@ -34,8 +30,12 @@ await getPages()
       <!-- Main Grid -->
       <div flex="~ gap2 wrap">
         <div p4 theme-card-green flex="~ col auto">
+          <img :src="UniIcon" w-7.5 h-7.5>
+          <code>v{{ initState?.uniCompileVersion }}</code>
+        </div>
+        <div p4 theme-card-green flex="~ col auto">
           <div i-logos-vue text-3xl />
-          <code>v{{ vueVersion }}</code>
+          <code>v{{ initState?.vueVersion }}</code>
         </div>
         <RouterLink flex="~ col auto" to="/pages" replace min-w-40 p4 theme-card-lime>
           <div i-carbon-tree-view-alt text-3xl />

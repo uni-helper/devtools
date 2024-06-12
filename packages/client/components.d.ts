@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ComponentTreeNode: typeof import('./src/components/components/ComponentTreeNode.vue')['default']
+    DevToolsLogo: typeof import('./src/components/common/DevToolsLogo.vue')['default']
     IconTitle: typeof import('./src/components/common/IconTitle.vue')['default']
     PanelGrids: typeof import('./src/components/common/PanelGrids.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
