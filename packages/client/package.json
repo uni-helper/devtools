@@ -23,6 +23,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@uni-helper/devtools-shared": "workspace:*",
     "@vue/devtools-ui": "^7.2.1",
     "@vueuse/core": "^10.9.0",
     "vue": "^3.4.27",

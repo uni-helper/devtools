@@ -3,7 +3,8 @@
 ## TODO
 
 - [x] Monorepo改造
-- [ ] 小程序与viewview通讯包封装
+- [x] 像素风格uni-helper的LOGO
+- [x] 小程序与viewview通讯包封装
 - [ ] pages页面
   - [ ] 区分不同类型page
   - [ ] 渲染页面

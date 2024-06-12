@@ -1,5 +1,9 @@
 {
   "watch": ["packages/plugin/**/*"],
   "ext": "js,ts,vue",
-  "exec": "npm -C playground run dev:mp-weixin"
+  "exec": "npm -C playground run dev:mp-weixin",
+  "delay": 1000,
+  "events": {
+    "restart": "kill-port 4498"
+  }
 }

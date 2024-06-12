@@ -1,3 +1,4 @@
+import { decompressURLQuery } from '@uni-helper/devtools-shared'
 import type { InitState } from '~/types'
 
 export const useInitState = createGlobalState(
@@ -6,7 +7,7 @@ export const useInitState = createGlobalState(
     function init() {
       const params = new URLSearchParams(window.location.search)
       const data = params.get('data')!
-      initState.value = JSON.parse(decodeURIComponent(data))
+      initState.value = decompressURLQuery(data)
     }
 
     return {
