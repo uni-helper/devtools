@@ -28,6 +28,8 @@
     "dev": "turbo stub",
     "play": "nodemon",
     "build": "turbo build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "preinstall": "npx only-allow pnpm"
   },
   "devDependencies": {

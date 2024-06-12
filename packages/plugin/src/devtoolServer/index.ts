@@ -3,7 +3,6 @@ import sirv from 'sirv'
 import { DIR_CLIENT, DIR_TMP_INSPECT } from '../dir'
 
 export function createDevtoolServe(port: number) {
-  console.log(DIR_CLIENT)
   const clientServe = sirv(DIR_CLIENT, { dev: true })
   const inspectServe = sirv(DIR_TMP_INSPECT, { dev: true })
 

@@ -11,7 +11,6 @@ export interface ComponentTreeNode {
   children?: ComponentTreeNode[]
 }
 
-
 /** 初始化状态 */
 export interface InitState {
   /** 当前页面 */
