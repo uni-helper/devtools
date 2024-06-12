@@ -30,6 +30,7 @@
     "build": "turbo build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test": "vitest",
     "preinstall": "npx only-allow pnpm"
   },
   "devDependencies": {
