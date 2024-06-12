@@ -5,6 +5,8 @@
 - [x] Monorepo改造
 - [x] 像素风格uni-helper的LOGO
 - [x] 小程序与viewview通讯包封装
+- [ ] 重构pages.json读取逻辑
+- [ ] 重构插入组件逻辑
 - [x] overview页面
 - [ ] pages页面
   - [ ] 区分不同类型page

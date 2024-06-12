@@ -1,14 +1,15 @@
 import { cwd } from 'node:process'
 import type { Plugin } from 'vite'
-import { globSync } from 'glob'
+import { globSync } from 'fast-glob'
 import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
-import { parse } from '@vue/compiler-sfc'
 import { getPackageInfo } from 'local-pkg'
+import { createFilter } from 'vite'
 import type { Pages, PagesJson } from './types'
 import { DIR_INSPECT_LIST } from './dir'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
 import { getDevtoolsPage } from './utils/getDevtoolsPage'
+import { importDevtools } from './logic'
 
 function insertBeforeTemplate(originalString: string, contentToInsert: string) {
   // 检查是否存在</template>标签
@@ -27,18 +28,6 @@ function insertBeforeTemplate(originalString: string, contentToInsert: string) {
 
   return newString
 }
-
-export function parseSFC(code: string, id: string) {
-  const { descriptor } = parse(code, {
-    filename: id,
-  })
-  const isTs = (descriptor.script || descriptor.scriptSetup)?.lang === 'ts'
-
-  return {
-    templateContent: descriptor.template?.content,
-    isTs,
-  }
-}
 export default function UniDevToolsPlugin(): Plugin[] {
   let pages: Pages[]
   let rootPath: string
@@ -46,6 +35,10 @@ export default function UniDevToolsPlugin(): Plugin[] {
 
   const inspect = loadInspectPlugin()
   const app = createDevtoolServe(port)
+
+  const files = globSync('**/pages.json', {
+    ignore: ['**/node_modules/**'],
+  })
 
   app.get('api/dependencies', async (res, req) => {
     const pkg = await getPackageInfo(cwd())
@@ -59,9 +52,7 @@ export default function UniDevToolsPlugin(): Plugin[] {
         const json = readJsonSync(DIR_INSPECT_LIST)
         res.end(JSON.stringify(json.modules))
       })
-      const files = globSync('**/pages.json', {
-        ignore: ['**/node_modules/**'],
-      })
+
       const pagesJson = readJsonSync(files[0]) as PagesJson
       pages = pagesJson.pages
       app.get('/api/getPages', (req, res) => {
@@ -74,25 +65,25 @@ export default function UniDevToolsPlugin(): Plugin[] {
       removeSync(`${rootPath}__uni_devtools_page__temp`)
     },
     transform(src, id) {
+      const filterMainFile = createFilter(['src/main.(ts|js)', 'main.(ts|js)'])
+      if (filterMainFile(id))
+        return importDevtools(src, id)
+
       let code = src
       pages.forEach((page) => {
         if (id.endsWith(`${page.path}.vue`)) {
-          const { isTs } = parseSFC(src, id)
           const contentToInsert = '<UniDevTools />'
           const template = insertBeforeTemplate(src, contentToInsert)
-          const contentImport = /* html */`
-          <script ${isTs && 'lang="ts"'}>
-          import UniDevTools from '@uni-helper/devtools/src/inspect/UniDevTools.vue'
-          </script>`
-          code = contentImport + template
+          code = template
         }
       })
-      if (id.endsWith('pages-json-js')) {
+      const filterPagesJson = createFilter(['**/pages-json-js'])
+      if (filterPagesJson(id)) {
         const pages = JSON.parse(src)
         pages.pages.push({
           path: '__uni_devtools_page__temp/index',
         })
-        code = JSON.stringify(pages, null, 2)
+        return JSON.stringify(pages, null, 2)
       }
       return {
         code,
