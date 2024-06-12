@@ -7,5 +7,8 @@ export default antfu(
   },
   {
     ignores: ['**/uniJs.js', 'playground/**'],
+    rules: {
+      'no-console': 'warn',
+    },
   },
 )
