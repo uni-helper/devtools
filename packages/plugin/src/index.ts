@@ -2,6 +2,7 @@ import type { Plugin } from 'vite'
 import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
 import { createFilter } from 'vite'
 import { isH5 } from '@uni-helper/uni-env'
+import JSON5 from 'json5'
 import { DIR_INSPECT_LIST } from './dir'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
@@ -69,7 +70,7 @@ export default function UniDevToolsPlugin(options: Partial<Options>): Plugin[] {
       /** pages.json里添加devtools路由页面 */
       const filterPagesJson = createFilter(['**/pages-json-js'])
       if (filterPagesJson(id)) {
-        const pages = JSON.parse(src)
+        const pages = JSON5.parse(src)
         pages.pages.push({
           path: '__uni_devtools_page__temp/index',
         })

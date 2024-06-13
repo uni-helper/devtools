@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      json5:
+        specifier: ^2.2.3
+        version: 2.2.3
     devDependencies:
       '@antfu/eslint-config':
         specifier: ^2.21.1
