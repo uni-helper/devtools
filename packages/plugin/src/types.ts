@@ -9,8 +9,18 @@ export interface Pages {
   type: string
 }
 
+export interface TabBarList {
+  pagePath: string
+  iconPath: string
+  selectedIconPath: string
+  text?: string
+}
+
 export interface PagesJson {
   pages: Pages[]
+  tabBar?: {
+    list: TabBarList[]
+  }
 }
 
 export interface Options {

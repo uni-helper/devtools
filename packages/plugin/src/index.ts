@@ -18,7 +18,7 @@ export default function UniDevToolsPlugin(options: Partial<Options>): Plugin[] {
   const port = options?.port || 5015
   const inspect = loadInspectPlugin()
   const app = createDevtoolServe(port)
-  const [pages, pagesPath] = getPagesInfo(options?.pageJsonPath)
+  const [pagesPath, pages, tabBarList] = getPagesInfo(options?.pageJsonPath)
   const rootPath = pagesPath.replace('pages.json', '')
 
   const plugin = <Plugin>{
@@ -52,7 +52,7 @@ export default function UniDevToolsPlugin(options: Partial<Options>): Plugin[] {
        * 获取pages.json文件数据接口
        */
       app.get('/api/getPages', (req, res) => {
-        res.end(JSON.stringify(pages))
+        res.end(JSON.stringify({ pages, tabBarList }))
       })
     },
     transform(src, id) {

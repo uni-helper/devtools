@@ -10,7 +10,7 @@ export const usePagesState = createGlobalState(
         const response = await fetch('/api/getPages')
         pagesState.value = await response.json()
       }
-      return pagesState
+      return pagesState.value
     }
 
     return {
