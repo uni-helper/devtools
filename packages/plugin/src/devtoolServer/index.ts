@@ -3,6 +3,7 @@ import sirv from 'sirv'
 import { DIR_CLIENT, DIR_TMP_INSPECT } from '../dir'
 import { uniDevToolsPrint } from '../utils/print'
 
+/** 创建DevTools开发服务器 */
 export function createDevtoolServe(port: number) {
   const clientServe = sirv(DIR_CLIENT, { dev: true })
   const inspectServe = sirv(DIR_TMP_INSPECT, { dev: true })

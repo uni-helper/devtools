@@ -9,6 +9,7 @@ export default defineBuildConfig({
   externals: [
     'vite',
     'vite-plugin-inspect',
+    'vite-plugin-vue-devtools',
   ],
   rollup: {
     emitCJS: true,

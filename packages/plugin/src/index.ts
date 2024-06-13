@@ -1,15 +1,15 @@
 import { cwd } from 'node:process'
 import type { Plugin } from 'vite'
-import { globSync } from 'fast-glob'
 import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
-import { getPackageInfo } from 'local-pkg'
 import { createFilter } from 'vite'
-import type { Pages, PagesJson } from './types'
+import { isH5 } from '@uni-helper/uni-env'
 import { DIR_INSPECT_LIST } from './dir'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
+import { loadVueDevtoolsPlugin } from './loadOtherPlugin/vueDevtools'
 import { getDevtoolsPage } from './utils/getDevtoolsPage'
-import { importDevtools } from './logic'
+import { getPagesInfo, importDevtools } from './logic'
+import type { Options } from './types'
 
 function insertBeforeTemplate(originalString: string, contentToInsert: string) {
   // 检查是否存在</template>标签
@@ -28,43 +28,53 @@ function insertBeforeTemplate(originalString: string, contentToInsert: string) {
 
   return newString
 }
-export default function UniDevToolsPlugin(): Plugin[] {
-  let pages: Pages[]
-  let rootPath: string
-  const port = 4498
 
+export default function UniDevToolsPlugin(options: Partial<Options>): Plugin[] {
+  if (isH5)
+    return [loadVueDevtoolsPlugin(options?.vueDevtoolsOptions || {})]
+
+  const port = options?.port || 5015
   const inspect = loadInspectPlugin()
   const app = createDevtoolServe(port)
+  const [pages, pagesPath] = getPagesInfo(options?.pageJsonPath)
+  const rootPath = pagesPath.replace('pages.json', '')
 
-  const files = globSync('**/pages.json', {
-    ignore: ['**/node_modules/**'],
-  })
-
-  app.get('api/dependencies', async (res, req) => {
-    const pkg = await getPackageInfo(cwd())
-    req.end(JSON.stringify(pkg))
-  })
   const plugin = <Plugin>{
     name: 'uni-devtools',
     enforce: 'pre',
     buildStart() {
+      /**
+       * uni-app编译文件时，
+       * 会检查文件是否存在，
+       * 在插件开始时写入临时空文件骗过uni-app
+       */
+      outputFileSync(`${rootPath}__uni_devtools_page__temp/index.vue`, '')
+    },
+    buildEnd() {
+      /**
+       * uni-app编译结束后，删除临时文件
+       */
+      removeSync(`${rootPath}__uni_devtools_page__temp`)
+    },
+    /** 插件运行结束后的hooks */
+    closeBundle() {
+      /**
+       * 获取vite-plugin-inspect插件里获取的编译文件数据接口
+       */
       app.get('/api/component', async (_req, res) => {
         const json = readJsonSync(DIR_INSPECT_LIST)
         res.end(JSON.stringify(json.modules))
       })
 
-      const pagesJson = readJsonSync(files[0]) as PagesJson
-      pages = pagesJson.pages
+      /**
+       * 获取pages.json文件数据接口
+       */
       app.get('/api/getPages', (req, res) => {
         res.end(JSON.stringify(pages))
       })
-      rootPath = files[0].replace('pages.json', '')
-      outputFileSync(`${rootPath}__uni_devtools_page__temp/index.vue`, '')
-    },
-    buildEnd() {
-      removeSync(`${rootPath}__uni_devtools_page__temp`)
     },
     transform(src, id) {
+      /** 在main.js文件里注册Devtools组件 */
       const filterMainFile = createFilter(['src/main.(ts|js)', 'main.(ts|js)'])
       if (filterMainFile(id))
         return importDevtools(src, id)
@@ -77,6 +87,8 @@ export default function UniDevToolsPlugin(): Plugin[] {
           code = template
         }
       })
+
+      /** pages.json里添加devtools路由页面 */
       const filterPagesJson = createFilter(['**/pages-json-js'])
       if (filterPagesJson(id)) {
         const pages = JSON.parse(src)
@@ -90,13 +102,12 @@ export default function UniDevToolsPlugin(): Plugin[] {
       }
     },
     load(id) {
-      if (id.endsWith('__uni_devtools_page__temp/index.vue'))
+      /** 获取devtools路由时，返回的页面数据 */
+      const filter = createFilter(['**/__uni_devtools_page__temp/index.vue'])
+      if (filter(id))
         return getDevtoolsPage(port)
     },
   }
 
-  return [
-    plugin,
-    inspect,
-  ]
+  return [plugin, inspect]
 }

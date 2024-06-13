@@ -4,6 +4,6 @@
   "exec": "npm -C playground run dev:mp-weixin",
   "delay": 1000,
   "events": {
-    "restart": "kill-port 4498"
+    "restart": "kill-port 5015"
   }
 }
