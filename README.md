@@ -7,7 +7,7 @@
 - [x] 小程序与viewview通讯包封装
 - [x] 编译到H5时，使用vite-plugin-vue-devtools
 - [x] 重构pages.json读取逻辑
-- [ ] 重构插入组件逻辑
+- [x] 重构插入组件逻辑
 - [x] overview页面
 - [ ] pages页面
   - [ ] 区分不同类型page
