@@ -4,9 +4,13 @@ export default antfu(
   {
     unocss: false,
     formatters: true,
+    ignores: [
+      '**/uniJs.js',
+      'playground/**',
+      '**/plugin/client/**',
+    ],
   },
   {
-    ignores: ['**/uniJs.js', 'playground/**'],
     rules: {
       'no-console': 'warn',
     },

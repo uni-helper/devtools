@@ -6,7 +6,7 @@ export async function importDevtools(code: string, id: string) {
   const component = `app.component('uni-dev-tools', UniDevTools);`
   ms.appendRight(0, `${importer}\n`)
   ms.replace(
-    /(createApp[\s\S]*?)(return\s{\s*app)/,
+    /(createApp[\s\S]*?)(return\s\{\s*app)/,
     `$1${`${component}\n`}$2`,
   )
   const map = ms.generateMap({
