@@ -23,6 +23,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@trpc/client": "^10.45.2",
     "@uni-helper/devtools-shared": "workspace:*",
     "@vue/devtools-ui": "^7.2.1",
     "@vueuse/core": "^10.9.0",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@iconify-json/carbon": "^1.1.33",
     "@iconify-json/logos": "^1.1.42",
+    "@uni-helper/devtools": "workspace:*",
     "@unocss/reset": "^0.60.2",
     "@vitejs/plugin-vue": "^5.0.4",
     "unocss": "^0.60.2",

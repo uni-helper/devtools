@@ -1,6 +1,7 @@
 {
   "eslint.experimental.useFlatConfig": true,
   "cSpell.words": [
-    "sirv"
+    "sirv",
+    "trpc"
   ]
 }

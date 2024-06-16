@@ -17,9 +17,12 @@ export default function UniDevToolsPlugin(options: Partial<Options>): Plugin[] {
 
   const port = options?.port || 5015
   const inspect = loadInspectPlugin()
-  const app = createDevtoolServe(port)
   const [pagesPath, pages, tabBarList] = getPagesInfo(options?.pageJsonPath)
   const rootPath = pagesPath.replace('pages.json', '')
+  const app = createDevtoolServe(
+    port,
+    { pages, tabBarList },
+  )
 
   const plugin = <Plugin>{
     name: 'uni-devtools',
@@ -87,3 +90,4 @@ export default function UniDevToolsPlugin(options: Partial<Options>): Plugin[] {
 
   return [plugin, inspect]
 }
+export type { AppRouter } from './devtoolServer/index'

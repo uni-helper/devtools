@@ -9,6 +9,7 @@
 - [x] 重构pages.json读取逻辑
 - [x] 重构插入组件逻辑
 - [x] overview页面
+- [x] 使用tRPC
 - [ ] pages页面
   - [ ] 区分不同类型page
   - [ ] 渲染页面
