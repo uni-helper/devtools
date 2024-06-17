@@ -4,7 +4,7 @@ import { getPagesInfo } from '../logic'
 import { publicProcedure, router } from './trpc'
 import { DIR_INSPECT_LIST } from './../dir'
 
-export default function (options: Options) {
+export default function (options?: Partial<Options>) {
   const { query } = publicProcedure
 
   return router({

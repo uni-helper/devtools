@@ -59,6 +59,10 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
         const pages = JSON5.parse(src)
         pages.pages.push({
           path: '__uni_devtools_page__temp/index',
+          style: {
+            navigationBarBackgroundColor: '#0B1015',
+            navigationBarTextStyle: 'white',
+          },
         })
         return JSON.stringify(pages, null, 2)
       }
