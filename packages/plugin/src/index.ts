@@ -11,17 +11,17 @@ import { getDevtoolsPage } from './utils/getDevtoolsPage'
 import { getPagesInfo, importDevtools, inspectDevtools } from './logic'
 import type { Options } from './types'
 
-export default function UniDevToolsPlugin(options: Partial<Options>): Plugin[] {
+export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] {
   if (isH5)
     return [loadVueDevtoolsPlugin(options?.vueDevtoolsOptions || {})]
 
   const port = options?.port || 5015
   const inspect = loadInspectPlugin()
-  const [pagesPath, pages, tabBarList] = getPagesInfo(options?.pageJsonPath)
+  const [pagesPath, pages] = getPagesInfo(options?.pageJsonPath)
   const rootPath = pagesPath.replace('pages.json', '')
-  const app = createDevtoolServe(
+  createDevtoolServe(
     port,
-    { pages, tabBarList },
+    options,
   )
 
   const plugin = <Plugin>{
@@ -40,23 +40,6 @@ export default function UniDevToolsPlugin(options: Partial<Options>): Plugin[] {
        * uni-app编译结束后，删除临时文件
        */
       removeSync(`${rootPath}__uni_devtools_page__temp`)
-    },
-    /** 插件运行结束后的hooks */
-    closeBundle() {
-      /**
-       * 获取vite-plugin-inspect插件里获取的编译文件数据接口
-       */
-      app.get('/api/component', async (_req, res) => {
-        const json = readJsonSync(DIR_INSPECT_LIST)
-        res.end(JSON.stringify(json.modules))
-      })
-
-      /**
-       * 获取pages.json文件数据接口
-       */
-      app.get('/api/getPages', (req, res) => {
-        res.end(JSON.stringify({ pages, tabBarList }))
-      })
     },
     transform(src, id) {
       /** 在main.js文件里注册Devtools组件 */

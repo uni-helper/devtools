@@ -1,8 +1,10 @@
 import { readJsonSync } from 'fs-extra'
+import type { Options } from '../types'
+import { getPagesInfo } from '../logic'
 import { publicProcedure, router } from './trpc'
 import { DIR_INSPECT_LIST } from './../dir'
 
-export default function (pageInfo: any) {
+export default function (options: Options) {
   const { query } = publicProcedure
 
   return router({
@@ -11,7 +13,9 @@ export default function (pageInfo: any) {
       return json.modules
     }),
     getPages: query(() => {
-      return pageInfo
+      const [_, pages] = getPagesInfo(options?.pageJsonPath)
+
+      return pages
     }),
   })
 }

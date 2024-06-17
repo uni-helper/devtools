@@ -24,10 +24,17 @@ export function getPagesInfo(pagesPath?: string) {
 
   const pages = pagesJson.pages
   const tabBarList = pagesJson.tabBar?.list.map(item => item.pagePath)
+  tabBarList?.forEach((item) => {
+    pages.forEach((page) => {
+      if (page.path === item)
+        page.tabBar = true
+      else
+        page.tabBar = false
+    })
+  })
 
   return [
     path,
     pages,
-    tabBarList,
   ] as const
 }

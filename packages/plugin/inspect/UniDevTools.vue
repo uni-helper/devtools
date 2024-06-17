@@ -29,7 +29,13 @@ function getComponents(vm) {
   const components = []
   for (const child of vm.$children) {
     const { type } = child.$
-    const name = type.__name ? type.__name : type.__file.slice(type.__file.lastIndexOf('/') + 1)
+
+    const name = type.name
+      ? type.name
+      : type.__name
+        ? type.__name
+        : type.__file.slice(type.__file.lastIndexOf('/') + 1)
+
     if (name === 'UniDevTools')
       continue
 

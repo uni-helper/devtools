@@ -6,7 +6,7 @@ export interface Options {
 
 export interface Pages {
   path: string
-  type: string
+  tabBar: boolean
 }
 
 export interface TabBarList {

@@ -1,6 +1,6 @@
 {
-  "name": "vitesse-uni-app",
-  "appid": "",
+  "name": "unibest",
+  "appid": "H57F2ACE4",
   "description": "",
   "versionName": "1.0.0",
   "versionCode": "100",
@@ -34,24 +34,64 @@
           "<uses-permission android:name=\"android.permission.FLASHLIGHT\"/>",
           "<uses-feature android:name=\"android.hardware.camera\"/>",
           "<uses-permission android:name=\"android.permission.WRITE_SETTINGS\"/>"
+        ],
+        "minSdkVersion": 30,
+        "targetSdkVersion": 30,
+        "abiFilters": [
+          "armeabi-v7a",
+          "arm64-v8a"
         ]
       },
       "ios": {},
-      "sdkConfigs": {}
+      "sdkConfigs": {},
+      "icons": {
+        "android": {
+          "hdpi": "static/app/icons/72x72.png",
+          "xhdpi": "static/app/icons/96x96.png",
+          "xxhdpi": "static/app/icons/144x144.png",
+          "xxxhdpi": "static/app/icons/192x192.png"
+        },
+        "ios": {
+          "appstore": "static/app/icons/1024x1024.png",
+          "ipad": {
+            "app": "static/app/icons/76x76.png",
+            "app@2x": "static/app/icons/152x152.png",
+            "notification": "static/app/icons/20x20.png",
+            "notification@2x": "static/app/icons/40x40.png",
+            "proapp@2x": "static/app/icons/167x167.png",
+            "settings": "static/app/icons/29x29.png",
+            "settings@2x": "static/app/icons/58x58.png",
+            "spotlight": "static/app/icons/40x40.png",
+            "spotlight@2x": "static/app/icons/80x80.png"
+          },
+          "iphone": {
+            "app@2x": "static/app/icons/120x120.png",
+            "app@3x": "static/app/icons/180x180.png",
+            "notification@2x": "static/app/icons/40x40.png",
+            "notification@3x": "static/app/icons/60x60.png",
+            "settings@2x": "static/app/icons/58x58.png",
+            "settings@3x": "static/app/icons/87x87.png",
+            "spotlight@2x": "static/app/icons/80x80.png",
+            "spotlight@3x": "static/app/icons/120x120.png"
+          }
+        }
+      }
+    },
+    "compatible": {
+      "ignoreVersion": true
     }
   },
   "quickapp": {},
   "mp-weixin": {
-    "appid": "",
+    "appid": "wxa2abb91f64032a2b",
     "setting": {
       "urlCheck": false
     },
-    "usingComponents": true,
-    "darkmode": true,
-    "themeLocation": "theme.json"
+    "usingComponents": true
   },
   "mp-alipay": {
-    "usingComponents": true
+    "usingComponents": true,
+    "styleIsolation": "shared"
   },
   "mp-baidu": {
     "usingComponents": true
@@ -64,7 +104,8 @@
   },
   "vueVersion": "3",
   "h5": {
-    "darkmode": true,
-    "themeLocation": "theme.json"
+    "router": {
+      "base": "/unibest/"
+    }
   }
 }
