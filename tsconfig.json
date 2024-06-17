@@ -12,5 +12,6 @@
     "noImplicitAny": false,
     "outDir": "dist",
     "esModuleInterop": true
-  }
+  },
+  "exclude": ["playground"]
 }

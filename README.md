@@ -11,7 +11,7 @@
 - [x] overview页面
 - [x] 使用tRPC
 - [ ] pages页面
-  - [ ] 区分不同类型page
+  - [x] 区分tabBar Pages
   - [ ] 渲染页面
   - [ ] 页面跳转
   - [ ] 页面搜素
