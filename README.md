@@ -9,7 +9,7 @@
 - [x] 重构pages.json读取逻辑
 - [x] 重构插入组件逻辑
 - [x] 使用tRPC
-- [ ] tab重构
+- [x] tab重构
 - [x] overview页面
 - [ ] pages页面
   - [x] 区分tabBar Pages
