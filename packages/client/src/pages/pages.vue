@@ -4,7 +4,7 @@ import { VueBadge, VueInput } from '@vue/devtools-ui'
 const { initState } = useInitState()
 
 // const params = new URLSearchParams(window.location.search)
-const currentPage = toRaw(initState.value?.currentPage)
+const currentPage = toRaw(initState.value!.currentPage)
 const routeInput = ref(currentPage)
 const pages = await trpc.getPages.query()
 const pageCount = pages.length
@@ -36,7 +36,7 @@ function handlePush(page: typeof pages[number]) {
         :description="`${pageCount} Pages registered in your application`"
         :padding="false"
       >
-        <div cursor-default px4 space-y-2>
+        <div cursor-pointer px4 space-y-2>
           <div
             v-for="page in pages"
             :key="page.path"
@@ -48,8 +48,12 @@ function handlePush(page: typeof pages[number]) {
             >
               tabBar
             </VueBadge>
-            <span flex="inline gap3" items-center>
-              {{ page.path }}
+            <span
+              flex="inline gap3"
+              items-center
+              :class="page.path.includes(routeInput) ? 'text-green-400' : ''"
+            >
+              {{ `/${page.path}` }}
             </span>
           </div>
         </div>
