@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { Tab } from '~/constants/tab'
+
 defineProps<{
-  tab: BuiltinTab
+  tab: Tab
 }>()
 </script>
 
@@ -11,9 +13,8 @@ defineProps<{
       :to="`/${tab.path}`"
       flex="~"
       hover="bg-active"
-      h-10 w-10 select-none items-center justify-center rounded-xl p1 text-secondary
+      text-secondary h-10 w-10 select-none items-center justify-center rounded-xl p1
       exact-active-class="!text-primary bg-active"
-      @click="tab.event?.(client, router)"
     >
       <TabIcon
         text-xl

@@ -8,8 +8,9 @@
 - [x] 编译到H5时，使用vite-plugin-vue-devtools
 - [x] 重构pages.json读取逻辑
 - [x] 重构插入组件逻辑
-- [x] overview页面
 - [x] 使用tRPC
+- [ ] tab重构
+- [x] overview页面
 - [ ] pages页面
   - [x] 区分tabBar Pages
   - [ ] 渲染页面

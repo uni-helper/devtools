@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { VueDropdown } from '@vue/devtools-ui'
 import Logo from '/icon.png'
-
-const categories = useCategorizedTabs()
+import type { Tab } from '~/constants/tab'
 </script>
 
 <template>
@@ -30,15 +29,13 @@ const categories = useCategorizedTabs()
       </VueDropdown>
     </div>
     <div flex="~ auto col gap-0.5 items-center" w-full of-x-hidden of-y-auto p1 class="no-scrollbar">
-      <template v-for="[name, tabs], idx of categories" :key="name">
-        <template v-if="tabs.length">
-          <div v-if="idx" my1 h-1px w-8 border="b base" />
-          <SideNavItem
-            v-for="tab of tabs"
-            :key="tab.path"
-            :tab="tab"
-          />
-        </template>
+      <template v-for="[name, tabs], idx of builtinTab" :key="name">
+        <div v-if="idx" my1 h-1px w-8 border="b base" />
+        <SideNavItem
+          v-for="(tab, key) of (tabs as Tab[])"
+          :key
+          :tab="tab"
+        />
       </template>
       <div flex-auto />
     </div>

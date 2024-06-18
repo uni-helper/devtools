@@ -42,6 +42,7 @@ export default defineConfig({
         './src/constants',
         './src/stores',
         './src/trpc',
+        './src/constants',
       ],
       vueTemplate: true,
     }),

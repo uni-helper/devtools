@@ -8,7 +8,6 @@ declare global {
   const EffectScope: typeof import('vue')['EffectScope']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
-  const builtinTab: typeof import('./src/constants/tab')['builtinTab']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -30,8 +29,6 @@ declare global {
   const debouncedWatch: typeof import('@vueuse/core')['debouncedWatch']
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
   const defineComponent: typeof import('vue')['defineComponent']
-  const defineLoader: typeof import('vue-router/auto')['defineLoader']
-  const definePage: typeof import('unplugin-vue-router/runtime')['definePage']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
   const extendRef: typeof import('@vueuse/core')['extendRef']
@@ -41,7 +38,6 @@ declare global {
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
   const inject: typeof import('vue')['inject']
   const injectLocal: typeof import('@vueuse/core')['injectLocal']
-  const isDark: typeof import('./src/composables/dark')['isDark']
   const isDefined: typeof import('@vueuse/core')['isDefined']
   const isProxy: typeof import('vue')['isProxy']
   const isReactive: typeof import('vue')['isReactive']
@@ -51,22 +47,44 @@ declare global {
   const markRaw: typeof import('vue')['markRaw']
   const nextTick: typeof import('vue')['nextTick']
   const onActivated: typeof import('vue')['onActivated']
+  const onAddToFavorites: typeof import('@dcloudio/uni-app')['onAddToFavorites']
+  const onBackPress: typeof import('@dcloudio/uni-app')['onBackPress']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
-  const onBeforeRouteLeave: typeof import('vue-router/auto')['onBeforeRouteLeave']
-  const onBeforeRouteUpdate: typeof import('vue-router/auto')['onBeforeRouteUpdate']
   const onBeforeUnmount: typeof import('vue')['onBeforeUnmount']
   const onBeforeUpdate: typeof import('vue')['onBeforeUpdate']
   const onClickOutside: typeof import('@vueuse/core')['onClickOutside']
   const onDeactivated: typeof import('vue')['onDeactivated']
+  const onError: typeof import('@dcloudio/uni-app')['onError']
   const onErrorCaptured: typeof import('vue')['onErrorCaptured']
+  const onHide: typeof import('@dcloudio/uni-app')['onHide']
   const onKeyStroke: typeof import('@vueuse/core')['onKeyStroke']
+  const onLaunch: typeof import('@dcloudio/uni-app')['onLaunch']
+  const onLoad: typeof import('@dcloudio/uni-app')['onLoad']
   const onLongPress: typeof import('@vueuse/core')['onLongPress']
   const onMounted: typeof import('vue')['onMounted']
+  const onNavigationBarButtonTap: typeof import('@dcloudio/uni-app')['onNavigationBarButtonTap']
+  const onNavigationBarSearchInputChanged: typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputChanged']
+  const onNavigationBarSearchInputClicked: typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputClicked']
+  const onNavigationBarSearchInputConfirmed: typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputConfirmed']
+  const onNavigationBarSearchInputFocusChanged: typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputFocusChanged']
+  const onPageNotFound: typeof import('@dcloudio/uni-app')['onPageNotFound']
+  const onPageScroll: typeof import('@dcloudio/uni-app')['onPageScroll']
+  const onPullDownRefresh: typeof import('@dcloudio/uni-app')['onPullDownRefresh']
+  const onReachBottom: typeof import('@dcloudio/uni-app')['onReachBottom']
+  const onReady: typeof import('@dcloudio/uni-app')['onReady']
   const onRenderTracked: typeof import('vue')['onRenderTracked']
   const onRenderTriggered: typeof import('vue')['onRenderTriggered']
+  const onResize: typeof import('@dcloudio/uni-app')['onResize']
   const onScopeDispose: typeof import('vue')['onScopeDispose']
   const onServerPrefetch: typeof import('vue')['onServerPrefetch']
+  const onShareAppMessage: typeof import('@dcloudio/uni-app')['onShareAppMessage']
+  const onShareTimeline: typeof import('@dcloudio/uni-app')['onShareTimeline']
+  const onShow: typeof import('@dcloudio/uni-app')['onShow']
   const onStartTyping: typeof import('@vueuse/core')['onStartTyping']
+  const onTabItemTap: typeof import('@dcloudio/uni-app')['onTabItemTap']
+  const onThemeChange: typeof import('@dcloudio/uni-app')['onThemeChange']
+  const onUnhandledRejection: typeof import('@dcloudio/uni-app')['onUnhandledRejection']
+  const onUnload: typeof import('@dcloudio/uni-app')['onUnload']
   const onUnmounted: typeof import('vue')['onUnmounted']
   const onUpdated: typeof import('vue')['onUpdated']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
@@ -94,7 +112,6 @@ declare global {
   const syncRef: typeof import('@vueuse/core')['syncRef']
   const syncRefs: typeof import('@vueuse/core')['syncRefs']
   const templateRef: typeof import('@vueuse/core')['templateRef']
-  const testTrpc: typeof import('./src/trpc/index')['testTrpc']
   const throttledRef: typeof import('@vueuse/core')['throttledRef']
   const throttledWatch: typeof import('@vueuse/core')['throttledWatch']
   const toRaw: typeof import('vue')['toRaw']
@@ -102,7 +119,6 @@ declare global {
   const toRef: typeof import('vue')['toRef']
   const toRefs: typeof import('vue')['toRefs']
   const toValue: typeof import('vue')['toValue']
-  const toggleDark: typeof import('./src/composables/dark')['toggleDark']
   const triggerRef: typeof import('vue')['triggerRef']
   const tryOnBeforeMount: typeof import('@vueuse/core')['tryOnBeforeMount']
   const tryOnBeforeUnmount: typeof import('@vueuse/core')['tryOnBeforeUnmount']
@@ -136,12 +152,12 @@ declare global {
   const useBroadcastChannel: typeof import('@vueuse/core')['useBroadcastChannel']
   const useBrowserLocation: typeof import('@vueuse/core')['useBrowserLocation']
   const useCached: typeof import('@vueuse/core')['useCached']
-  const useCategorizedTabs: typeof import('./src/composables/tab')['useCategorizedTabs']
   const useClipboard: typeof import('@vueuse/core')['useClipboard']
   const useClipboardItems: typeof import('@vueuse/core')['useClipboardItems']
   const useCloned: typeof import('@vueuse/core')['useCloned']
   const useColorMode: typeof import('@vueuse/core')['useColorMode']
   const useConfirmDialog: typeof import('@vueuse/core')['useConfirmDialog']
+  const useCount: typeof import('./composables/useCount')['useCount']
   const useCounter: typeof import('@vueuse/core')['useCounter']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVar: typeof import('@vueuse/core')['useCssVar']
@@ -153,7 +169,6 @@ declare global {
   const useDebounce: typeof import('@vueuse/core')['useDebounce']
   const useDebounceFn: typeof import('@vueuse/core')['useDebounceFn']
   const useDebouncedRefHistory: typeof import('@vueuse/core')['useDebouncedRefHistory']
-  const useDevToolsSettings: typeof import('./src/composables/settings')['useDevToolsSettings']
   const useDeviceMotion: typeof import('@vueuse/core')['useDeviceMotion']
   const useDeviceOrientation: typeof import('@vueuse/core')['useDeviceOrientation']
   const useDevicePixelRatio: typeof import('@vueuse/core')['useDevicePixelRatio']
@@ -184,13 +199,11 @@ declare global {
   const useIdle: typeof import('@vueuse/core')['useIdle']
   const useImage: typeof import('@vueuse/core')['useImage']
   const useInfiniteScroll: typeof import('@vueuse/core')['useInfiniteScroll']
-  const useInitState: typeof import('./src/stores/init')['useInitState']
   const useIntersectionObserver: typeof import('@vueuse/core')['useIntersectionObserver']
   const useInterval: typeof import('@vueuse/core')['useInterval']
   const useIntervalFn: typeof import('@vueuse/core')['useIntervalFn']
   const useKeyModifier: typeof import('@vueuse/core')['useKeyModifier']
   const useLastChanged: typeof import('@vueuse/core')['useLastChanged']
-  const useLink: typeof import('vue-router/auto')['useLink']
   const useLocalStorage: typeof import('@vueuse/core')['useLocalStorage']
   const useMagicKeys: typeof import('@vueuse/core')['useMagicKeys']
   const useManualRefHistory: typeof import('@vueuse/core')['useManualRefHistory']
@@ -209,9 +222,7 @@ declare global {
   const useObjectUrl: typeof import('@vueuse/core')['useObjectUrl']
   const useOffsetPagination: typeof import('@vueuse/core')['useOffsetPagination']
   const useOnline: typeof import('@vueuse/core')['useOnline']
-  const useOverviewState: typeof import('./src/stores/overview')['useOverviewState']
   const usePageLeave: typeof import('@vueuse/core')['usePageLeave']
-  const usePagesState: typeof import('./src/stores/pages')['usePagesState']
   const useParallax: typeof import('@vueuse/core')['useParallax']
   const useParentElement: typeof import('@vueuse/core')['useParentElement']
   const usePerformanceObserver: typeof import('@vueuse/core')['usePerformanceObserver']
@@ -225,11 +236,10 @@ declare global {
   const usePreferredLanguages: typeof import('@vueuse/core')['usePreferredLanguages']
   const usePreferredReducedMotion: typeof import('@vueuse/core')['usePreferredReducedMotion']
   const usePrevious: typeof import('@vueuse/core')['usePrevious']
+  const useQuery: typeof import('./composables/useQuery')['useQuery']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
   const useResizeObserver: typeof import('@vueuse/core')['useResizeObserver']
-  const useRoute: typeof import('vue-router/auto')['useRoute']
-  const useRouter: typeof import('vue-router/auto')['useRouter']
   const useScreenOrientation: typeof import('@vueuse/core')['useScreenOrientation']
   const useScreenSafeArea: typeof import('@vueuse/core')['useScreenSafeArea']
   const useScriptTag: typeof import('@vueuse/core')['useScriptTag']
@@ -247,7 +257,6 @@ declare global {
   const useStyleTag: typeof import('@vueuse/core')['useStyleTag']
   const useSupported: typeof import('@vueuse/core')['useSupported']
   const useSwipe: typeof import('@vueuse/core')['useSwipe']
-  const useTabs: typeof import('./src/composables/tab')['useTabs']
   const useTemplateRefsList: typeof import('@vueuse/core')['useTemplateRefsList']
   const useTextDirection: typeof import('@vueuse/core')['useTextDirection']
   const useTextSelection: typeof import('@vueuse/core')['useTextSelection']
@@ -310,7 +319,6 @@ declare module 'vue' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
-    readonly builtinTab: UnwrapRef<typeof import('./src/constants/tab')['builtinTab']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -332,7 +340,6 @@ declare module 'vue' {
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
-    readonly definePage: UnwrapRef<typeof import('unplugin-vue-router/runtime')['definePage']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
@@ -351,22 +358,44 @@ declare module 'vue' {
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
+    readonly onAddToFavorites: UnwrapRef<typeof import('@dcloudio/uni-app')['onAddToFavorites']>
+    readonly onBackPress: UnwrapRef<typeof import('@dcloudio/uni-app')['onBackPress']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
-    readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router/auto')['onBeforeRouteLeave']>
-    readonly onBeforeRouteUpdate: UnwrapRef<typeof import('vue-router/auto')['onBeforeRouteUpdate']>
     readonly onBeforeUnmount: UnwrapRef<typeof import('vue')['onBeforeUnmount']>
     readonly onBeforeUpdate: UnwrapRef<typeof import('vue')['onBeforeUpdate']>
     readonly onClickOutside: UnwrapRef<typeof import('@vueuse/core')['onClickOutside']>
     readonly onDeactivated: UnwrapRef<typeof import('vue')['onDeactivated']>
+    readonly onError: UnwrapRef<typeof import('@dcloudio/uni-app')['onError']>
     readonly onErrorCaptured: UnwrapRef<typeof import('vue')['onErrorCaptured']>
+    readonly onHide: UnwrapRef<typeof import('@dcloudio/uni-app')['onHide']>
     readonly onKeyStroke: UnwrapRef<typeof import('@vueuse/core')['onKeyStroke']>
+    readonly onLaunch: UnwrapRef<typeof import('@dcloudio/uni-app')['onLaunch']>
+    readonly onLoad: UnwrapRef<typeof import('@dcloudio/uni-app')['onLoad']>
     readonly onLongPress: UnwrapRef<typeof import('@vueuse/core')['onLongPress']>
     readonly onMounted: UnwrapRef<typeof import('vue')['onMounted']>
+    readonly onNavigationBarButtonTap: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarButtonTap']>
+    readonly onNavigationBarSearchInputChanged: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputChanged']>
+    readonly onNavigationBarSearchInputClicked: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputClicked']>
+    readonly onNavigationBarSearchInputConfirmed: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputConfirmed']>
+    readonly onNavigationBarSearchInputFocusChanged: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputFocusChanged']>
+    readonly onPageNotFound: UnwrapRef<typeof import('@dcloudio/uni-app')['onPageNotFound']>
+    readonly onPageScroll: UnwrapRef<typeof import('@dcloudio/uni-app')['onPageScroll']>
+    readonly onPullDownRefresh: UnwrapRef<typeof import('@dcloudio/uni-app')['onPullDownRefresh']>
+    readonly onReachBottom: UnwrapRef<typeof import('@dcloudio/uni-app')['onReachBottom']>
+    readonly onReady: UnwrapRef<typeof import('@dcloudio/uni-app')['onReady']>
     readonly onRenderTracked: UnwrapRef<typeof import('vue')['onRenderTracked']>
     readonly onRenderTriggered: UnwrapRef<typeof import('vue')['onRenderTriggered']>
+    readonly onResize: UnwrapRef<typeof import('@dcloudio/uni-app')['onResize']>
     readonly onScopeDispose: UnwrapRef<typeof import('vue')['onScopeDispose']>
     readonly onServerPrefetch: UnwrapRef<typeof import('vue')['onServerPrefetch']>
+    readonly onShareAppMessage: UnwrapRef<typeof import('@dcloudio/uni-app')['onShareAppMessage']>
+    readonly onShareTimeline: UnwrapRef<typeof import('@dcloudio/uni-app')['onShareTimeline']>
+    readonly onShow: UnwrapRef<typeof import('@dcloudio/uni-app')['onShow']>
     readonly onStartTyping: UnwrapRef<typeof import('@vueuse/core')['onStartTyping']>
+    readonly onTabItemTap: UnwrapRef<typeof import('@dcloudio/uni-app')['onTabItemTap']>
+    readonly onThemeChange: UnwrapRef<typeof import('@dcloudio/uni-app')['onThemeChange']>
+    readonly onUnhandledRejection: UnwrapRef<typeof import('@dcloudio/uni-app')['onUnhandledRejection']>
+    readonly onUnload: UnwrapRef<typeof import('@dcloudio/uni-app')['onUnload']>
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
@@ -394,7 +423,6 @@ declare module 'vue' {
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
-    readonly testTrpc: UnwrapRef<typeof import('./src/trpc/index')['testTrpc']>
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
     readonly throttledWatch: UnwrapRef<typeof import('@vueuse/core')['throttledWatch']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
@@ -440,6 +468,7 @@ declare module 'vue' {
     readonly useCloned: UnwrapRef<typeof import('@vueuse/core')['useCloned']>
     readonly useColorMode: UnwrapRef<typeof import('@vueuse/core')['useColorMode']>
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
+    readonly useCount: UnwrapRef<typeof import('./composables/useCount')['useCount']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVar: UnwrapRef<typeof import('@vueuse/core')['useCssVar']>
@@ -481,13 +510,11 @@ declare module 'vue' {
     readonly useIdle: UnwrapRef<typeof import('@vueuse/core')['useIdle']>
     readonly useImage: UnwrapRef<typeof import('@vueuse/core')['useImage']>
     readonly useInfiniteScroll: UnwrapRef<typeof import('@vueuse/core')['useInfiniteScroll']>
-    readonly useInitState: UnwrapRef<typeof import('./src/stores/init')['useInitState']>
     readonly useIntersectionObserver: UnwrapRef<typeof import('@vueuse/core')['useIntersectionObserver']>
     readonly useInterval: UnwrapRef<typeof import('@vueuse/core')['useInterval']>
     readonly useIntervalFn: UnwrapRef<typeof import('@vueuse/core')['useIntervalFn']>
     readonly useKeyModifier: UnwrapRef<typeof import('@vueuse/core')['useKeyModifier']>
     readonly useLastChanged: UnwrapRef<typeof import('@vueuse/core')['useLastChanged']>
-    readonly useLink: UnwrapRef<typeof import('vue-router/auto')['useLink']>
     readonly useLocalStorage: UnwrapRef<typeof import('@vueuse/core')['useLocalStorage']>
     readonly useMagicKeys: UnwrapRef<typeof import('@vueuse/core')['useMagicKeys']>
     readonly useManualRefHistory: UnwrapRef<typeof import('@vueuse/core')['useManualRefHistory']>
@@ -506,9 +533,7 @@ declare module 'vue' {
     readonly useObjectUrl: UnwrapRef<typeof import('@vueuse/core')['useObjectUrl']>
     readonly useOffsetPagination: UnwrapRef<typeof import('@vueuse/core')['useOffsetPagination']>
     readonly useOnline: UnwrapRef<typeof import('@vueuse/core')['useOnline']>
-    readonly useOverviewState: UnwrapRef<typeof import('./src/stores/overview')['useOverviewState']>
     readonly usePageLeave: UnwrapRef<typeof import('@vueuse/core')['usePageLeave']>
-    readonly usePagesState: UnwrapRef<typeof import('./src/stores/pages')['usePagesState']>
     readonly useParallax: UnwrapRef<typeof import('@vueuse/core')['useParallax']>
     readonly useParentElement: UnwrapRef<typeof import('@vueuse/core')['useParentElement']>
     readonly usePerformanceObserver: UnwrapRef<typeof import('@vueuse/core')['usePerformanceObserver']>
@@ -522,11 +547,10 @@ declare module 'vue' {
     readonly usePreferredLanguages: UnwrapRef<typeof import('@vueuse/core')['usePreferredLanguages']>
     readonly usePreferredReducedMotion: UnwrapRef<typeof import('@vueuse/core')['usePreferredReducedMotion']>
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
+    readonly useQuery: UnwrapRef<typeof import('./composables/useQuery')['useQuery']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
-    readonly useRoute: UnwrapRef<typeof import('vue-router/auto')['useRoute']>
-    readonly useRouter: UnwrapRef<typeof import('vue-router/auto')['useRouter']>
     readonly useScreenOrientation: UnwrapRef<typeof import('@vueuse/core')['useScreenOrientation']>
     readonly useScreenSafeArea: UnwrapRef<typeof import('@vueuse/core')['useScreenSafeArea']>
     readonly useScriptTag: UnwrapRef<typeof import('@vueuse/core')['useScriptTag']>
@@ -599,7 +623,6 @@ declare module '@vue/runtime-core' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
-    readonly builtinTab: UnwrapRef<typeof import('./src/constants/tab')['builtinTab']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -621,7 +644,6 @@ declare module '@vue/runtime-core' {
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
-    readonly definePage: UnwrapRef<typeof import('unplugin-vue-router/runtime')['definePage']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
@@ -640,22 +662,44 @@ declare module '@vue/runtime-core' {
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
+    readonly onAddToFavorites: UnwrapRef<typeof import('@dcloudio/uni-app')['onAddToFavorites']>
+    readonly onBackPress: UnwrapRef<typeof import('@dcloudio/uni-app')['onBackPress']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
-    readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router/auto')['onBeforeRouteLeave']>
-    readonly onBeforeRouteUpdate: UnwrapRef<typeof import('vue-router/auto')['onBeforeRouteUpdate']>
     readonly onBeforeUnmount: UnwrapRef<typeof import('vue')['onBeforeUnmount']>
     readonly onBeforeUpdate: UnwrapRef<typeof import('vue')['onBeforeUpdate']>
     readonly onClickOutside: UnwrapRef<typeof import('@vueuse/core')['onClickOutside']>
     readonly onDeactivated: UnwrapRef<typeof import('vue')['onDeactivated']>
+    readonly onError: UnwrapRef<typeof import('@dcloudio/uni-app')['onError']>
     readonly onErrorCaptured: UnwrapRef<typeof import('vue')['onErrorCaptured']>
+    readonly onHide: UnwrapRef<typeof import('@dcloudio/uni-app')['onHide']>
     readonly onKeyStroke: UnwrapRef<typeof import('@vueuse/core')['onKeyStroke']>
+    readonly onLaunch: UnwrapRef<typeof import('@dcloudio/uni-app')['onLaunch']>
+    readonly onLoad: UnwrapRef<typeof import('@dcloudio/uni-app')['onLoad']>
     readonly onLongPress: UnwrapRef<typeof import('@vueuse/core')['onLongPress']>
     readonly onMounted: UnwrapRef<typeof import('vue')['onMounted']>
+    readonly onNavigationBarButtonTap: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarButtonTap']>
+    readonly onNavigationBarSearchInputChanged: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputChanged']>
+    readonly onNavigationBarSearchInputClicked: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputClicked']>
+    readonly onNavigationBarSearchInputConfirmed: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputConfirmed']>
+    readonly onNavigationBarSearchInputFocusChanged: UnwrapRef<typeof import('@dcloudio/uni-app')['onNavigationBarSearchInputFocusChanged']>
+    readonly onPageNotFound: UnwrapRef<typeof import('@dcloudio/uni-app')['onPageNotFound']>
+    readonly onPageScroll: UnwrapRef<typeof import('@dcloudio/uni-app')['onPageScroll']>
+    readonly onPullDownRefresh: UnwrapRef<typeof import('@dcloudio/uni-app')['onPullDownRefresh']>
+    readonly onReachBottom: UnwrapRef<typeof import('@dcloudio/uni-app')['onReachBottom']>
+    readonly onReady: UnwrapRef<typeof import('@dcloudio/uni-app')['onReady']>
     readonly onRenderTracked: UnwrapRef<typeof import('vue')['onRenderTracked']>
     readonly onRenderTriggered: UnwrapRef<typeof import('vue')['onRenderTriggered']>
+    readonly onResize: UnwrapRef<typeof import('@dcloudio/uni-app')['onResize']>
     readonly onScopeDispose: UnwrapRef<typeof import('vue')['onScopeDispose']>
     readonly onServerPrefetch: UnwrapRef<typeof import('vue')['onServerPrefetch']>
+    readonly onShareAppMessage: UnwrapRef<typeof import('@dcloudio/uni-app')['onShareAppMessage']>
+    readonly onShareTimeline: UnwrapRef<typeof import('@dcloudio/uni-app')['onShareTimeline']>
+    readonly onShow: UnwrapRef<typeof import('@dcloudio/uni-app')['onShow']>
     readonly onStartTyping: UnwrapRef<typeof import('@vueuse/core')['onStartTyping']>
+    readonly onTabItemTap: UnwrapRef<typeof import('@dcloudio/uni-app')['onTabItemTap']>
+    readonly onThemeChange: UnwrapRef<typeof import('@dcloudio/uni-app')['onThemeChange']>
+    readonly onUnhandledRejection: UnwrapRef<typeof import('@dcloudio/uni-app')['onUnhandledRejection']>
+    readonly onUnload: UnwrapRef<typeof import('@dcloudio/uni-app')['onUnload']>
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
@@ -683,7 +727,6 @@ declare module '@vue/runtime-core' {
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
-    readonly testTrpc: UnwrapRef<typeof import('./src/trpc/index')['testTrpc']>
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
     readonly throttledWatch: UnwrapRef<typeof import('@vueuse/core')['throttledWatch']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
@@ -729,6 +772,7 @@ declare module '@vue/runtime-core' {
     readonly useCloned: UnwrapRef<typeof import('@vueuse/core')['useCloned']>
     readonly useColorMode: UnwrapRef<typeof import('@vueuse/core')['useColorMode']>
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
+    readonly useCount: UnwrapRef<typeof import('./composables/useCount')['useCount']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVar: UnwrapRef<typeof import('@vueuse/core')['useCssVar']>
@@ -770,13 +814,11 @@ declare module '@vue/runtime-core' {
     readonly useIdle: UnwrapRef<typeof import('@vueuse/core')['useIdle']>
     readonly useImage: UnwrapRef<typeof import('@vueuse/core')['useImage']>
     readonly useInfiniteScroll: UnwrapRef<typeof import('@vueuse/core')['useInfiniteScroll']>
-    readonly useInitState: UnwrapRef<typeof import('./src/stores/init')['useInitState']>
     readonly useIntersectionObserver: UnwrapRef<typeof import('@vueuse/core')['useIntersectionObserver']>
     readonly useInterval: UnwrapRef<typeof import('@vueuse/core')['useInterval']>
     readonly useIntervalFn: UnwrapRef<typeof import('@vueuse/core')['useIntervalFn']>
     readonly useKeyModifier: UnwrapRef<typeof import('@vueuse/core')['useKeyModifier']>
     readonly useLastChanged: UnwrapRef<typeof import('@vueuse/core')['useLastChanged']>
-    readonly useLink: UnwrapRef<typeof import('vue-router/auto')['useLink']>
     readonly useLocalStorage: UnwrapRef<typeof import('@vueuse/core')['useLocalStorage']>
     readonly useMagicKeys: UnwrapRef<typeof import('@vueuse/core')['useMagicKeys']>
     readonly useManualRefHistory: UnwrapRef<typeof import('@vueuse/core')['useManualRefHistory']>
@@ -795,9 +837,7 @@ declare module '@vue/runtime-core' {
     readonly useObjectUrl: UnwrapRef<typeof import('@vueuse/core')['useObjectUrl']>
     readonly useOffsetPagination: UnwrapRef<typeof import('@vueuse/core')['useOffsetPagination']>
     readonly useOnline: UnwrapRef<typeof import('@vueuse/core')['useOnline']>
-    readonly useOverviewState: UnwrapRef<typeof import('./src/stores/overview')['useOverviewState']>
     readonly usePageLeave: UnwrapRef<typeof import('@vueuse/core')['usePageLeave']>
-    readonly usePagesState: UnwrapRef<typeof import('./src/stores/pages')['usePagesState']>
     readonly useParallax: UnwrapRef<typeof import('@vueuse/core')['useParallax']>
     readonly useParentElement: UnwrapRef<typeof import('@vueuse/core')['useParentElement']>
     readonly usePerformanceObserver: UnwrapRef<typeof import('@vueuse/core')['usePerformanceObserver']>
@@ -811,11 +851,10 @@ declare module '@vue/runtime-core' {
     readonly usePreferredLanguages: UnwrapRef<typeof import('@vueuse/core')['usePreferredLanguages']>
     readonly usePreferredReducedMotion: UnwrapRef<typeof import('@vueuse/core')['usePreferredReducedMotion']>
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
+    readonly useQuery: UnwrapRef<typeof import('./composables/useQuery')['useQuery']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
-    readonly useRoute: UnwrapRef<typeof import('vue-router/auto')['useRoute']>
-    readonly useRouter: UnwrapRef<typeof import('vue-router/auto')['useRouter']>
     readonly useScreenOrientation: UnwrapRef<typeof import('@vueuse/core')['useScreenOrientation']>
     readonly useScreenSafeArea: UnwrapRef<typeof import('@vueuse/core')['useScreenSafeArea']>
     readonly useScriptTag: UnwrapRef<typeof import('@vueuse/core')['useScriptTag']>

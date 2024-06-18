@@ -1,34 +1,18 @@
 {
+  "extends": "@vue/tsconfig/tsconfig.json",
   "compilerOptions": {
-    "composite": true,
-    "skipLibCheck": true,
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "resolveJsonModule": true,
-    "noImplicitThis": true,
-    "allowSyntheticDefaultImports": true,
-    "allowJs": true,
-    "sourceMap": true,
+    "ignoreDeprecations": "5.0",
+    "lib": ["esnext", "dom"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
-    "outDir": "dist",
-    "lib": ["esnext", "dom"],
-    "types": ["@dcloudio/types", "@types/wechat-miniprogram", "wot-design-uni/global.d.ts"]
+    "types": ["@dcloudio/types", "@uni-helper/uni-app-types"],
+    "sourceMap": true
   },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
   "vueCompilerOptions": {
-    "target": 3,
-    "nativeTags": ["block", "template", "component", "slot"]
-  },
-  "exclude": ["node_modules"],
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.js",
-    "src/**/*.d.ts",
-    "src/**/*.tsx",
-    "src/**/*.jsx",
-    "src/**/*.vue",
-    "src/**/*.json"
-  ]
+    "experimentalRuntimeMode": "runtime-uni-app",
+    "nativeTags": ["block", "component", "template", "slot"]
+  }
 }
