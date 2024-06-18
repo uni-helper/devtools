@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AppConnecting: typeof import('./src/components/AppConnecting.vue')['default']
     ComponentTreeNode: typeof import('./src/components/components/ComponentTreeNode.vue')['default']
     DevToolsLogo: typeof import('./src/components/common/DevToolsLogo.vue')['default']
     IconTitle: typeof import('./src/components/common/IconTitle.vue')['default']

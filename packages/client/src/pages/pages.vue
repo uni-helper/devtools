@@ -1,27 +1,20 @@
 <script setup lang="ts">
-import { VueInput } from '@vue/devtools-ui'
+import { VueBadge, VueInput } from '@vue/devtools-ui'
+
+const { initState } = useInitState()
 
 // const params = new URLSearchParams(window.location.search)
-// const currentPage = params.get('from')
-// const routeInput = ref(currentPage)
-// const { pageCount, getPages, pagesState } = usePagesState()
-// await getPages()
-// const currentRoute = ref<RouteLocationNormalizedLoaded | null>(null)
-// const matchedRoutes = ref<RouteRecordNormalized[]>([])
-// const routeInputMatched = computed(() => {
-//   if (routeInput.value === currentRoute.value?.path)
-//     return []
-//   else
-//     return matchedRoutes.value
-// })
-// function navigate() {
-//   if (routeInputMatched.value.length)
-//     navigateToRoute(routeInput.value)
-// }
+const currentPage = toRaw(initState.value?.currentPage)
+const routeInput = ref(currentPage)
+const pages = await trpc.getPages.query()
+const pageCount = pages.length
 
-// function navigateToRoute(path: string) {
-//   console.log(path)
-// }
+function handlePush(page: typeof pages[number]) {
+  // @ts-expect-error 有uni方法
+  uni[page.tabBar ? 'switchTab' : 'redirectTo']({
+    url: `/${page.path}`,
+  })
+}
 </script>
 
 <template>
@@ -29,14 +22,7 @@ import { VueInput } from '@vue/devtools-ui'
     <div h-full of-auto>
       <div border="b base" flex="~ col gap1" px4 py3>
         <div>
-          <template v-if="false">
-            <span op50>Navigate from </span>
-            <span font-mono>Hi</span>
-            <span op50> to </span>
-          </template>
-          <template v-else>
-            <span op50>Current route</span>
-          </template>
+          <span op50>Current route</span>
         </div>
         <VueInput
           v-model="routeInput"
@@ -46,16 +32,27 @@ import { VueInput } from '@vue/devtools-ui'
       </div>
       <SectionBlock
         icon="i-carbon-tree-view-alt"
-        text="All Routes"
-        :description="`${pageCount} routes registered in your application`"
+        text="All Pages"
+        :description="`${pageCount} Pages registered in your application`"
         :padding="false"
       >
-        <!-- <RoutesTable
-          :pages="pagesState"
-          :matched="currentRoute?.matched ?? []"
-          :matched-pending="routeInputMatched"
-          @navigate="navigateToRoute"
-        /> -->
+        <div cursor-default px4 space-y-2>
+          <div
+            v-for="page in pages"
+            :key="page.path"
+            @click="handlePush(page)"
+          >
+            <VueBadge
+              v-if="!page.tabBar"
+              mr2 bg-green-400:10 text-green-400
+            >
+              tabBar
+            </VueBadge>
+            <span flex="inline gap3" items-center>
+              {{ page.path }}
+            </span>
+          </div>
+        </div>
       </SectionBlock>
     </div>
   </PanelGrids>

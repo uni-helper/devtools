@@ -2,23 +2,19 @@
 import { version } from './../../package.json'
 import UniIcon from '/icon/uni_icon.png'
 
-const {
-  getModules,
-  vueModules,
-} = useOverviewState()
-
-const { pageCount, getPages } = usePagesState()
 const { initState } = useInitState()
-await getModules()
-await getPages()
+const pages = await trpc.getPages.query()
+const modules = await trpc.getComponent.query()
+
+const vueModules = modules?.filter(module => module.id.endsWith('vue')).length
 </script>
 
 <template>
   <PanelGrids h-screen w-full flex of-auto>
     <div flex="~ col gap2 justify-center" ma h-full w-full px10>
       <!-- Banner -->
-      <div flex="~ col" items-center mt-10>
-        <DevToolsLogo h-18 mb2 />
+      <div flex="~ col" mt-10 items-center>
+        <DevToolsLogo mb2 h-18 />
         <div mb6 mt--1 text-center text-sm flex="~ gap-1">
           <span op40>
             Uni DevTools
@@ -30,7 +26,7 @@ await getPages()
       <!-- Main Grid -->
       <div flex="~ gap2 wrap">
         <div p4 theme-card-green flex="~ col auto">
-          <img :src="UniIcon" w-7.5 h-7.5>
+          <img :src="UniIcon" h-7.5 w-7.5>
           <code>v{{ initState?.uniCompileVersion }}</code>
         </div>
         <div p4 theme-card-green flex="~ col auto">
@@ -39,7 +35,7 @@ await getPages()
         </div>
         <RouterLink flex="~ col auto" to="/pages" replace min-w-40 p4 theme-card-lime>
           <div i-carbon-tree-view-alt text-3xl />
-          <div>{{ pageCount }} pages</div>
+          <div>{{ pages.length }} pages</div>
         </RouterLink>
         <RouterLink v-if="vueModules" flex="~ col auto" to="/components" replace min-w-40 p4 theme-card-lime>
           <div i-carbon-assembly-cluster text-3xl />

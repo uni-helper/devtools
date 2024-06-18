@@ -8,7 +8,9 @@
         return window.parent.postMessage({ type: 'WEB_INVOKE_APPSERVICE', data: i, pageId: '' }, '*'); if (t.length === 0) {
         const u = plus.webview.currentWebview(); if (!u)
           throw new Error('plus.webview.currentWebview() is undefined'); const g = u.parent(); let v = ''; v = g ? g.id : u.id, t.push(v)
-      } if (plus.webview.getWebviewById('__uniapp__service')) { plus.webview.postMessageToUniNView({ type: 'WEB_INVOKE_APPSERVICE', args: { data: i, webviewIds: t } }, '__uniapp__service') }
+      } if (plus.webview.getWebviewById('__uniapp__service')) {
+        plus.webview.postMessageToUniNView({ type: 'WEB_INVOKE_APPSERVICE', args: { data: i, webviewIds: t } }, '__uniapp__service')
+      }
       else { const c = JSON.stringify(i); plus.webview.getLaunchWebview().evalJS('UniPlusBridge.subscribeHandler("'.concat('WEB_INVOKE_APPSERVICE', '",').concat(c, ',').concat(JSON.stringify(t), ');')) }
     }
   }; const d = { navigateTo() { const e = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : {}; const n = e.url; r('navigateTo', { url: encodeURI(n) }) }, navigateBack() { const e = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : {}; const n = e.delta; r('navigateBack', { delta: Number.parseInt(n) || 1 }) }, switchTab() { const e = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : {}; const n = e.url; r('switchTab', { url: encodeURI(n) }) }, reLaunch() { const e = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : {}; const n = e.url; r('reLaunch', { url: encodeURI(n) }) }, redirectTo() { const e = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : {}; const n = e.url; r('redirectTo', { url: encodeURI(n) }) }, getEnv(e) { a() ? e({ uvue: !0 }) : o() ? e({ nvue: !0 }) : window.plus ? e({ plus: !0 }) : e({ h5: !0 }) }, postMessage() { const e = arguments.length > 0 && void 0 !== arguments[0] ? arguments[0] : {}; r('postMessage', e.data || {}) } }; const s = /uni-app/i.test(navigator.userAgent); const w = /Html5Plus/i.test(navigator.userAgent); const u = /complete|loaded|interactive/; const g = window.my && navigator.userAgent.includes(['t', 'n', 'e', 'i', 'l', 'C', 'y', 'a', 'p', 'i', 'l', 'A'].reverse().join('')); const v = window.swan && window.swan.webView && /swan/i.test(navigator.userAgent); const c = window.qq && window.qq.miniProgram && /QQ/i.test(navigator.userAgent) && /miniProgram/i.test(navigator.userAgent); const p = window.tt && window.tt.miniProgram && /toutiaomicroapp/i.test(navigator.userAgent); const _ = window.wx && window.wx.miniProgram && /micromessenger/i.test(navigator.userAgent) && /miniProgram/i.test(navigator.userAgent); const m = window.qa && /quickapp/i.test(navigator.userAgent); const f = window.ks && window.ks.miniProgram && /micromessenger/i.test(navigator.userAgent) && /miniProgram/i.test(navigator.userAgent); const l = window.tt && window.tt.miniProgram && /Lark|Feishu/i.test(navigator.userAgent); const E = window.jd && window.jd.miniProgram && /micromessenger/i.test(navigator.userAgent) && /miniProgram/i.test(navigator.userAgent); const x = window.xhs && window.xhs.miniProgram && /xhsminiapp/i.test(navigator.userAgent); for (var S, h = function () { window.UniAppJSBridge = !0, document.dispatchEvent(new CustomEvent('UniAppJSBridgeReady', { bubbles: !0, cancelable: !0 })) }, y = [function (e) {
@@ -38,6 +40,7 @@
     }, function (e) {
       if (x)
         return window.xhs.miniProgram
-    }, function (e) { return document.addEventListener('DOMContentLoaded', e), d }], M = 0; M < y.length && !(S = y[M](h)); M++);S || (S = {}); const P = typeof uni != 'undefined' ? uni : {}; if (!P.navigateTo)
-    for (const b in S)i(S, b) && (P[b] = S[b]); return P.webView = S, P
+    }, function (e) { return document.addEventListener('DOMContentLoaded', e), d }], M = 0; M < y.length && !(S = y[M](h)); M++);S || (S = {}); const P = typeof uni != 'undefined' ? uni : {}; if (!P.navigateTo) {
+    for (const b in S)i(S, b) && (P[b] = S[b])
+  } return P.webView = S, P
 }))
