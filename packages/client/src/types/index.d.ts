@@ -29,5 +29,5 @@ export interface InitState {
   vueVersion: string
 
   /** 当前页面组件 */
-  components: ComponentTreeNode[]
+  components: ComponentTreeNode
 }

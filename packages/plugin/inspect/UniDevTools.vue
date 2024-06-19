@@ -1,5 +1,6 @@
 <script setup>
 import { ref, version } from 'vue'
+import { basename } from '@uni-helper/devtools-shared'
 
 const x = ref(0)
 const y = ref(0)
@@ -25,40 +26,32 @@ function handleTouchEnd() {
 }
 
 /** 递归获取组件名称和地址 */
-function getComponents(vm) {
-  const components = []
-  for (const child of vm.$children) {
-    const { type } = child.$
+function extractComponentInfo(component) {
+  const { type } = component.$
 
-    const name = type.name
-      ? type.name
-      : type.__name
-        ? type.__name
-        : type.__file.slice(type.__file.lastIndexOf('/') + 1)
+  const name = type.name
+    ? type.name
+    : type.__name
+      ? type.__name
+      : basename(type.__file, '.vue')
 
-    if (name === 'UniDevTools')
-      continue
+  if (name === 'UniDevTools')
+    return null
 
-    const file = type.__file
-    if (child.$children?.length > 0) {
-      const childComponents = getComponents(child)
-      components.push({
-        name,
-        file,
-        children: childComponents,
-      })
-    }
-    else {
-      components.push({ name, file })
-    }
+  const file = type.__file
+  const componentInfo = { name, file }
+
+  if (component.$children?.length > 0) {
+    componentInfo.children = component.$children.map(extractComponentInfo).filter(c => c !== null)
   }
-  return components
+
+  return componentInfo
 }
 
 function handleTap() {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
-  const components = getComponents(currentPage.$vm)
+  const components = extractComponentInfo(currentPage.$vm)
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
 
   const data = {

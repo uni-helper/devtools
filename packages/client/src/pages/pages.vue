@@ -43,7 +43,7 @@ function handlePush(page: typeof pages[number]) {
             @click="handlePush(page)"
           >
             <VueBadge
-              v-if="!page.tabBar"
+              v-if="page.tabBar"
               mr2 bg-green-400:10 text-green-400
             >
               tabBar

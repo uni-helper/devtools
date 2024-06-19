@@ -8,8 +8,8 @@ const [filtered] = useToggle(true)
 </script>
 
 <template>
-  <PanelGrids h-screen>
-    <div w-full flex gap2 px2 py2>
+  <PanelGrids block h-screen of-auto>
+    <div w-full flex gap2 p2>
       <VueInput
         v-model="filterName"
         :loading-debounce-time="250"
@@ -18,12 +18,8 @@ const [filtered] = useToggle(true)
         flex-1
       />
     </div>
-    <div h-screen select-none overflow-scroll p-2 class="no-scrollbar">
-      <ComponentTreeNode
-        v-for="item in initState!.components"
-        :key="item.name"
-        :data="item"
-      />
+    <div no-scrollbar flex-1 select-none overflow-hidden px2>
+      <ComponentTreeNode :data="initState!.components" />
     </div>
   </PanelGrids>
 </template>

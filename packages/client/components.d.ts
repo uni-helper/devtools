@@ -19,5 +19,6 @@ declare module 'vue' {
     SideNav: typeof import('./src/components/SideNav.vue')['default']
     SideNavItem: typeof import('./src/components/SideNavItem.vue')['default']
     TabIcon: typeof import('./src/components/TabIcon.vue')['default']
+    ToggleExpanded: typeof import('./src/components/common/ToggleExpanded.vue')['default']
   }
 }
