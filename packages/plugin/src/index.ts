@@ -1,15 +1,16 @@
 import type { Plugin } from 'vite'
-import { outputFileSync, readJsonSync, removeSync } from 'fs-extra'
+import { outputFileSync, removeSync } from 'fs-extra'
 import { createFilter } from 'vite'
 import { isH5 } from '@uni-helper/uni-env'
 import JSON5 from 'json5'
-import { DIR_INSPECT_LIST } from './dir'
+import { createExpressMiddleware } from '@trpc/server/adapters/express'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
 import { loadVueDevtoolsPlugin } from './loadOtherPlugin/vueDevtools'
 import { getDevtoolsPage } from './utils/getDevtoolsPage'
 import { getPagesInfo, importDevtools, inspectDevtools } from './logic'
 import type { Options } from './types'
+import createRouter from './devtoolServer/router'
 
 export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] {
   if (isH5)
@@ -19,14 +20,19 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
   const inspect = loadInspectPlugin()
   const [pagesPath, pages] = getPagesInfo(options?.pageJsonPath)
   const rootPath = pagesPath.replace('pages.json', '')
-  createDevtoolServe(
-    port,
-    options,
-  )
+  const app = createDevtoolServe(port)
 
   const plugin = <Plugin>{
     name: 'uni-devtools',
     enforce: 'pre',
+    configResolved(resolvedConfig) {
+      app.use(
+        '/trpc',
+        createExpressMiddleware({
+          router: createRouter(resolvedConfig, options),
+        }),
+      )
+    },
     buildStart() {
       /**
        * uni-app编译文件时，
@@ -77,4 +83,4 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
 
   return [plugin, inspect]
 }
-export type { AppRouter } from './devtoolServer/index'
+export type AppRouter = ReturnType<typeof createRouter>

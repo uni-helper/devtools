@@ -46,3 +46,13 @@ export interface ModuleInfo {
   deps: string[]
   virtual: boolean
 }
+
+export type AssetType = 'image' | 'font' | 'video' | 'audio' | 'text' | 'json' | 'wasm' | 'other'
+export interface AssetInfo {
+  path: string
+  type: AssetType
+  publicPath: string
+  filePath: string
+  size: number
+  mtime: number
+}
