@@ -8,9 +8,15 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppConnecting: typeof import('./src/components/AppConnecting.vue')['default']
+    AssetFontPreview: typeof import('./src/components/assets/AssetFontPreview.vue')['default']
+    AssetGridItem: typeof import('./src/components/assets/AssetGridItem.vue')['default']
+    AssetListItem: typeof import('./src/components/assets/AssetListItem.vue')['default']
+    AssetPreview: typeof import('./src/components/assets/AssetPreview.vue')['default']
     ComponentTreeNode: typeof import('./src/components/components/ComponentTreeNode.vue')['default']
     DevToolsLogo: typeof import('./src/components/common/DevToolsLogo.vue')['default']
+    FilepathItem: typeof import('./src/components/assets/FilepathItem.vue')['default']
     IconTitle: typeof import('./src/components/common/IconTitle.vue')['default']
+    Navbar: typeof import('./src/components/common/Navbar.vue')['default']
     PanelGrids: typeof import('./src/components/common/PanelGrids.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

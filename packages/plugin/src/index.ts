@@ -12,6 +12,8 @@ import { getPagesInfo, importDevtools, inspectDevtools } from './logic'
 import type { Options } from './types'
 import createRouter from './devtoolServer/router'
 
+export * from './types'
+export type AppRouter = ReturnType<typeof createRouter>
 export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] {
   if (isH5)
     return [loadVueDevtoolsPlugin(options?.vueDevtoolsOptions || {})]
@@ -26,6 +28,7 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
     name: 'uni-devtools',
     enforce: 'pre',
     configResolved(resolvedConfig) {
+      /** 注册trpc中间件 */
       app.use(
         '/trpc',
         createExpressMiddleware({
@@ -83,4 +86,3 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
 
   return [plugin, inspect]
 }
-export type AppRouter = ReturnType<typeof createRouter>

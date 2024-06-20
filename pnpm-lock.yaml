@@ -82,10 +82,13 @@ importers:
         version: link:../shared
       '@vue/devtools-ui':
         specifier: ^7.2.1
-        version: 7.2.1(@unocss/reset@0.60.4)(floating-vue@5.2.2(vue@3.4.27(typescript@5.4.5)))(unocss@0.60.4(postcss@8.4.38)(rollup@4.18.0)(vite@5.2.13(@types/node@20.14.2)(sass@1.77.5)(terser@5.31.1)))(vue@3.4.27(typescript@5.4.5))
+        version: 7.2.1(@unocss/reset@0.60.4)(floating-vue@5.2.2(vue@3.4.27(typescript@5.4.5)))(fuse.js@7.0.0)(unocss@0.60.4(postcss@8.4.38)(rollup@4.18.0)(vite@5.2.13(@types/node@20.14.2)(sass@1.77.5)(terser@5.31.1)))(vue@3.4.27(typescript@5.4.5))
       '@vueuse/core':
         specifier: ^10.9.0
         version: 10.10.1(vue@3.4.27(typescript@5.4.5))
+      fuse.js:
+        specifier: ^7.0.0
+        version: 7.0.0
       vue:
         specifier: ^3.4.27
         version: 3.4.27(typescript@5.4.5)
@@ -153,6 +156,9 @@ importers:
       magic-string:
         specifier: ^0.30.10
         version: 0.30.10
+      mime:
+        specifier: ^4.0.3
+        version: 4.0.3
       polka:
         specifier: ^0.5.2
         version: 0.5.2
@@ -4216,6 +4222,10 @@ packages:
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
+  fuse.js@7.0.0:
+    resolution: {integrity: sha512-14F4hBIxqKvD4Zz/XjDc3y94mNZN6pRv3U13Udo0lNLCWRBUsrMv2xwcF/y/Z5sV6+FQW+/ow68cHpm4sunt8Q==}
+    engines: {node: '>=10'}
+
   generic-names@4.0.0:
     resolution: {integrity: sha512-ySFolZQfw9FoDb3ed9d80Cm9f0+r7qj+HJkWjeD9RBfpxEVTlVhol+gvaQB/78WbwYfbnNh8nWHHBSlg072y6A==}
 
@@ -5020,6 +5030,11 @@ packages:
   mime@3.0.0:
     resolution: {integrity: sha512-jSCU7/VB1loIWBZe14aEYHU/+1UMEHoaO7qxCOVJOw9GgH72VAWppxNcjU+x9a2k3GSIBXNKxXQFqRvvZ7vr3A==}
     engines: {node: '>=10.0.0'}
+    hasBin: true
+
+  mime@4.0.3:
+    resolution: {integrity: sha512-KgUb15Oorc0NEKPbvfa0wRU+PItIEZmiv+pyAO2i0oTIVTJhlzMclU7w4RXWQrSOVH5ax/p/CkIO7KI4OyFJTQ==}
+    engines: {node: '>=16'}
     hasBin: true
 
   mimic-fn@2.1.0:
@@ -10581,13 +10596,13 @@ snapshots:
     dependencies:
       rfdc: 1.4.1
 
-  '@vue/devtools-ui@7.2.1(@unocss/reset@0.60.4)(floating-vue@5.2.2(vue@3.4.27(typescript@5.4.5)))(unocss@0.60.4(postcss@8.4.38)(rollup@4.18.0)(vite@5.2.13(@types/node@20.14.2)(sass@1.77.5)(terser@5.31.1)))(vue@3.4.27(typescript@5.4.5))':
+  '@vue/devtools-ui@7.2.1(@unocss/reset@0.60.4)(floating-vue@5.2.2(vue@3.4.27(typescript@5.4.5)))(fuse.js@7.0.0)(unocss@0.60.4(postcss@8.4.38)(rollup@4.18.0)(vite@5.2.13(@types/node@20.14.2)(sass@1.77.5)(terser@5.31.1)))(vue@3.4.27(typescript@5.4.5))':
     dependencies:
       '@unocss/reset': 0.60.4
       '@vue/devtools-shared': 7.2.1
       '@vueuse/components': 10.10.1(vue@3.4.27(typescript@5.4.5))
       '@vueuse/core': 10.10.1(vue@3.4.27(typescript@5.4.5))
-      '@vueuse/integrations': 10.10.1(focus-trap@7.5.4)(vue@3.4.27(typescript@5.4.5))
+      '@vueuse/integrations': 10.10.1(focus-trap@7.5.4)(fuse.js@7.0.0)(vue@3.4.27(typescript@5.4.5))
       colord: 2.9.3
       floating-vue: 5.2.2(vue@3.4.27(typescript@5.4.5))
       focus-trap: 7.5.4
@@ -10704,13 +10719,14 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@vueuse/integrations@10.10.1(focus-trap@7.5.4)(vue@3.4.27(typescript@5.4.5))':
+  '@vueuse/integrations@10.10.1(focus-trap@7.5.4)(fuse.js@7.0.0)(vue@3.4.27(typescript@5.4.5))':
     dependencies:
       '@vueuse/core': 10.10.1(vue@3.4.27(typescript@5.4.5))
       '@vueuse/shared': 10.10.1(vue@3.4.27(typescript@5.4.5))
       vue-demi: 0.14.8(vue@3.4.27(typescript@5.4.5))
     optionalDependencies:
       focus-trap: 7.5.4
+      fuse.js: 7.0.0
     transitivePeerDependencies:
       - '@vue/composition-api'
       - vue
@@ -12408,6 +12424,8 @@ snapshots:
 
   function-bind@1.1.2: {}
 
+  fuse.js@7.0.0: {}
+
   generic-names@4.0.0:
     dependencies:
       loader-utils: 3.3.1
@@ -13430,6 +13448,8 @@ snapshots:
   mime@1.6.0: {}
 
   mime@3.0.0: {}
+
+  mime@4.0.3: {}
 
   mimic-fn@2.1.0: {}
 

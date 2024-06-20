@@ -55,4 +55,5 @@ export interface AssetInfo {
   filePath: string
   size: number
   mtime: number
+  base64: string
 }

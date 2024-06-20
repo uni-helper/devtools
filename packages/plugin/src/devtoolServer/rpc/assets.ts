@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import fg from 'fast-glob'
 import { join, resolve } from 'pathe'
 import type { ResolvedConfig } from 'vite'
+import mime from 'mime'
 import type { AssetInfo, AssetType } from '../../types'
 
 function guessType(path: string): AssetType {
@@ -18,6 +19,11 @@ function guessType(path: string): AssetType {
   if (/\.wasm/i.test(path))
     return 'wasm'
   return 'other'
+}
+
+function guessMimeType(path) {
+  // 如果无法确定类型，默认为'application/octet-stream'
+  return mime.getType(path) || 'application/octet-stream'
 }
 
 export async function getStaticAssets(config: ResolvedConfig): Promise<AssetInfo[]> {
@@ -52,6 +58,12 @@ export async function getStaticAssets(config: ResolvedConfig): Promise<AssetInfo
     const filePath = resolve(config.root, path)
     const stat = await fs.lstat(filePath)
     path = path.startsWith('public/') ? path.slice(7) : path
+    let base64 = ''
+    // 假设我们只对小于10MB的文件进行Base64编码
+    if (stat.size < 10 * 1024 * 1024) {
+      const fileBuffer = await fs.readFile(filePath)
+      base64 = `data:${guessMimeType(path)};base64,${fileBuffer.toString('base64')}`
+    }
     return {
       path,
       filePath,
@@ -59,6 +71,7 @@ export async function getStaticAssets(config: ResolvedConfig): Promise<AssetInfo
       type: guessType(path),
       size: stat.size,
       mtime: stat.mtimeMs,
+      base64,
     }
   }))
 }

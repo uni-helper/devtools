@@ -62,6 +62,7 @@
     "json5": "^2.2.3",
     "local-pkg": "^0.5.0",
     "magic-string": "^0.30.10",
+    "mime": "^4.0.3",
     "polka": "^0.5.2",
     "sirv": "^2.0.4",
     "vite-plugin-inspect": "^0.8.4",
