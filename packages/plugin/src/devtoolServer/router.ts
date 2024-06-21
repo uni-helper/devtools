@@ -1,16 +1,17 @@
 import { readJsonSync } from 'fs-extra'
 import type { ResolvedConfig } from 'vite'
+import { z } from 'zod'
 import type { ModuleInfo, Options } from '../types'
 import { getPagesInfo } from '../logic'
 import { publicProcedure, router } from './trpc'
 import { DIR_INSPECT_LIST } from './../dir'
-import { getStaticAssets } from './rpc/assets'
+import { getImageMeta, getStaticAssets, getTextAssetContent } from './rpc/assets'
 
 export default function (
   config: ResolvedConfig,
   options?: Partial<Options>,
 ) {
-  const { query } = publicProcedure
+  const { query, input } = publicProcedure
 
   return router({
     getComponent: query(() => {
@@ -23,8 +24,18 @@ export default function (
       return pages
     }),
     staticAssets: query(() => {
-      console.log('staticAssets')
       return getStaticAssets(config)
+    }),
+    getImageMeta: input(z.string()).query(({ input }) => {
+      return getImageMeta(input)
+    }),
+    getTextAssetContent: input(z.string()).query(({ input }) => {
+      return getTextAssetContent(input)
+    }),
+    openInEditor: input(z.string()).query((opts) => {
+      const { input } = opts
+      console.log('openInEditor', input)
+      return '111'
     }),
   })
 }

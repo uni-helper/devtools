@@ -3,6 +3,8 @@ import fg from 'fast-glob'
 import { join, resolve } from 'pathe'
 import type { ResolvedConfig } from 'vite'
 import mime from 'mime'
+import type { ImageMeta } from 'image-meta'
+import { imageMeta } from 'image-meta'
 import type { AssetInfo, AssetType } from '../../types'
 
 function guessType(path: string): AssetType {
@@ -62,7 +64,7 @@ export async function getStaticAssets(config: ResolvedConfig): Promise<AssetInfo
     // 假设我们只对小于10MB的文件进行Base64编码
     if (stat.size < 10 * 1024 * 1024) {
       const fileBuffer = await fs.readFile(filePath)
-      base64 = `data:${guessMimeType(path)};base64,${fileBuffer.toString('base64')}`
+      base64 = `data:${guessMimeType(filePath)};base64,${fileBuffer.toString('base64')}`
     }
     return {
       path,
@@ -74,4 +76,31 @@ export async function getStaticAssets(config: ResolvedConfig): Promise<AssetInfo
       base64,
     }
   }))
+}
+
+const _imageMetaCache = new Map<string, ImageMeta | undefined>()
+export async function getImageMeta(filepath: string) {
+  if (_imageMetaCache.has(filepath))
+    return _imageMetaCache.get(filepath)
+  try {
+    const meta = imageMeta(await fs.readFile(filepath)) as ImageMeta
+    _imageMetaCache.set(filepath, meta)
+    return meta
+  }
+  catch (e) {
+    _imageMetaCache.set(filepath, undefined)
+    console.error(e)
+    return undefined
+  }
+}
+
+export async function getTextAssetContent(filepath: string, limit = 300) {
+  try {
+    const content = await fs.readFile(filepath, 'utf-8')
+    return content.slice(0, limit)
+  }
+  catch (e) {
+    console.error(e)
+    return undefined
+  }
 }

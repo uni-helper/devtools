@@ -157,7 +157,7 @@ function toggleView() {
       :model-value="!!selected"
       :top="navbar"
       permanent mount-to=".drawer-container" position="absolute"
-      content-class="w120 text-sm" @update:model-value="(v) => {
+      content-class="text-sm" @update:model-value="(v) => {
         if (!v) selected = undefined
       }"
     >
