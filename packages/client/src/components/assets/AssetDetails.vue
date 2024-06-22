@@ -88,7 +88,7 @@ const supportsPreview = computed(() => {
 </script>
 
 <template>
-  <div flex="~ col gap-4" min-h-full w-full of-hidden p4>
+  <div flex="~ col gap-4" min-h-full w-full of-hidden px2>
     <template v-if="supportsPreview">
       <div flex="~ gap2" mb--2 items-center op50>
         <div x-divider />
@@ -100,8 +100,7 @@ const supportsPreview = computed(() => {
 
       <div flex="~" items-center justify-center>
         <AssetPreview
-          detail
-          max-w-80 min-h-20 min-w-20 w-auto rounded border="~ base"
+          detail max-w-65 min-h-20 min-w-20 rounded border="~ base"
           :asset="asset"
           :text-content="textContent"
         />
@@ -131,6 +130,7 @@ const supportsPreview = computed(() => {
                 icon="i-carbon-launch"
                 action flex-none
                 :border="false"
+                @click="openInEditor(asset.filePath)"
               />
             </div>
           </td>

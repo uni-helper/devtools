@@ -10,9 +10,10 @@
 - [x] 重构插入组件逻辑
 - [x] 使用tRPC
 - [x] tab重构
-- [x] overview页面
 - [ ] 封装小程序JS-SDK
 - [ ] build时不plugin执行
+- [x] 欢迎页面
+- [x] overview页面
 - [ ] pages页面
   - [x] 区分tabBar Pages
   - [x] 渲染页面
@@ -24,8 +25,16 @@
   - [ ] 组件搜索
   - [ ] 组件跳转代码位置vscode
   - [ ] 组件文件数据
-- [ ] 资源页面
+- [x] 资源页面
   - [x] 获取静态资源
   - [x] 渲染文件
   - [x] 搜索
-  - [ ] 文件详情
+  - [x] 文件详情
+  - [x] 在编辑器中打开
+- [ ] inspect页面
+  - [x] 加载inspect插件
+  - [x] 保存build文件
+  - [x] 加载inspect build文件
+  - [x] 页面渲染
+  - [ ] 主题切换
+  - [ ] h5兼容

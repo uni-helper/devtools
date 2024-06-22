@@ -6,6 +6,7 @@ import { getPagesInfo } from '../logic'
 import { publicProcedure, router } from './trpc'
 import { DIR_INSPECT_LIST } from './../dir'
 import { getImageMeta, getStaticAssets, getTextAssetContent } from './rpc/assets'
+import { openInEditor } from './rpc/openInEditor'
 
 export default function (
   config: ResolvedConfig,
@@ -33,9 +34,7 @@ export default function (
       return getTextAssetContent(input)
     }),
     openInEditor: input(z.string()).query((opts) => {
-      const { input } = opts
-      console.log('openInEditor', input)
-      return '111'
+      openInEditor(opts.input)
     }),
   })
 }

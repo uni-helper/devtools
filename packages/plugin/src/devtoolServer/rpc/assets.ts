@@ -61,8 +61,9 @@ export async function getStaticAssets(config: ResolvedConfig): Promise<AssetInfo
     const stat = await fs.lstat(filePath)
     path = path.startsWith('public/') ? path.slice(7) : path
     let base64 = ''
-    // 假设我们只对小于10MB的文件进行Base64编码
-    if (stat.size < 10 * 1024 * 1024) {
+    const type = guessType(path)
+
+    if (type === 'image') {
       const fileBuffer = await fs.readFile(filePath)
       base64 = `data:${guessMimeType(filePath)};base64,${fileBuffer.toString('base64')}`
     }
@@ -70,7 +71,7 @@ export async function getStaticAssets(config: ResolvedConfig): Promise<AssetInfo
       path,
       filePath,
       publicPath: join(baseURL, path),
-      type: guessType(path),
+      type,
       size: stat.size,
       mtime: stat.mtimeMs,
       base64,
