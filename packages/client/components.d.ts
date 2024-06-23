@@ -19,6 +19,7 @@ declare module 'vue' {
     DevToolsLogo: typeof import('./src/components/common/DevToolsLogo.vue')['default']
     FilepathItem: typeof import('./src/components/assets/FilepathItem.vue')['default']
     IconTitle: typeof import('./src/components/common/IconTitle.vue')['default']
+    IframeView: typeof import('./src/components/common/IframeView.vue')['default']
     Navbar: typeof import('./src/components/common/Navbar.vue')['default']
     PanelGrids: typeof import('./src/components/common/PanelGrids.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

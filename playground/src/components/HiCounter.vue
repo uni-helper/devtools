@@ -1,16 +1,34 @@
 <script setup lang="ts">
-const { count, inc, dec } = useCount()
+// const { count, inc, dec } = useCount()
+import { useCounterStore } from './../stores/counter'
+import { useCounterStore1 } from './../stores/couter1'
+const counter = useCounterStore()
+const counter1 = useCounterStore1()
 </script>
 
 <template>
   <view inline-flex m="y-3">
-    <view class="btn" @click="dec()">
+    <view class="btn" @click="counter.dec()">
       <text i-carbon-subtract />
     </view>
     <view font="mono" w="15" m-auto inline-block>
-      {{ count }}
+      {{ counter.count }}
+      {{ counter.doubleCount }}
     </view>
-    <view class="btn" @click="inc()">
+    <view class="btn" @click="counter.inc()">
+      <text i-carbon-add />
+    </view>
+  </view>
+
+  <view inline-flex m="y-3">
+    <view class="btn" @click="counter1.dec()">
+      <text i-carbon-subtract />
+    </view>
+    <view font="mono" w="15" m-auto inline-block>
+      {{ counter1.count }}
+      {{ counter1.doubleCount }}
+    </view>
+    <view class="btn" @click="counter1.inc()">
       <text i-carbon-add />
     </view>
   </view>

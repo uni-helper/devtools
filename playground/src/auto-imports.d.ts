@@ -159,6 +159,8 @@ declare global {
   const useConfirmDialog: typeof import('@vueuse/core')['useConfirmDialog']
   const useCount: typeof import('./composables/useCount')['useCount']
   const useCounter: typeof import('@vueuse/core')['useCounter']
+  const useCounterStore: typeof import('./stores/counter')['useCounterStore']
+  const useCounterStore1: typeof import('./stores/couter1')['useCounterStore1']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVar: typeof import('@vueuse/core')['useCssVar']
   const useCssVars: typeof import('vue')['useCssVars']
@@ -470,6 +472,8 @@ declare module 'vue' {
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
     readonly useCount: UnwrapRef<typeof import('./composables/useCount')['useCount']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
+    readonly useCounterStore1: UnwrapRef<typeof import('./stores/couter1')['useCounterStore1']>
+    readonly useCounterStore: UnwrapRef<typeof import('./stores/counter')['useCounterStore']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVar: UnwrapRef<typeof import('@vueuse/core')['useCssVar']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
@@ -774,6 +778,8 @@ declare module '@vue/runtime-core' {
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
     readonly useCount: UnwrapRef<typeof import('./composables/useCount')['useCount']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
+    readonly useCounterStore1: UnwrapRef<typeof import('./stores/couter1')['useCounterStore1']>
+    readonly useCounterStore: UnwrapRef<typeof import('./stores/counter')['useCounterStore']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVar: UnwrapRef<typeof import('@vueuse/core')['useCssVar']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>

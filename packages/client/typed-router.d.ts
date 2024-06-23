@@ -25,5 +25,6 @@ declare module 'vue-router/auto-routes' {
     '/inspect': RouteRecordInfo<'/inspect', '/inspect', Record<never, never>, Record<never, never>>,
     '/overview': RouteRecordInfo<'/overview', '/overview', Record<never, never>, Record<never, never>>,
     '/pages': RouteRecordInfo<'/pages', '/pages', Record<never, never>, Record<never, never>>,
+    '/pinia': RouteRecordInfo<'/pinia', '/pinia', Record<never, never>, Record<never, never>>,
   }
 }

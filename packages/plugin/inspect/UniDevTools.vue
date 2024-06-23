@@ -1,13 +1,14 @@
 <script setup>
 import { ref, version } from 'vue'
 import { basename } from '@uni-helper/devtools-shared'
+import * as Pinia from 'pinia'
 
 const x = ref(0)
 const y = ref(0)
 const dragging = ref(false)
 let startX = 0
 let startY = 0
-
+console.log(Pinia.getActivePinia())
 function handleTouchStart(event) {
   dragging.value = true
   startX = event.touches[0].clientX - x.value
@@ -23,6 +24,11 @@ function handleTouchMove(event) {
 
 function handleTouchEnd() {
   dragging.value = false
+}
+
+function getPiniaState() {
+  const state = Pinia.getActivePinia().state._rawValue
+  return state
 }
 
 /** 递归获取组件名称和地址 */
@@ -51,8 +57,10 @@ function extractComponentInfo(component) {
 function handleTap() {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
+  console.log(currentPage)
   const components = extractComponentInfo(currentPage.$vm)
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
+  const piniaState = getPiniaState()
 
   const data = {
     currentPage: currentPage.route,
@@ -61,8 +69,8 @@ function handleTap() {
     uniCompileVersion,
     uniRuntimeVersion,
     components,
+    piniaState,
   }
-  console.log(data)
   uni.navigateTo({
     url: `/__uni_devtools_page__temp/index`,
     success(res) {

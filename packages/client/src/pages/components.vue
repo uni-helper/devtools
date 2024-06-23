@@ -4,7 +4,7 @@ import { VueInput } from '@vue/devtools-ui'
 const { initState } = useInitState()
 
 const filterName = ref('')
-const [filtered] = useToggle(true)
+const [filtered, _toggleFiltered] = useToggle(true)
 </script>
 
 <template>
@@ -14,7 +14,7 @@ const [filtered] = useToggle(true)
         v-model="filterName"
         :loading-debounce-time="250"
         :loading="!filtered"
-        placeholder="搜索组件..."
+        placeholder="Find components..."
         flex-1
       />
     </div>

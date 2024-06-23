@@ -10,11 +10,11 @@ it('should compress url query', () => {
     },
   }
 
-  expect(compressURLQuery(data)).toMatchInlineSnapshot(`"N4IgrgTgNiBcIAsAuSAOBnWB6LB3fAdAKYAeAhgLapREEDGA9hSADQgCOYREAnnKAGsiPAIxwQANzJQuYtkJ4AmcVJlFlAXw1A"`)
+  expect(compressURLQuery(data)).toMatchInlineSnapshot(`"N4VwTgNgXA5AFgFwQBwM5QPQYO64HQCmAHgIYC2yEBeAxgPZkwA0AjiAWAJ5TADWBnAIywAbiQjtBzfpwBMo8e1kwAviqA"`)
 })
 
 it('should decompress url query', () => {
-  const data = 'N4IgrgTgNiBcIAsAuSAOBnWB6LB3fAdAKYAeAhgLapREEDGA9hSADQgCOYREAnnKAGsiPAIxwQANzJQuYtkJ4AmcVJlFlAXw1A'
+  const data = 'N4VwTgNgXA5AFgFwQBwM5QPQYO64HQCmAHgIYC2yEBeAxgPZkwA0AjiAWAJ5TADWBnAIywAbiQjtBzfpwBMo8e1kwAviqA'
 
   expect(decompressURLQuery(data)).toMatchInlineSnapshot(`
     {

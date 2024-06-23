@@ -30,4 +30,7 @@ export interface InitState {
 
   /** 当前页面组件 */
   components: ComponentTreeNode
+
+  /** pinia数据 */
+  piniaState: { [key: string]: any }
 }
