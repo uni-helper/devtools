@@ -9,6 +9,7 @@ const dragging = ref(false)
 let startX = 0
 let startY = 0
 console.log(Pinia.getActivePinia())
+console.log(getApp())
 function handleTouchStart(event) {
   dragging.value = true
   startX = event.touches[0].clientX - x.value
@@ -27,7 +28,8 @@ function handleTouchEnd() {
 }
 
 function getPiniaState() {
-  const state = Pinia.getActivePinia().state._rawValue
+  const state = JSON.parse(JSON.stringify(Pinia.getActivePinia().state.value))
+  // 获取所有 stores 的信息
   return state
 }
 
@@ -61,6 +63,7 @@ function handleTap() {
   const components = extractComponentInfo(currentPage.$vm)
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
   const piniaState = getPiniaState()
+  console.log(piniaState)
 
   const data = {
     currentPage: currentPage.route,

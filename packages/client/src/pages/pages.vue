@@ -20,7 +20,7 @@ function handlePush(page: typeof pages[number]) {
 <template>
   <PanelGrids block h-screen of-auto>
     <div h-full of-auto>
-      <div border="b base" flex="~ col gap1" px4 py3>
+      <div border="b base" flex="~ col gap1" px4 py3 navbar-glass>
         <div>
           <span op50>Current route</span>
         </div>
