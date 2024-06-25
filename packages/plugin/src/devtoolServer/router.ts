@@ -34,7 +34,7 @@ export default function (
       return getTextAssetContent(input)
     }),
     openInEditor: input(z.string()).query((opts) => {
-      openInEditor(opts.input)
+      openInEditor(opts.input, options?.launchEditor ?? 'code')
     }),
   })
 }

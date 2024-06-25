@@ -9,21 +9,16 @@ const navbar = ref<HTMLElement>()
 const view = ref('grid')
 const assets = ref(await trpc.staticAssets.query())
 
-const uniqAssetsTypes = computed(() => {
-  const results: { label: string, value: string }[] = []
-  for (const asset of assets.value || []) {
-    const ext = asset.path.split('.').pop()
-    if (ext && !results.find(e => e.value === ext))
-      results.push({ label: ext, value: ext })
-  }
-  return results
-})
+const results: { label: string, value: string }[] = []
+for (const asset of assets.value || []) {
+  const ext = asset.path.split('.').pop()
+  if (ext && !results.find(e => e.value === ext))
+    results.push({ label: ext, value: ext })
+}
 
-const filteredExtensions = ref<string[]>([])
-// first time, selected all
-watchOnce(() => uniqAssetsTypes.value, (v) => {
-  filteredExtensions.value = v.map(i => i.value)
-})
+const uniqAssetsTypes = ref(results)
+const filteredExtensions = ref(results.map(i => i.value))
+
 const selected = ref<AssetInfo>()
 const fuse = computed(() => new Fuse(assets.value || [], {
   keys: [
@@ -31,9 +26,13 @@ const fuse = computed(() => new Fuse(assets.value || [], {
   ],
 }))
 const filtered = computed(() => {
-  return search.value
+  const result = search.value
     ? fuse.value.search(search.value).map(i => i.item)
     : (assets.value || [])
+  return result.filter((asset) => {
+    const ext = asset.path.split('.').pop()
+    return !ext || filteredExtensions.value.includes(ext)
+  })
 })
 
 const byFolders = computed(() => {

@@ -35,6 +35,13 @@ export interface Options {
   pageJsonPath: string
 
   /**
+   * 启动编辑器
+   *
+   * @default 'code'
+   */
+  launchEditor?: 'appcode' | 'atom' | 'atom-beta' | 'brackets' | 'clion' | 'code' | 'code-insiders' | 'codium' | 'emacs' | 'idea' | 'notepad++' | 'pycharm' | 'phpstorm' | 'rubymine' | 'sublime' | 'vim' | 'visualstudio' | 'webstorm' | 'rider' | string
+
+  /**
    * vue-devtools Opthins
    */
   vueDevtoolsOptions: VitePluginVueDevToolsOptions
