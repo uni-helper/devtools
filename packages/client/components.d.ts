@@ -28,6 +28,8 @@ declare module 'vue' {
     SectionBlock: typeof import('./src/components/common/SectionBlock.vue')['default']
     SideNav: typeof import('./src/components/SideNav.vue')['default']
     SideNavItem: typeof import('./src/components/SideNavItem.vue')['default']
+    StateFields: typeof import('./src/components/state/StateFields.vue')['default']
+    StateFieldsTree: typeof import('./src/components/state/StateFieldsTree.vue')['default']
     TabIcon: typeof import('./src/components/TabIcon.vue')['default']
     ToggleExpanded: typeof import('./src/components/common/ToggleExpanded.vue')['default']
   }

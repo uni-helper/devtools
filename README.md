@@ -35,9 +35,9 @@
   - [x] 获取state数据
   - [ ] 获取getters数据
   - [x] 支持两种范式
-  - [ ] 渲染数据
+  - [x] 渲染数据
     - [x] key
-    - [ ] 树形结构
+    - [x] 树形结构
 - [ ] inspect页面
   - [x] 加载inspect插件
   - [x] 保存build文件

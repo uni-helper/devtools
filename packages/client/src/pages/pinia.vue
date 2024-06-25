@@ -21,10 +21,30 @@ for (const [id, store] of Object.entries(piniaState)) {
 
 const activeIndex = ref('')
 const selected = ref(false)
+const data = computed(() => {
+  const store = piniaStores.value.find(item => item.id === activeIndex.value)!
+  return [
+    {
+      key: 'State',
+      value: store.value,
+    },
+  ]
+})
 function select(index: string) {
   activeIndex.value = index
   selected.value = true
+  // data.value = [{
+  //   key: 'State',
+  //   value: piniaStores.value.find(item => item.id === index)!.value,
+  // }]
 }
+
+// const data = ref([
+//   {
+//     key: 'state',
+//     value: piniaState,
+//   },
+// ])
 </script>
 
 <template>
@@ -47,8 +67,8 @@ function select(index: string) {
       content-class="text-sm b-l-0 w-full"
       position="absolute"
     >
-      <div>
-        {{ piniaStores.find((item) => item.id === activeIndex)?.value }}
+      <div h-screen select-none overflow-scroll p-2 class="no-scrollbar">
+        <StateFields v-for="(item, index) in data" :id="index" :key="index" :data="item" />
       </div>
     </VueDrawer>
   </PanelGrids>
