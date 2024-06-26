@@ -18,6 +18,7 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
   if (isH5)
     return [loadVueDevtoolsPlugin(options?.vueDevtoolsOptions || {})]
 
+  let _resolvedConfig
   const port = options?.port || 5015
   const inspect = loadInspectPlugin()
   const [pagesPath, pages] = getPagesInfo(options?.pageJsonPath)
@@ -28,6 +29,7 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
     name: 'uni-devtools',
     enforce: 'pre',
     configResolved(resolvedConfig) {
+      _resolvedConfig = resolvedConfig
       /** 注册trpc中间件 */
       app.use(
         '/trpc',
@@ -84,5 +86,7 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
     },
   }
 
-  return [plugin, inspect]
+  const isBuild = !_resolvedConfig?.build?.watch
+  console.log('uni-devtools', isBuild ? 'build' : 'serve')
+  return isBuild ? [] : [plugin, inspect]
 }

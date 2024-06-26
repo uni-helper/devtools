@@ -1,8 +1,7 @@
 {
   "watch": ["packages/plugin/**/*"],
-  "ext": "js,ts,vue",
-  "exec": "npm -C playground run dev:mp-weixin",
-  "delay": 1000,
+  "ext": "flag,ts,vue",
+  "exec": "pnpm rimraf packages/plugin/client/end.flag && npm -C playground run dev:mp-weixin",
   "events": {
     "restart": "kill-port 5015"
   }

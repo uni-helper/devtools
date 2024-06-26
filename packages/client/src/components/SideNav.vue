@@ -2,6 +2,10 @@
 import { VueDropdown } from '@vue/devtools-ui'
 import Logo from '/icon.png'
 import type { Tab } from '~/constants/tab'
+
+async function handleClick() {
+  await trpc.openInBrowser.query(window.location.href)
+}
 </script>
 
 <template>
@@ -23,9 +27,11 @@ import type { Tab } from '~/constants/tab'
           <img :src="Logo" h-6 w-6>
           <!-- <img :src="Icon" alt=""> -->
         </button>
-      <!-- <template #popper>
-        <DockingPanel />
-      </template> -->
+        <template #popper>
+          <div @click="handleClick">
+            在浏览器打开
+          </div>
+        </template>
       </VueDropdown>
     </div>
     <div flex="~ auto col gap-0.5 items-center" w-full of-x-hidden of-y-auto p1 class="no-scrollbar">

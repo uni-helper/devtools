@@ -43,6 +43,7 @@
     "@unocss/reset": "^0.59.4",
     "bumpp": "^9.4.1",
     "concurrently": "^8.2.2",
+    "consola": "^3.2.3",
     "eslint": "^9.4.0",
     "eslint-plugin-format": "^0.1.1",
     "fast-glob": "^3.3.2",

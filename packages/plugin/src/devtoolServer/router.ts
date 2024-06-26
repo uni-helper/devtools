@@ -7,6 +7,7 @@ import { publicProcedure, router } from './trpc'
 import { DIR_INSPECT_LIST } from './../dir'
 import { getImageMeta, getStaticAssets, getTextAssetContent } from './rpc/assets'
 import { openInEditor } from './rpc/openInEditor'
+import openInBrowser from './rpc/openInBrowser'
 
 export default function (
   config: ResolvedConfig,
@@ -35,6 +36,11 @@ export default function (
     }),
     openInEditor: input(z.string()).query((opts) => {
       openInEditor(opts.input, options?.launchEditor ?? 'code')
+    }),
+    openInBrowser: input(z.string()).query(async (opts) => {
+      await openInBrowser(opts.input)
+
+      return { success: true }
     }),
   })
 }
