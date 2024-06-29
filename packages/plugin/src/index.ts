@@ -1,24 +1,23 @@
 import type { Plugin } from 'vite'
 import { outputFileSync, removeSync } from 'fs-extra'
 import { createFilter } from 'vite'
-import { isH5 } from '@uni-helper/uni-env'
 import JSON5 from 'json5'
 import { createExpressMiddleware } from '@trpc/server/adapters/express'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
-import { loadVueDevtoolsPlugin } from './loadOtherPlugin/vueDevtools'
 import { getDevtoolsPage } from './utils/getDevtoolsPage'
 import { getPagesInfo, importDevtools, inspectDevtools } from './logic'
 import type { Options } from './types'
 import createRouter from './devtoolServer/router'
+import { pluginByEnv } from './logic/pluginByEnv'
 
 export * from './types'
 export type AppRouter = ReturnType<typeof createRouter>
 export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] {
-  if (isH5)
-    return [loadVueDevtoolsPlugin(options?.vueDevtoolsOptions || {})]
-
-  let _resolvedConfig
+  const _plugin = pluginByEnv(options)
+  if (_plugin) {
+    return _plugin
+  }
   const port = options?.port || 5015
   const inspect = loadInspectPlugin()
   const [pagesPath, pages] = getPagesInfo(options?.pageJsonPath)
@@ -29,7 +28,6 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
     name: 'uni-devtools',
     enforce: 'pre',
     configResolved(resolvedConfig) {
-      _resolvedConfig = resolvedConfig
       /** 注册trpc中间件 */
       app.use(
         '/trpc',
@@ -85,8 +83,5 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
         return getDevtoolsPage(port)
     },
   }
-
-  const isBuild = !_resolvedConfig?.build?.watch
-  console.log('uni-devtools', isBuild ? 'build' : 'serve')
-  return isBuild ? [] : [plugin, inspect]
+  return [plugin, inspect]
 }

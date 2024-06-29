@@ -66,6 +66,7 @@
     "local-pkg": "^0.5.0",
     "magic-string": "^0.30.10",
     "mime": "^4.0.3",
+    "minimist": "^1.2.8",
     "open": "^10.1.0",
     "polka": "^0.5.2",
     "sirv": "^2.0.4",
@@ -75,6 +76,7 @@
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
+    "@types/minimist": "^1.2.5",
     "@types/polka": "^0.5.7",
     "chalk": "^5.3.0",
     "fs-extra": "^11.2.0",

@@ -11,7 +11,7 @@
 - [x] 使用tRPC
 - [x] tab重构
 - [ ] 封装小程序JS-SDK
-- [ ] build时不执行plugin
+- [x] build时不执行plugin
 - [x] 支持在浏览器打开页面
 - [ ] 浏览器窗口数据传递
 - [x] 欢迎页面
