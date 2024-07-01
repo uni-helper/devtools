@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { VueDropdown } from '@vue/devtools-ui'
+import { VueButton, VueDropdown, VueIcon } from '@vue/devtools-ui'
 import Logo from '/icon.png'
 import type { Tab } from '~/constants/tab'
 
@@ -28,8 +28,11 @@ async function handleClick() {
           <!-- <img :src="Icon" alt=""> -->
         </button>
         <template #popper>
-          <div @click="handleClick">
-            在浏览器打开
+          <div flex="~ gap-2" px3 py2>
+            <VueButton outlined type="primary" @click="handleClick">
+              <VueIcon icon="i-carbon-launch" />
+              在浏览器打开
+            </VueButton>
           </div>
         </template>
       </VueDropdown>
