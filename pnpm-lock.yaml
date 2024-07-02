@@ -201,6 +201,9 @@ importers:
       vite-plugin-vue-devtools:
         specifier: ^7.2.1
         version: 7.2.1(rollup@3.29.4)(vite@5.2.13(@types/node@20.14.2)(sass@1.77.5)(terser@5.31.1))(vue@3.4.27(typescript@5.4.5))
+      ws:
+        specifier: ^8.17.1
+        version: 8.17.1
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -214,6 +217,9 @@ importers:
       '@types/polka':
         specifier: ^0.5.7
         version: 0.5.7
+      '@types/ws':
+        specifier: ^8.5.10
+        version: 8.5.10
       chalk:
         specifier: ^5.3.0
         version: 5.3.0
@@ -2496,6 +2502,9 @@ packages:
 
   '@types/web-bluetooth@0.0.20':
     resolution: {integrity: sha512-g9gZnnXVq7gM7v3tJCWV/qw7w+KeOlSHAhgF9RytFyifW6AF61hdT2ucrYhPq9hLs5JIryeupHV3qGk95dH9ow==}
+
+  '@types/ws@8.5.10':
+    resolution: {integrity: sha512-vmQSUcfalpIq0R9q7uTo2lXs6eGIpt9wtnLdMv9LVpIjCA/+ufZRozlVoVelIYixx1ugCBKDhn89vnsEGOCx9A==}
 
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
@@ -6992,6 +7001,18 @@ packages:
       utf-8-validate:
         optional: true
 
+  ws@8.17.1:
+    resolution: {integrity: sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   xhr@2.6.0:
     resolution: {integrity: sha512-/eCGLb5rxjx5e3mF1A7s+pLlR6CGyqWN91fv1JgER5mVWg1MZmlhBvy9kjcsOdRk8RrIujotWyJamfyrp+WIcA==}
 
@@ -9870,6 +9891,10 @@ snapshots:
   '@types/unist@2.0.10': {}
 
   '@types/web-bluetooth@0.0.20': {}
+
+  '@types/ws@8.5.10':
+    dependencies:
+      '@types/node': 20.14.2
 
   '@types/yargs-parser@21.0.3': {}
 
@@ -15602,6 +15627,8 @@ snapshots:
   ws@8.11.0: {}
 
   ws@8.17.0: {}
+
+  ws@8.17.1: {}
 
   xhr@2.6.0:
     dependencies:

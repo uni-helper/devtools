@@ -72,12 +72,14 @@
     "sirv": "^2.0.4",
     "vite-plugin-inspect": "^0.8.4",
     "vite-plugin-vue-devtools": "^7.2.1",
+    "ws": "^8.17.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/minimist": "^1.2.5",
     "@types/polka": "^0.5.7",
+    "@types/ws": "^8.5.10",
     "chalk": "^5.3.0",
     "fs-extra": "^11.2.0",
     "glob": "^10.3.12",
