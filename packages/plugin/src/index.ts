@@ -25,6 +25,13 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
   const plugin = <Plugin>{
     name: 'uni-devtools',
     enforce: 'pre',
+    config() {
+      return {
+        define: {
+          __UNI_DEVTOOLS_PORT__: JSON.stringify(port),
+        },
+      }
+    },
     configResolved(resolvedConfig) {
       createDevtoolServe({
         port,

@@ -1,6 +1,8 @@
+import type { EventEmitter } from 'node:stream'
 import { readJsonSync } from 'fs-extra'
 import type { ResolvedConfig } from 'vite'
 import { z } from 'zod'
+import { observable } from '@trpc/server/observable'
 import type { ModuleInfo, Options } from '../types'
 import { getPagesInfo } from '../logic'
 import { publicProcedure, router } from './trpc'
@@ -11,9 +13,10 @@ import openInBrowser from './rpc/openInBrowser'
 
 export default function (
   config: ResolvedConfig,
+  eventEmitter: EventEmitter,
   options?: Partial<Options>,
 ) {
-  const { query, input } = publicProcedure
+  const { query, input, subscription } = publicProcedure
 
   return router({
     getComponent: query(() => {
@@ -41,6 +44,32 @@ export default function (
       await openInBrowser(opts.input)
 
       return { success: true }
+    }),
+    update: input(z.string()).mutation((opts) => {
+      const post = opts.input
+      eventEmitter.emit('update', post)
+
+      return { success: true }
+    }),
+    onGetComponent: subscription(() => {
+      return observable<string>((emit) => {
+        eventEmitter.on('getComponent', emit.next)
+
+        return () => {
+          eventEmitter.off('getComponent', emit.next)
+        }
+      })
+    }),
+    onUpdate: input(z.string()).subscription((opts) => {
+      console.log(opts)
+      console.log('onUpdate', opts.input)
+      return observable<string>((emit) => {
+        eventEmitter.on('update', emit.next)
+
+        return () => {
+          eventEmitter.off('update', emit.next)
+        }
+      })
     }),
   })
 }
