@@ -3,13 +3,13 @@ import { readJsonSync } from 'fs-extra'
 import type { ResolvedConfig } from 'vite'
 import { z } from 'zod'
 import { observable } from '@trpc/server/observable'
-import type { ModuleInfo, Options } from '../types'
-import { getPagesInfo } from '../logic'
-import { publicProcedure, router } from './trpc'
-import { DIR_INSPECT_LIST } from './../dir'
-import { getImageMeta, getStaticAssets, getTextAssetContent } from './rpc/assets'
-import { openInEditor } from './rpc/openInEditor'
-import openInBrowser from './rpc/openInBrowser'
+import type { ModuleInfo, Options } from './../../types'
+import { getPagesInfo } from './../../logic'
+import { publicProcedure, router } from './../trpc'
+import { DIR_INSPECT_LIST } from './../../dir'
+import { getImageMeta, getStaticAssets, getTextAssetContent } from './assets'
+import { openInEditor } from './openInEditor'
+import openInBrowser from './openInBrowser'
 
 export default function (
   config: ResolvedConfig,
@@ -45,29 +45,12 @@ export default function (
 
       return { success: true }
     }),
-    update: input(z.string()).mutation((opts) => {
-      const post = opts.input
-      eventEmitter.emit('update', post)
-
-      return { success: true }
-    }),
-    onGetComponent: subscription(() => {
+    onLog: subscription(() => {
       return observable<string>((emit) => {
-        eventEmitter.on('getComponent', emit.next)
+        eventEmitter.on('log', emit.next)
 
         return () => {
-          eventEmitter.off('getComponent', emit.next)
-        }
-      })
-    }),
-    onUpdate: input(z.string()).subscription((opts) => {
-      console.log(opts)
-      console.log('onUpdate', opts.input)
-      return observable<string>((emit) => {
-        eventEmitter.on('update', emit.next)
-
-        return () => {
-          eventEmitter.off('update', emit.next)
+          eventEmitter.off('log', emit.next)
         }
       })
     }),

@@ -1,6 +1,6 @@
 {
-  "watch": ["packages/plugin/**/*"],
-  "ext": "flag,ts,vue",
+  "watch": ["packages/plugin/src/**/*", "packages/plugin/inspect/**/*"],
+  "ext": "flag,ts,vue,js",
   "exec": "pnpm rimraf packages/plugin/client/end.flag && npm -C playground run dev:mp-weixin",
   "events": {
     "restart": "kill-port 5015"

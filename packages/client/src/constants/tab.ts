@@ -56,6 +56,13 @@ export const builtinTab = [
       //   title: 'Graph',
       // },
       {
+        icon: 'i-tabler:terminal',
+        name: 'log',
+        order: 100,
+        path: '/log',
+        title: 'Log',
+      },
+      {
         icon: 'i-carbon-ibm-watson-discovery',
         name: 'inspect',
         order: -100,
@@ -64,7 +71,7 @@ export const builtinTab = [
       },
     ],
   ],
-]
+] as const
 
 export type BuiltinTab = typeof builtinTab[number][number][number]
 export type Tab = Exclude<BuiltinTab, string>

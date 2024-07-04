@@ -7,7 +7,7 @@ import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
 import { getDevtoolsPage } from './utils/getDevtoolsPage'
 import { getPagesInfo, importDevtools, inspectDevtools } from './logic'
 import type { Options } from './types'
-import type createRouter from './devtoolServer/router'
+import type createRouter from './devtoolServer/rpc/index'
 import { pluginByEnv } from './logic/pluginByEnv'
 
 export * from './types'

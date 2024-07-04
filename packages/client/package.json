@@ -38,6 +38,7 @@
     "@iconify-json/carbon": "^1.1.33",
     "@iconify-json/logos": "^1.1.42",
     "@iconify-json/radix-icons": "^1.1.14",
+    "@iconify-json/tabler": "^1.1.116",
     "@types/splitpanes": "^2.2.6",
     "@uni-helper/devtools": "workspace:*",
     "@unocss/reset": "^0.60.2",

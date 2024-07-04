@@ -8,10 +8,12 @@ import { applyWSSHandler } from '@trpc/server/adapters/ws'
 import { createExpressMiddleware } from '@trpc/server/adapters/express'
 
 import type { ResolvedConfig } from 'vite'
+import bodyParser from 'body-parser'
 import { DIR_CLIENT, DIR_TMP_INSPECT } from '../dir'
 import { uniDevToolsPrint } from '../utils/print'
 import type { Options } from '../types'
-import createAppRouter from './router'
+import createAppRouter from './rpc/index'
+import { setupUserRoutes } from './RESTful/index'
 
 const eventEmitter = new EventEmitter()
 
@@ -19,11 +21,11 @@ const eventEmitter = new EventEmitter()
 export function createDevtoolServe(
   serverOptions: {
     port: number
-    config: ResolvedConfig
+    resolvedConfig: ResolvedConfig
     options?: Partial<Options>
   },
 ) {
-  const { port, config, options } = serverOptions
+  const { port, resolvedConfig, options } = serverOptions
   const clientServe = sirv(DIR_CLIENT, { dev: true })
   const inspectServe = sirv(DIR_TMP_INSPECT, { dev: true })
 
@@ -35,17 +37,18 @@ export function createDevtoolServe(
   app.use(
     '/trpc',
     createExpressMiddleware({
-      router: createAppRouter(config, eventEmitter, options),
+      router: createAppRouter(resolvedConfig, eventEmitter, options),
     }),
   )
-
+  app.use(bodyParser.json())
+  setupUserRoutes(app, eventEmitter)
   app.listen(port, () => {
     uniDevToolsPrint(port)
   })
 
   applyWSSHandler(({
     wss: new ws.Server({ server }),
-    router: createAppRouter(config, eventEmitter, options),
+    router: createAppRouter(resolvedConfig, eventEmitter, options),
   }))
 
   return app

@@ -14,5 +14,11 @@ export default antfu(
     rules: {
       'no-console': 'warn',
     },
+    languageOptions: {
+      globals: {
+        uni: 'readonly',
+        __UNI_DEVTOOLS_PORT__: 'readonly',
+      },
+    },
   },
 )

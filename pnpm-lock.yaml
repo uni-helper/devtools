@@ -117,6 +117,9 @@ importers:
       '@iconify-json/radix-icons':
         specifier: ^1.1.14
         version: 1.1.14
+      '@iconify-json/tabler':
+        specifier: ^1.1.116
+        version: 1.1.116
       '@types/splitpanes':
         specifier: ^2.2.6
         version: 2.2.6
@@ -162,6 +165,9 @@ importers:
       '@vue/compiler-sfc':
         specifier: ^3.4.27
         version: 3.4.27
+      body-parser:
+        specifier: ^1.20.2
+        version: 1.20.2
       execa:
         specifier: ^9.3.0
         version: 9.3.0
@@ -208,6 +214,9 @@ importers:
         specifier: ^3.23.8
         version: 3.23.8
     devDependencies:
+      '@dcloudio/types':
+        specifier: ^3.4.7
+        version: 3.4.8
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -1835,6 +1844,9 @@ packages:
 
   '@iconify-json/radix-icons@1.1.14':
     resolution: {integrity: sha512-AYBOyhnJ2hXlg3aIn8Ekphrr7zHRyz1l8x6bidM3PDUuTL+aRt8r6cpCvN3GeuTHy2JOhmihbVJRF0bt2FF7Ag==}
+
+  '@iconify-json/tabler@1.1.116':
+    resolution: {integrity: sha512-p+dJ+3L/M2o10REG2lh179Blu5+AA51TFkwuUwY7F+vQsF5Z8DIjyNck3yoBBiCxWqhDhsLzC+p9YO7dWqISmw==}
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -8960,6 +8972,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/radix-icons@1.1.14':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/tabler@1.1.116':
     dependencies:
       '@iconify/types': 2.0.0
 
