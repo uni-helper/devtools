@@ -64,3 +64,12 @@ export interface AssetInfo {
   mtime: number
   base64: string
 }
+
+export interface LogInfo {
+  type: string
+  messages: string
+  stack: {
+    file: string
+    line: number
+  }
+}

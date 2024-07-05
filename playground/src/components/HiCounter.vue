@@ -1,9 +1,20 @@
 <script setup lang="ts">
 // const { count, inc, dec } = useCount()
+import { watch } from 'vue';
 import { useCounterStore } from './../stores/counter'
 import { useCounterStore1 } from './../stores/couter1'
 const counter = useCounterStore()
 const counter1 = useCounterStore1()
+
+watch(
+  () => counter.count,
+  (count) => {
+    if (count === 5) {
+      console.warn('count is 5')
+    }
+    console.log(11111111111111111)
+  }
+)
 </script>
 
 <template>

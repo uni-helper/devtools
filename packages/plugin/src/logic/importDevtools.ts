@@ -10,7 +10,7 @@ export async function importDevtools(code: string, id: string) {
     `proxyLog();`,
   ]
   const component = `app.component('uni-dev-tools', UniDevTools);`
-  ms.appendRight(0, `${importer.join('\n')}\n`)
+  ms.prepend(`${importer.join('\n')}\n`)
   ms.append(`\n${injectFunc.join('\n')}\n`)
   ms.replace(
     /(createApp[\s\S]*?)(return\s\{\s*app)/,

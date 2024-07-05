@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/error-message */
 export function proxyLog() {
   if (proxyLog.proxied)
     return // 确保只设置一次代理
@@ -11,21 +12,20 @@ export function proxyLog() {
       Reflect.apply(target, thisArg, argumentsList)
 
       // 将信息发送到后端
-      if (target.name) {
-        const port = __UNI_DEVTOOLS_PORT__ // 确保这个变量在你的环境中是可用的
-        uni.request({
-          url: `http://localhost:${port}/api/log`,
-          method: 'POST',
-          data: {
-            type: target.name,
-            messages: argumentsList,
-          },
-          fail: (error) => {
+      const port = __UNI_DEVTOOLS_PORT__ // 确保这个变量在你的环境中是可用的
+      uni.request({
+        url: `http://localhost:${port}/api/log`,
+        method: 'POST',
+        data: {
+          type: target.methodName,
+          messages: argumentsList,
+          stack: new Error().stack,
+        },
+        fail: (error) => {
           // 在这里处理请求失败的情况
-            originalConsole.error('Failed to send log to backend:', error)
-          },
-        })
-      }
+          originalConsole.error('Failed to send log to backend:', error)
+        },
+      })
     },
   }
 
@@ -33,7 +33,9 @@ export function proxyLog() {
   for (const key in console) {
     if (typeof console[key] === 'function') {
       originalConsole[key] = console[key] // 保存原始方法
-      console[key] = new Proxy(console[key], handler)
+      const proxyFunction = new Proxy(console[key], handler)
+      proxyFunction.methodName = key // 存储方法名
+      console[key] = proxyFunction
     }
   }
 }

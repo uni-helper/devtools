@@ -3,13 +3,15 @@ import { readJsonSync } from 'fs-extra'
 import type { ResolvedConfig } from 'vite'
 import { z } from 'zod'
 import { observable } from '@trpc/server/observable'
-import type { ModuleInfo, Options } from './../../types'
+import type { LogInfo, ModuleInfo, Options } from './../../types'
 import { getPagesInfo } from './../../logic'
 import { publicProcedure, router } from './../trpc'
 import { DIR_INSPECT_LIST } from './../../dir'
 import { getImageMeta, getStaticAssets, getTextAssetContent } from './assets'
 import { openInEditor } from './openInEditor'
 import openInBrowser from './openInBrowser'
+
+const logInfoList: LogInfo[] = []
 
 export default function (
   config: ResolvedConfig,
@@ -46,11 +48,17 @@ export default function (
       return { success: true }
     }),
     onLog: subscription(() => {
-      return observable<string>((emit) => {
-        eventEmitter.on('log', emit.next)
+      return observable<LogInfo[]>((emit) => {
+        const logHandler = (log: LogInfo) => {
+          logInfoList.push(log)
+          emit.next([log])
+        }
+
+        emit.next(logInfoList)
+        eventEmitter.on('log', logHandler)
 
         return () => {
-          eventEmitter.off('log', emit.next)
+          eventEmitter.off('log', logHandler)
         }
       })
     }),
