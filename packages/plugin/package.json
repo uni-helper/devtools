@@ -62,6 +62,7 @@
     "body-parser": "^1.20.2",
     "error-stack-parser-es": "^0.1.4",
     "execa": "^9.3.0",
+    "flatted": "^3.3.1",
     "image-meta": "^0.2.0",
     "json5": "^2.2.3",
     "launch-editor": "^2.8.0",

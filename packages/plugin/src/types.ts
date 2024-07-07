@@ -65,7 +65,7 @@ export interface AssetInfo {
   base64: string
 }
 
-export interface LogInfo {
+export interface ConsoleInfo {
   type: string
   messages: string
   stack: {

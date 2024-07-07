@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "json5": "^2.2.3",
-    "lz-string": "^1.5.0"
+    "lz-string": "^1.5.0",
+    "rfdc": "^1.4.1"
   }
 }

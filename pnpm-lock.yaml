@@ -89,6 +89,9 @@ importers:
       '@vueuse/core':
         specifier: ^10.9.0
         version: 10.10.1(vue@3.4.27(typescript@5.4.5))
+      flatted:
+        specifier: ^3.3.1
+        version: 3.3.1
       floating-vue:
         specifier: ^5.2.2
         version: 5.2.2(vue@3.4.27(typescript@5.4.5))
@@ -174,6 +177,9 @@ importers:
       execa:
         specifier: ^9.3.0
         version: 9.3.0
+      flatted:
+        specifier: ^3.3.1
+        version: 3.3.1
       image-meta:
         specifier: ^0.2.0
         version: 0.2.0
@@ -259,6 +265,9 @@ importers:
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
+      rfdc:
+        specifier: ^1.4.1
+        version: 1.4.1
 
   playground:
     dependencies:
@@ -4675,7 +4684,7 @@ packages:
     engines: {node: '>=18'}
 
   is-typedarray@1.0.0:
-    resolution: {integrity: sha1-5HnICFjfDBsR3dppQPlgEfzaSpo=}
+    resolution: {integrity: sha512-cyA56iCMHAh5CdzjJIa4aohJyeO1YbwLi3Jc35MmRU6poroFjIGZzUzupGiRPOjgHg9TLu43xbpwXk523fMxKA==}
 
   is-unicode-supported@2.0.0:
     resolution: {integrity: sha512-FRdAyx5lusK1iHG0TWpVtk9+1i+GjrzRffhDg4ovQ7mcidMQ6mj+MhKPmvh7Xwyv5gIS06ns49CA7Sqg7lC22Q==}

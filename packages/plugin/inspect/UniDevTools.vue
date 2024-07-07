@@ -8,8 +8,6 @@ const y = ref(0)
 const dragging = ref(false)
 let startX = 0
 let startY = 0
-console.log(Pinia.getActivePinia())
-console.log(getApp())
 function handleTouchStart(event) {
   dragging.value = true
   startX = event.touches[0].clientX - x.value
@@ -59,11 +57,10 @@ function extractComponentInfo(component) {
 function handleTap() {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
-  console.log(currentPage)
   const components = extractComponentInfo(currentPage.$vm)
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
   const piniaState = getPiniaState()
-  console.log(piniaState)
+  console.log(Pinia.getActivePinia())
 
   const data = {
     currentPage: currentPage.route,

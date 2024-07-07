@@ -47,8 +47,10 @@
   - [x] 页面渲染
   - [x] 主题跟随切换
   - [ ] h5兼容
-- [ ] log页面
-  - [ ] 劫持uni-app Log信息
-  - [ ] 通过devtools服务器转发劫持的log信息
+- [ ] console页面
+  - [x] 劫持uni-app console信息
+  - [x] 通过devtools服务器转发劫持的log信息
+    - [x] 解决打印数据为循环引用和复杂结构，无法序列化
+  - [x] 获取console调用栈信息
   - [ ] 渲染log信息
   - [ ] 在vscode里打开输入log信息的本地文件
