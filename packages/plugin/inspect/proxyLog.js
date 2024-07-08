@@ -1,4 +1,6 @@
 /* eslint-disable unicorn/error-message */
+import ws from './createWS'
+
 export function proxyLog() {
   if (proxyLog.proxied)
     return // 确保只设置一次代理
@@ -7,24 +9,29 @@ export function proxyLog() {
   const originalConsole = {} // 用于存储原始 console 方法
 
   const handler = {
-    apply(target, thisArg, argumentsList) {
+    async apply(target, thisArg, argumentsList) {
       // 调用原始 console 方法
       Reflect.apply(target, thisArg, argumentsList)
 
       // 将信息发送到后端
-      const port = __UNI_DEVTOOLS_PORT__ // 确保这个变量在你的环境中是可用的
-      uni.request({
-        url: `http://localhost:${port}/api/log`,
-        method: 'POST',
-        data: {
-          type: target.methodName,
-          messages: argumentsList,
-          stack: new Error().stack,
-        },
-        fail: (error) => {
-          // 在这里处理请求失败的情况
-          originalConsole.error('Failed to send log to backend:', error)
-        },
+      // const port = __UNI_DEVTOOLS_PORT__ // 确保这个变量在你的环境中是可用的
+      // uni.request({
+      //   url: `http://localhost:${port}/api/log`,
+      //   method: 'POST',
+      //   data: {
+      //     type: target.methodName,
+      //     messages: argumentsList,
+      //     stack: new Error().stack,
+      //   },
+      //   fail: (error) => {
+      //     // 在这里处理请求失败的情况
+      //     originalConsole.error('Failed to send log to backend:', error)
+      //   },
+      // })
+      await ws.send({
+        type: target.methodName,
+        messages: argumentsList,
+        stack: new Error().stack,
       })
     },
   }

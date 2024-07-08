@@ -46,8 +46,10 @@ export function createDevtoolServe(
     uniDevToolsPrint(port)
   })
 
+  const wss = new ws.Server({ server })
+
   applyWSSHandler(({
-    wss: new ws.Server({ server }),
+    wss,
     router: createAppRouter(resolvedConfig, eventEmitter, options),
   }))
 
