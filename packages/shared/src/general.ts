@@ -1,3 +1,5 @@
+import rfdc from 'rfdc'
+
 export function basename(filename: string, ext: string): string {
   const normalizedFilename = filename.replace(/^[a-z]:/i, '').replace(/\\/g, '/')
   const lastSlashIndex = normalizedFilename.lastIndexOf('/')
@@ -9,3 +11,5 @@ export function basename(filename: string, ext: string): string {
   }
   return ''
 }
+
+export const deepClone = rfdc({ circles: true })

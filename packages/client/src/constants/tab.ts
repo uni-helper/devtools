@@ -57,10 +57,10 @@ export const builtinTab = [
       // },
       {
         icon: 'i-tabler:terminal',
-        name: 'log',
+        name: 'console',
         order: 100,
-        path: '/log',
-        title: 'Log',
+        path: '/console',
+        title: 'Console',
       },
       {
         icon: 'i-carbon-ibm-watson-discovery',

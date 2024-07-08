@@ -1,5 +1,6 @@
 /* eslint-disable unicorn/error-message */
-import ws from './createWS'
+import { stringify } from 'flatted'
+// import ws from './createWS'
 
 export function proxyLog() {
   if (proxyLog.proxied)
@@ -7,31 +8,28 @@ export function proxyLog() {
   proxyLog.proxied = true
 
   const originalConsole = {} // 用于存储原始 console 方法
+  const port = __UNI_DEVTOOLS_PORT__
 
   const handler = {
     async apply(target, thisArg, argumentsList) {
       // 调用原始 console 方法
       Reflect.apply(target, thisArg, argumentsList)
-
-      // 将信息发送到后端
-      // const port = __UNI_DEVTOOLS_PORT__ // 确保这个变量在你的环境中是可用的
-      // uni.request({
-      //   url: `http://localhost:${port}/api/log`,
-      //   method: 'POST',
-      //   data: {
-      //     type: target.methodName,
-      //     messages: argumentsList,
-      //     stack: new Error().stack,
-      //   },
-      //   fail: (error) => {
-      //     // 在这里处理请求失败的情况
-      //     originalConsole.error('Failed to send log to backend:', error)
-      //   },
-      // })
-      await ws.send({
+      const messages = stringify(argumentsList)
+      const data = {
         type: target.methodName,
-        messages: argumentsList,
+        messages,
         stack: new Error().stack,
+      }
+      // 将信息发送到后端
+      uni.request({
+        url: `http://localhost:${port}/api/console`,
+        method: 'POST',
+        data,
+        fail: (error) => {
+          originalConsole.log(messages)
+          // 在这里处理请求失败的情况
+          originalConsole.error('Failed to send log to backend:', error)
+        },
       })
     },
   }
