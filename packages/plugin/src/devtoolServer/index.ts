@@ -46,10 +46,10 @@ export function createDevtoolServe(
     uniDevToolsPrint(port)
   })
 
-  const wss = new ws.Server({ server })
+  // createUniSocketServer(server)
 
   applyWSSHandler(({
-    wss,
+    wss: new ws.Server({ server }),
     router: createAppRouter(resolvedConfig, eventEmitter, options),
   }))
 

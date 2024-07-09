@@ -21,14 +21,20 @@ class WS {
   }
 
   initRequest() {
+    console.log(this.url)
     this.socketTask = uni.connectSocket({
       url: this.url, // 接口地址。
       success: () => {
         // 返回实例
         return this.socketTask
       },
+      fail: (err) => {
+        console.log('websocket连接失败')
+        console.log(err)
+      },
     })
-
+    console.log('websocket连接成功')
+    console.log(this.socketTask)
     this.socketTask.onOpen(() => {
       // 清除重连定时器
       clearTimeout(this.reconnectTimeOutObj)
@@ -105,9 +111,9 @@ class WS {
 /** @type string */
 const port = __UNI_DEVTOOLS_PORT__
 
-const ws = new WS({
-  url: `ws://localhost:${port}/`,
-  timeout: 30000,
-})
+const ws = new WS(
+  `ws://localhost:${port}/trpc`,
+  30000,
+)
 
 export default ws
