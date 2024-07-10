@@ -52,7 +52,7 @@ export interface RequestInitEsque {
   /**
    * Sets the request's body.
    */
-  body?: FormData | string | null | Uint8Array | Blob | File
+  body?: FormData | ReadableStream | string | null
 
   /**
    * Sets the request's associated headers.
@@ -78,19 +78,12 @@ export interface WebReadableStreamEsque {
   getReader: () => ReadableStreamDefaultReader<Uint8Array>
 }
 
-export interface NodeJSReadableStreamEsque {
-  on: (
-    eventName: string | symbol,
-    listener: (...args: any[]) => void,
-  ) => NodeJSReadableStreamEsque
-}
-
 /**
  * A subset of the standard Response properties needed by tRPC internally.
  * @see Response from lib.dom.d.ts
  */
 export interface ResponseEsque {
-  readonly body?: NodeJSReadableStreamEsque | WebReadableStreamEsque | null
+  readonly body?: NodeJS.ReadableStream | WebReadableStreamEsque | null
   /**
    * @remarks
    * The built-in Response::json() method returns Promise<any>, but

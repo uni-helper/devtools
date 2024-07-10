@@ -1,5 +1,5 @@
 import { observable } from '@trpc/server/observable'
-import type { AnyRouter } from '@trpc/server/unstable-core-do-not-import'
+import type { AnyRouter } from '@trpc/server/src'
 import { createChain } from './createChain'
 
 describe('chain', () => {

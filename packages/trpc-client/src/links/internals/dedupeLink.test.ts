@@ -1,6 +1,6 @@
 import { waitFor } from '@testing-library/dom'
-import { observable } from '@trpc/server/observable'
-import type { AnyRouter } from '@trpc/server/unstable-core-do-not-import'
+import type { AnyRouter } from '@trpc/server/src'
+import { observable } from '@trpc/server/src/observable'
 import type { OperationLink } from '../..'
 import { createChain } from './createChain'
 import { dedupeLink } from './dedupeLink'

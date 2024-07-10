@@ -1,19 +1,18 @@
 // import { stringify } from 'flatted'
-import ws from './createWS'
 
 export function proxyLog() {
+  // @ts-ignore
   if (proxyLog.proxied)
     return // 确保只设置一次代理
+  // @ts-ignore
   proxyLog.proxied = true
 
   const originalConsole = {} // 用于存储原始 console 方法
-  // const port = __UNI_DEVTOOLS_PORT__
 
   const handler = {
     async apply(target, thisArg, argumentsList) {
       // 调用原始 console 方法
       Reflect.apply(target, thisArg, argumentsList)
-      ws.send('test')
       // const messages = stringify(argumentsList)
       // const data = {
       //   type: target.methodName,

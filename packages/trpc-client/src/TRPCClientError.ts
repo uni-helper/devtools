@@ -1,23 +1,30 @@
 import type {
-  type DefaultErrorShape,
-  InferrableClientTypes,
+  AnyProcedure,
+  AnyRouter,
+  DefaultErrorShape,
   Maybe,
-  TRPCErrorResponse,
+  inferRouterError,
+} from '@trpc/server'
+import type { TRPCErrorResponse, TRPCErrorShape } from '@trpc/server/rpc'
+import { getCauseFromUnknown } from '@trpc/server/shared'
+import { isObject } from './internals/isObject'
 
-  getCauseFromUnknown,
-  inferClientTypes,
-  isObject,
-} from '@trpc/server/unstable-core-do-not-import'
+type ErrorInferrable = AnyProcedure | AnyRouter | TRPCErrorShape<number>
 
-type inferErrorShape<TInferrable extends InferrableClientTypes> =
-  inferClientTypes<TInferrable>['errorShape']
+type inferErrorShape<TInferrable extends ErrorInferrable> =
+  TInferrable extends AnyRouter
+    ? inferRouterError<TInferrable>
+    : TInferrable extends AnyProcedure
+      ? TInferrable['_def']['_config']['$types']['errorShape']
+      : TInferrable
+
 export interface TRPCClientErrorBase<TShape extends DefaultErrorShape> {
   readonly message: string
   readonly shape: Maybe<TShape>
   readonly data: Maybe<TShape['data']>
 }
-export type TRPCClientErrorLike<TInferrable extends InferrableClientTypes> =
-  TRPCClientErrorBase<inferErrorShape<TInferrable>>
+export type TRPCClientErrorLike<TRouterOrProcedure extends ErrorInferrable> =
+  TRPCClientErrorBase<inferErrorShape<TRouterOrProcedure>>
 
 function isTRPCClientError(cause: unknown): cause is TRPCClientError<any> {
   return (
@@ -39,7 +46,7 @@ function isTRPCErrorResponse(obj: unknown): obj is TRPCErrorResponse<any> {
   )
 }
 
-export class TRPCClientError<TRouterOrProcedure extends InferrableClientTypes>
+export class TRPCClientError<TRouterOrProcedure extends ErrorInferrable>
   extends Error
   implements TRPCClientErrorBase<inferErrorShape<TRouterOrProcedure>> {
   // @ts-expect-error override doesn't work in all environments due to "This member cannot have an 'override' modifier because it is not declared in the base class 'Error'"
@@ -76,7 +83,7 @@ export class TRPCClientError<TRouterOrProcedure extends InferrableClientTypes>
     Object.setPrototypeOf(this, TRPCClientError.prototype)
   }
 
-  public static from<TRouterOrProcedure extends InferrableClientTypes>(
+  public static from<TRouterOrProcedure extends ErrorInferrable>(
     _cause: Error | TRPCErrorResponse<any>,
     opts: { meta?: Record<string, unknown> } = {},
   ): TRPCClientError<TRouterOrProcedure> {

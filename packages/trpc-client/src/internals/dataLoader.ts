@@ -11,10 +11,13 @@ interface Batch<TKey, TValue> {
   items: BatchItem<TKey, TValue>[]
   cancel: CancelFn
 }
-export interface BatchLoader<TKey, TValue> {
+interface BatchLoader<TKey, TValue> {
   validate: (keys: TKey[]) => boolean
-  fetch: (keys: TKey[]) => {
-    promise: Promise<TValue[] | Promise<TValue>[]>
+  fetch: (
+    keys: TKey[],
+    unitResolver: (index: number, value: NonNullable<TValue>) => void,
+  ) => {
+    promise: Promise<TValue[]>
     cancel: CancelFn
   }
 }
@@ -103,31 +106,25 @@ export function dataLoader<TKey, TValue>(
       for (const item of items) {
         item.batch = batch
       }
+      const unitResolver = (index: number, value: NonNullable<TValue>) => {
+        const item = batch.items[index]!
+        item.resolve?.(value)
+        item.batch = null
+        item.reject = null
+        item.resolve = null
+      }
       const { promise, cancel } = batchLoader.fetch(
         batch.items.map(_item => _item.key),
+        unitResolver,
       )
       batch.cancel = cancel
 
       promise
-        .then(async (result) => {
-          await Promise.all(
-            result.map(async (valueOrPromise, index) => {
-              const item = batch.items[index]!
-              try {
-                const value = await Promise.resolve(valueOrPromise)
-
-                item.resolve?.(value)
-              }
-              catch (cause) {
-                item.reject?.(cause as Error)
-              }
-
-              item.batch = null
-              item.reject = null
-              item.resolve = null
-            }),
-          )
-
+        .then((result) => {
+          for (let i = 0; i < result.length; i++) {
+            const value = result[i]!
+            unitResolver(i, value)
+          }
           for (const item of batch.items) {
             item.reject?.(new Error('Missing result'))
             item.batch = null

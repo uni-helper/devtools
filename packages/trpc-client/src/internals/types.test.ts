@@ -1,7 +1,7 @@
 import isomorphicFetch from 'isomorphic-fetch'
 import nodeFetch from 'node-fetch'
 import type { fetch as undiciFetch } from 'undici'
-import { createTRPCClient } from '../createTRPCClient'
+import { createTRPCProxyClient } from '../createTRPCClientProxy'
 import { getFetch } from '../getFetch'
 import { httpBatchLink } from '../links/httpBatchLink'
 import { getAbortController } from './getAbortController'
@@ -27,7 +27,7 @@ describe('abortController', () => {
 
 describe('fetch', () => {
   it('parameters', () => {
-    createTRPCClient({
+    createTRPCProxyClient({
       links: [
         httpBatchLink({
           url: 'YOUR_SERVER_URL',

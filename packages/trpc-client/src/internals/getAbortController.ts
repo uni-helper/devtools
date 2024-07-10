@@ -1,4 +1,4 @@
-import type { Maybe } from '@trpc/server/unstable-core-do-not-import'
+import type { Maybe } from '@trpc/server'
 import type { AbortControllerEsque } from './types'
 
 export function getAbortController(
@@ -11,7 +11,6 @@ export function getAbortController(
   if (typeof window !== 'undefined' && window.AbortController) {
     return window.AbortController
   }
-
   if (typeof globalThis !== 'undefined' && globalThis.AbortController) {
     return globalThis.AbortController
   }

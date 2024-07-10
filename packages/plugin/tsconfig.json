@@ -8,6 +8,7 @@
     "resolveJsonModule": true,
     "types": ["@dcloudio/types"],
     "allowJs": true,
+    "checkJs": true,
     "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": false,

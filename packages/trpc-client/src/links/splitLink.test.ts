@@ -1,8 +1,8 @@
 import { observable } from '@trpc/server/observable'
-import type { AnyRouter } from '@trpc/server/unstable-core-do-not-import'
-import { createChain } from './internals/createChain'
-import { splitLink } from './splitLink'
-import type { OperationLink, TRPCLink } from './types'
+import type { OperationLink, TRPCLink } from '../'
+import { splitLink } from '../'
+import type { AnyRouter } from '../../../server/src'
+import { createChain } from '../links/internals/createChain'
 
 it('splitLink', () => {
   const wsLinkSpy = vi.fn()
