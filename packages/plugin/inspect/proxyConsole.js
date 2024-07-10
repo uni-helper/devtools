@@ -12,10 +12,9 @@ export function proxyConsole() {
   const originalConsole = {}
 
   const handler = {
-    async apply(target, thisArg, argumentsList) {
+    apply(target, thisArg, argumentsList) {
       // 调用原始 console 方法
       Reflect.apply(target, thisArg, argumentsList)
-
       const messages = stringify(argumentsList)
       /**
        * @typedef ConsoleInfo
@@ -25,13 +24,12 @@ export function proxyConsole() {
        * @property {string} stack
        */
       /**
-       *
        * @type {ConsoleInfo}
        */
       const data = {
         type: target.methodName,
         messages,
-        stack: new Error()?.stack || '',
+        stack: (new Error())?.stack || '',
       }
       trpc.sendConsole.subscribe(data, {
         onComplete: () => {},

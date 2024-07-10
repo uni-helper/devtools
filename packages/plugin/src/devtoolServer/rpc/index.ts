@@ -67,7 +67,6 @@ export default function (
           line: line ?? 0,
         },
       }
-      console.log(input)
       console.log(consoleInfo)
       eventEmitter.emit('console', consoleInfo)
     }),
