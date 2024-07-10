@@ -15,41 +15,41 @@
     "./package.json": "./package.json",
     ".": {
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "default": "./dist/index.cjs"
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./links/httpLink": {
       "import": "./dist/links/httpLink.mjs",
-      "require": "./dist/links/httpLink.cjs",
-      "default": "./dist/links/httpLink.cjs"
+      "require": "./dist/links/httpLink.js",
+      "default": "./dist/links/httpLink.js"
     },
     "./links/httpBatchLink": {
       "import": "./dist/links/httpBatchLink.mjs",
-      "require": "./dist/links/httpBatchLink.cjs",
-      "default": "./dist/links/httpBatchLink.cjs"
+      "require": "./dist/links/httpBatchLink.js",
+      "default": "./dist/links/httpBatchLink.js"
     },
     "./links/splitLink": {
       "import": "./dist/links/splitLink.mjs",
-      "require": "./dist/links/splitLink.cjs",
-      "default": "./dist/links/splitLink.cjs"
+      "require": "./dist/links/splitLink.js",
+      "default": "./dist/links/splitLink.js"
     },
     "./links/loggerLink": {
       "import": "./dist/links/loggerLink.mjs",
-      "require": "./dist/links/loggerLink.cjs",
-      "default": "./dist/links/loggerLink.cjs"
+      "require": "./dist/links/loggerLink.js",
+      "default": "./dist/links/loggerLink.js"
     },
     "./links/wsLink": {
       "import": "./dist/links/wsLink.mjs",
-      "require": "./dist/links/wsLink.cjs",
-      "default": "./dist/links/wsLink.cjs"
+      "require": "./dist/links/wsLink.js",
+      "default": "./dist/links/wsLink.js"
     },
     "./shared": {
       "import": "./dist/shared/index.mjs",
-      "require": "./dist/shared/index.cjs",
-      "default": "./dist/shared/index.cjs"
+      "require": "./dist/shared/index.js",
+      "default": "./dist/shared/index.js"
     }
   },
-  "main": "dist/index.cjs",
+  "main": "dist/index.js",
   "module": "dist/index.mjs",
   "typings": "dist/index.d.ts",
   "files": [
@@ -62,18 +62,24 @@
     "src"
   ],
   "scripts": {
-    "stub": "unbuild --stub",
-    "build": "unbuild"
+    "stub": "pnpm build --watch",
+    "build": "rollup --config rollup.config.ts --configPlugin rollup-plugin-swc3"
   },
   "peerDependencies": {
     "@trpc/server": "10.45.2"
   },
   "devDependencies": {
+    "@swc/helpers": "^0.5.11",
     "@trpc/server": "10.45.2",
     "@types/isomorphic-fetch": "^0.0.39",
     "@types/node": "^20.10.0",
     "isomorphic-fetch": "^3.0.0",
     "node-fetch": "^3.3.0",
+    "rollup": "^4.18.1",
+    "rollup-plugin-delete": "^2.0.0",
+    "rollup-plugin-multi-input": "^1.4.2",
+    "rollup-plugin-node-externals": "^7.1.2",
+    "rollup-plugin-typescript2": "^0.36.0",
     "undici": "^6.0.1"
   }
 }

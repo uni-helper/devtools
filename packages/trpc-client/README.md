@@ -20,7 +20,7 @@
 
 ## Documentation
 
-查阅`@trpc/clinrt`的完整文档，请访问[这里](https://trpc.io/docs/vanilla)。
+查阅`@trpc/client`的完整文档，请访问[这里](https://trpc.io/docs/vanilla)。
 
 ## Installation
 

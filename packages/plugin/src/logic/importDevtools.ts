@@ -4,10 +4,10 @@ export async function importDevtools(code: string, id: string) {
   const ms = new MagicString(code)
   const importer = [
     `import UniDevTools from '@uni-helper/devtools/inspect/UniDevTools.vue';`,
-    `import {proxyLog} from '@uni-helper/devtools/inspect/proxyLog.js';`,
+    `import {proxyConsole} from '@uni-helper/devtools/inspect/proxyConsole.js';`,
   ]
   const injectFunc = [
-    `proxyLog();`,
+    `proxyConsole();`,
   ]
   const component = `app.component('uni-dev-tools', UniDevTools);`
   ms.prepend(`${importer.join('\n')}\n`)

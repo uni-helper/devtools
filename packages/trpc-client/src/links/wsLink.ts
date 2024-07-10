@@ -25,7 +25,7 @@ type WSCallbackObserver<TRouter extends AnyRouter, TOutput> = Observer<
 
 export interface WebSocketClientOptions {
   url: string | (() => string)
-  WebSocket?: typeof WebSocket
+  WebSocket?: typeof uni.connectSocket
   retryDelayMs?: typeof retryDelay
   onOpen?: () => void
   onClose?: (cause?: { code?: number }) => void
@@ -34,7 +34,7 @@ export interface WebSocketClientOptions {
 export function createWSClient(opts: WebSocketClientOptions) {
   const {
     url,
-    WebSocket: WebSocketImpl = WebSocket,
+    WebSocket: WebSocketImpl = uni.connectSocket,
     retryDelayMs: retryDelayFn = retryDelay,
     onOpen,
     onClose,
@@ -57,7 +57,7 @@ export function createWSClient(opts: WebSocketClientOptions) {
     /**
      * Reference to the WebSocket instance this request was made to
      */
-    ws: WebSocket
+    ws: UniApp.SocketTask
     type: ProcedureType
     callbacks: TCallbacks
     op: Operation
@@ -81,11 +81,11 @@ export function createWSClient(opts: WebSocketClientOptions) {
 
       if (outgoing.length === 1) {
         // single send
-        activeConnection.send(JSON.stringify(outgoing.pop()))
+        activeConnection.send({ data: JSON.stringify(outgoing.pop()) })
       }
       else {
         // batch send
-        activeConnection.send(JSON.stringify(outgoing))
+        activeConnection.send({ data: JSON.stringify(outgoing) })
       }
       // clear
       outgoing = []
@@ -112,13 +112,13 @@ export function createWSClient(opts: WebSocketClientOptions) {
     connectTimer = setTimeout(reconnect, ms)
   }
 
-  function closeIfNoPending(conn: WebSocket) {
+  function closeIfNoPending(conn: UniApp.SocketTask) {
     // disconnect as soon as there are are no pending result
     const hasPendingRequests = Object.values(pendingRequests).some(
       p => p.ws === conn,
     )
     if (!hasPendingRequests) {
-      conn.close()
+      conn.close({ code: 100 })
     }
   }
 
@@ -139,11 +139,14 @@ export function createWSClient(opts: WebSocketClientOptions) {
 
   function createWS() {
     const urlString = typeof url === 'function' ? url() : url
-    const conn = new WebSocketImpl(urlString)
+    const conn = WebSocketImpl({
+      url: urlString,
+      complete: () => {},
+    })
     clearTimeout(connectTimer as any)
     connectTimer = null
 
-    conn.addEventListener('open', () => {
+    conn.onOpen(() => {
       /* istanbul ignore next -- @preserve */
       if (conn !== activeConnection) {
         return
@@ -153,7 +156,7 @@ export function createWSClient(opts: WebSocketClientOptions) {
       onOpen?.()
       dispatch()
     })
-    conn.addEventListener('error', () => {
+    conn.onError(() => {
       if (conn === activeConnection) {
         tryReconnect()
       }
@@ -195,7 +198,7 @@ export function createWSClient(opts: WebSocketClientOptions) {
         req.callbacks.complete()
       }
     }
-    conn.addEventListener('message', ({ data }) => {
+    conn.onMessage(({ data }) => {
       const msg = JSON.parse(data) as TRPCClientIncomingMessage
 
       if ('method' in msg) {
@@ -210,7 +213,7 @@ export function createWSClient(opts: WebSocketClientOptions) {
       }
     })
 
-    conn.addEventListener('close', ({ code }) => {
+    conn.onClose(({ code }) => {
       if (state === 'open') {
         onClose?.({ code })
       }
@@ -278,7 +281,7 @@ export function createWSClient(opts: WebSocketClientOptions) {
 
       callbacks?.complete?.()
       if (
-        activeConnection.readyState === WebSocketImpl.OPEN
+        state === 'open'
         && op.type === 'subscription'
       ) {
         outgoing.push({

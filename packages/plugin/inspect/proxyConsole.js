@@ -1,11 +1,12 @@
 // import { stringify } from 'flatted'
+// import { trpc } from './trpc'
 
-export function proxyLog() {
+export function proxyConsole() {
   // @ts-ignore
-  if (proxyLog.proxied)
+  if (proxyConsole.proxied)
     return // 确保只设置一次代理
   // @ts-ignore
-  proxyLog.proxied = true
+  proxyConsole.proxied = true
 
   const originalConsole = {} // 用于存储原始 console 方法
 

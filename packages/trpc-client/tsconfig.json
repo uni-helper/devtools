@@ -6,6 +6,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "types": ["@dcloudio/types"],
     "allowJs": true,
     "checkJs": true,
     "strict": true,

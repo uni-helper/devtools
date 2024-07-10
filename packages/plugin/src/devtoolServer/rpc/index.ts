@@ -63,5 +63,15 @@ export default function (
         }
       })
     }),
+    onUpdate: input(z.string()).subscription((opts) => {
+      console.log('onUpdate', opts.input)
+      return observable<string>(() => {
+        // eventEmitter.on('update', emit.next)
+
+        return () => {
+          // eventEmitter.off('update', emit.next)
+        }
+      })
+    }),
   })
 }

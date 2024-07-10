@@ -49,7 +49,6 @@ function isTRPCErrorResponse(obj: unknown): obj is TRPCErrorResponse<any> {
 export class TRPCClientError<TRouterOrProcedure extends ErrorInferrable>
   extends Error
   implements TRPCClientErrorBase<inferErrorShape<TRouterOrProcedure>> {
-  // @ts-expect-error override doesn't work in all environments due to "This member cannot have an 'override' modifier because it is not declared in the base class 'Error'"
   public override readonly cause
   public readonly shape: Maybe<inferErrorShape<TRouterOrProcedure>>
   public readonly data: Maybe<inferErrorShape<TRouterOrProcedure>['data']>
@@ -70,7 +69,6 @@ export class TRPCClientError<TRouterOrProcedure extends ErrorInferrable>
   ) {
     const cause = opts?.cause
 
-    // @ts-expect-error https://github.com/tc39/proposal-error-cause
     super(message, { cause })
 
     this.meta = opts?.meta
