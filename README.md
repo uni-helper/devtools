@@ -4,13 +4,14 @@
 
 - [x] Monorepo改造
 - [x] 像素风格uni-helper的LOGO
-- [x] 小程序与webview通讯包封装
+- [x] ~~小程序与webview通讯包封装~~ 使用websocket传递数据
 - [x] 编译到H5时，使用vite-plugin-vue-devtools
 - [x] 重构pages.json读取逻辑
 - [x] 重构插入组件逻辑
 - [x] 使用tRPC
+  - [x] 适配uni-app trpc
 - [x] tab重构
-- [ ] 封装小程序JS-SDK
+- [ ] ~~封装小程序JS-SDK~~ 使用websocket传递数据
 - [x] build时不执行plugin
 - [x] 支持在浏览器打开页面
 - [ ] 浏览器窗口数据传递

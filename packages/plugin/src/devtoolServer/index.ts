@@ -8,12 +8,10 @@ import { applyWSSHandler } from '@trpc/server/adapters/ws'
 import { createExpressMiddleware } from '@trpc/server/adapters/express'
 
 import type { ResolvedConfig } from 'vite'
-import bodyParser from 'body-parser'
 import { DIR_CLIENT, DIR_TMP_INSPECT } from '../dir'
 import { uniDevToolsPrint } from '../utils/print'
 import type { Options } from '../types'
 import createAppRouter from './rpc/index'
-import { setupUserRoutes } from './RESTful/index'
 
 const eventEmitter = new EventEmitter()
 
@@ -40,13 +38,9 @@ export function createDevtoolServe(
       router: createAppRouter(resolvedConfig, eventEmitter, options),
     }),
   )
-  app.use(bodyParser.json())
-  setupUserRoutes(app, eventEmitter)
   app.listen(port, () => {
     uniDevToolsPrint(port)
   })
-
-  // createUniSocketServer(server)
 
   applyWSSHandler(({
     wss: new ws.Server({ server }),

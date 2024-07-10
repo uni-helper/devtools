@@ -3,6 +3,8 @@ import { readJsonSync } from 'fs-extra'
 import type { ResolvedConfig } from 'vite'
 import { z } from 'zod'
 import { observable } from '@trpc/server/observable'
+import { parseStack } from 'error-stack-parser-es/lite'
+import { extractPathByStack, sourceFile } from '../../utils/sourceFile'
 import type { ConsoleInfo, ModuleInfo, Options } from './../../types'
 import { getPagesInfo } from './../../logic'
 import { publicProcedure, router } from './../trpc'
@@ -47,11 +49,32 @@ export default function (
 
       return { success: true }
     }),
+    sendConsole: input(
+      z.object({
+        type: z.string(),
+        messages: z.string(),
+        stack: z.string(),
+      }),
+    ).subscription((opts) => {
+      const { input } = opts
+      const { file, line } = parseStack(input.stack)[1]
+      const path = extractPathByStack(file!)
+      const sourceFilePath = sourceFile(path)
+      const consoleInfo: ConsoleInfo = {
+        ...input,
+        stack: {
+          file: sourceFilePath,
+          line: line ?? 0,
+        },
+      }
+      console.log(input)
+      console.log(consoleInfo)
+      eventEmitter.emit('console', consoleInfo)
+    }),
     onConsole: subscription(() => {
       return observable<ConsoleInfo[]>((emit) => {
         const consoleHandler = (consoleInfo: ConsoleInfo) => {
           consoleInfoList.push(consoleInfo)
-          console.log(consoleInfo)
           emit.next([consoleInfo])
         }
 
@@ -60,16 +83,6 @@ export default function (
 
         return () => {
           eventEmitter.off('console', consoleHandler)
-        }
-      })
-    }),
-    onUpdate: input(z.string()).subscription((opts) => {
-      console.log('onUpdate', opts.input)
-      return observable<string>(() => {
-        // eventEmitter.on('update', emit.next)
-
-        return () => {
-          // eventEmitter.off('update', emit.next)
         }
       })
     }),
