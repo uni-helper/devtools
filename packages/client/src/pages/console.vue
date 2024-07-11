@@ -7,6 +7,8 @@ const logList = ref<ConsoleInfo[]>([])
 trpc.onConsole.subscribe(undefined, {
   onData: (data) => {
     data.forEach((item) => {
+      console.log(parse(item.messages))
+
       logList.value.push(item)
     })
   },
@@ -14,13 +16,23 @@ trpc.onConsole.subscribe(undefined, {
 </script>
 
 <template>
-  <StateFields
-    v-for="(co, index) in logList"
-    :id="index"
-    :key="index"
-    :data="{
-      key: co.type,
-      value: parse(co.messages),
-    }"
-  />
+  <PanelGrids class="drawer-container" relative block h-full of-hidden>
+    <div h-full w-full of-auto>
+      <template v-for="(co, index) in logList" :key="index">
+        <template v-for="(item, i) in parse(co.messages)" :key="i">
+          <StateFields
+            v-if="typeof item === 'object'"
+            :id="i"
+            :data="{
+              key: Object.keys(item).join(','),
+              value: item,
+            }"
+          />
+          <p v-else>
+            {{ item }}
+          </p>
+        </template>
+      </template>
+    </div>
+  </PanelGrids>
 </template>
