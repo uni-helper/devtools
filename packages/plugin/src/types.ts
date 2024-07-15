@@ -68,8 +68,5 @@ export interface AssetInfo {
 export interface ConsoleInfo {
   type: string
   messages: string
-  stack: {
-    file: string
-    line: number
-  }
+  file: string
 }

@@ -57,15 +57,13 @@ export default function (
       }),
     ).subscription((opts) => {
       const { input } = opts
-      const { file, line } = parseStack(input.stack)[1]
+      const { file } = parseStack(input.stack)[1]
       const path = extractPathByStack(file!)
       const sourceFilePath = sourceFile(path)
       const consoleInfo: ConsoleInfo = {
-        ...input,
-        stack: {
-          file: sourceFilePath,
-          line: line ?? 0,
-        },
+        type: input.type,
+        messages: input.messages,
+        file: sourceFilePath,
       }
       console.log(consoleInfo)
       eventEmitter.emit('console', consoleInfo)

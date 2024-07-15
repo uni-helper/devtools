@@ -22,6 +22,7 @@ declare module 'vue' {
     IframeView: typeof import('./src/components/common/IframeView.vue')['default']
     Navbar: typeof import('./src/components/common/Navbar.vue')['default']
     PanelGrids: typeof import('./src/components/common/PanelGrids.vue')['default']
+    RootStateViewer: typeof import('./src/components/state/RootStateViewer.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     RoutesTable: typeof import('./src/components/pages/RoutesTable.vue')['default']
