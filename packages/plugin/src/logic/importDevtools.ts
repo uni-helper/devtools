@@ -10,8 +10,8 @@ export async function importDevtools(code: string, id: string) {
     `proxyConsole();`,
   ]
   const component = `app.component('uni-dev-tools', UniDevTools);`
+  ms.prepend(`\n${injectFunc.join('\n')}\n`)
   ms.prepend(`${importer.join('\n')}\n`)
-  ms.append(`\n${injectFunc.join('\n')}\n`)
   ms.replace(
     /(createApp[\s\S]*?)(return\s\{\s*app)/,
     `$1${`${component}\n`}$2`,

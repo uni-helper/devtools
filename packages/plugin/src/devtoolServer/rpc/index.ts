@@ -13,8 +13,6 @@ import { getImageMeta, getStaticAssets, getTextAssetContent } from './assets'
 import { openInEditor } from './openInEditor'
 import openInBrowser from './openInBrowser'
 
-const consoleInfoList: ConsoleInfo[] = []
-
 export default function (
   config: ResolvedConfig,
   eventEmitter: EventEmitter,
@@ -69,13 +67,10 @@ export default function (
       eventEmitter.emit('console', consoleInfo)
     }),
     onConsole: subscription(() => {
-      return observable<ConsoleInfo[]>((emit) => {
+      return observable<ConsoleInfo>((emit) => {
         const consoleHandler = (consoleInfo: ConsoleInfo) => {
-          consoleInfoList.push(consoleInfo)
-          emit.next([consoleInfo])
+          emit.next(consoleInfo)
         }
-
-        emit.next(consoleInfoList)
         eventEmitter.on('console', consoleHandler)
 
         return () => {

@@ -27,7 +27,6 @@
     "@uni-helper/devtools-shared": "workspace:*",
     "@vue/devtools-ui": "^7.3.4",
     "@vueuse/core": "^10.9.0",
-    "flatted": "^3.3.1",
     "floating-vue": "^5.2.2",
     "fuse.js": "^7.0.0",
     "shiki": "^1.7.0",

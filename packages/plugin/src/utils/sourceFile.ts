@@ -18,6 +18,9 @@ export function sourceFile(filePath: string) {
   if (filePath.includes('common/vendor')) {
     return 'node_modules'
   }
+  if (filePath === '//app') {
+    filePath = '/main'
+  }
   const files = globSync(`**${filePath}.*`, {
     ignore: [
       '**/node_modules/**',

@@ -29,9 +29,7 @@ function getFunctionDetails(func: Function) {
     matches = String.prototype.match.call(string, /\([\s\S]*?\)/)
   }
   catch (e) {
-    // Func is probably a Proxy, which can break Function.prototype.toString()
   }
-  // Trim any excess whitespace from the argument string
   const match = matches && matches[0]
   const args = typeof match === 'string'
     ? match
@@ -82,7 +80,7 @@ export function formatStateType(value: unknown): StateType {
   if (isArray(value)) {
     return {
       rawType: 'object',
-      rawDisplay: `Array[${value.length}]`,
+      rawDisplay: `Array(${value.length})`,
       recursive: true,
       value,
     }
@@ -216,7 +214,7 @@ export function formatStateType(value: unknown): StateType {
     else if (isPlainObject(value)) {
       return {
         rawType: 'object',
-        rawDisplay: 'Object',
+        rawDisplay: '{...}',
         recursive: true,
         value,
       }

@@ -3,9 +3,20 @@ defineProps<{
   data?: unknown
 }>()
 
-// function getDataKeysPreview() {
+function getDataKeysPreview(data: object) {
+  if (isPlainObject(data)) {
+    const rootKeyString = Object.entries(data).map(([key, value]) => {
+      const format = formatStateType(value)
+      return `${key}: ${format?.rawDisplay || format.value}`
+    }).join(',  ')
+    return `{${rootKeyString}}`
+  }
 
-// }
+  if (isArray(data)) {
+    // const rootKeyString =
+    return `(${Array.from(data).length}) [${data}]`
+  }
+}
 function colorByType(data: unknown) {
   const colorMap = {
     string: 'text-#D1977F',
@@ -23,12 +34,26 @@ function colorByType(data: unknown) {
 </script>
 
 <template>
-  <template v-if="typeof data === 'object'">
-    {{ data.tostring() }}
+  <template v-if="typeof data === 'object' && data !== null">
+    <ToggleExpanded
+      :value="false"
+      cursor-pointer
+    />
+    <span font-state-field text-3.5 italic>
+      {{ getDataKeysPreview(data) }}
+    </span>
   </template>
   <template v-else>
     <span :class="colorByType(data)" pl1rem>
-      {{ data }}
+      <template v-if="typeof data === 'bigint'">
+        {{ data }}{{ 'n' }}
+      </template>
+      <template v-else-if="typeof data === 'undefined'">
+        {{ 'undefined' }}
+      </template>
+      <template v-else>
+        {{ data }}
+      </template>
     </span>
   </template>
 </template>

@@ -1,21 +1,20 @@
 <script setup lang="ts">
 import type { ConsoleInfo } from '@uni-helper/devtools'
-import { parse } from 'flatted'
 import { VueCheckbox, VueSelect } from '@vue/devtools-ui'
+import { parse } from '@ungap/structured-clone/json'
 
 const consoleList = ref<ConsoleInfo[]>([])
 const uniqConsoleTypes = ref<{ label: string, value: string }[]>([])
 trpc.onConsole.subscribe(undefined, {
   onData: (data) => {
-    data.forEach((item) => {
-      consoleList.value.push({
-        ...item,
-        messages: parse(item.messages),
-      })
-      const hastype = uniqConsoleTypes.value.find(type => type.value === item.type)
-      if (!hastype)
-        uniqConsoleTypes.value.push({ label: item.type, value: item.type })
+    consoleList.value.push({
+      ...data,
+      messages: parse(data.messages),
     })
+    console.log(consoleList.value)
+    const hastype = uniqConsoleTypes.value.find(type => type.value === data.type)
+    if (!hastype)
+      uniqConsoleTypes.value.push({ label: data.type, value: data.type })
   },
 })
 const filteredConsoles = ref(consoleList.value.map(i => i.type))
@@ -24,9 +23,9 @@ function clearConsoleList() {
 }
 function colorByType(data: ConsoleInfo['type']) {
   const colorMap = {
-    log: '',
     warn: 'bg-#413C27',
     error: 'bg-#4F3634',
+    log: 'bg-#2C2C2C',
   }
   return colorMap[data] || ''
 }
@@ -70,12 +69,11 @@ function colorByType(data: ConsoleInfo['type']) {
       <div m-0.83rem>
         <div
           v-for="(consoleInfo, key) in consoleList" :key
-          mb0.5 flex items-center justify-between rounded
-          hover:bg-active
+          mb0.5 flex cursor-default items-center justify-between rounded hover:op85
           :class="colorByType(consoleInfo.type)"
         >
           <div v-for="(data, index) in consoleInfo.messages" :key="index">
-            <RootStateViewer :data />
+            <RootStateViewer :data="data === null ? 'null' : data" />
           </div>
           <span
             mr1rem cursor-pointer text-sm text-gray font-300

@@ -1,7 +1,7 @@
 /* eslint-disable unicorn/error-message */
-import { stringify } from 'flatted'
+import { stringify } from '@ungap/structured-clone/json'
 import { trpc } from './trpc'
-
+// import superjson from 'superjson'
 export function proxyConsole() {
   // @ts-ignore
   if (proxyConsole.proxied)

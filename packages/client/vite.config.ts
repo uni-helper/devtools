@@ -55,24 +55,6 @@ export default defineConfig({
     }),
 
     UnoCSS(),
-
-    {
-      name: 'create-end-flag-file',
-      apply: 'build',
-      enforce: 'post',
-      configResolved(config) {
-        const { watch, outDir } = config.build
-        _resolvedConfig = { watch, outDir }
-      },
-      closeBundle() {
-        const { watch, outDir } = _resolvedConfig!
-        if (watch) {
-          const flagFile = path.resolve(outDir, 'end.flag')
-          fs.writeFileSync(flagFile, 'done')
-        }
-        consola.success('client build done')
-      },
-    },
   ],
   build: {
     target: 'esnext',

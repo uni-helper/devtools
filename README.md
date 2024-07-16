@@ -9,12 +9,12 @@
 - [x] 重构pages.json读取逻辑
 - [x] 重构插入组件逻辑
 - [x] 使用tRPC
-  - [x] 适配uni-app trpc
+  - [x] 适配uni-app trpc(仅适配支持websocket)
 - [x] tab重构
 - [ ] ~~封装小程序JS-SDK~~ 使用websocket传递数据
 - [x] build时不执行plugin
 - [x] 支持在浏览器打开页面
-- [ ] 浏览器窗口数据传递
+- [ ] ~~浏览器窗口数据传递~~ 使用websocket传递数据
 - [x] 欢迎页面
 - [x] overview页面
 - [ ] pages页面
@@ -54,4 +54,18 @@
     - [x] 解决打印数据为循环引用和复杂结构，无法序列化
   - [x] 获取console调用栈信息
   - [ ] 渲染log信息
-  - [ ] 在vscode里打开输入log信息的本地文件
+    - [x] 基本类型渲染
+    - [ ] 对象tree组件
+      - [ ] 根节点key解析
+        - [ ] 基本类型
+          - [x] string
+          - [x] number
+          - [x] bigint
+          - [x] boolean
+          - [x] undefined
+          - [x] null
+          - [ ] Symbol
+        - [ ] 复杂类型
+          - [ ] object
+          - [ ] array
+  - [x] 在vscode里打开输入log信息的本地文件
