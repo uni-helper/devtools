@@ -1,59 +1,81 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 defineProps<{
   data?: unknown
 }>()
 
-function getDataKeysPreview(data: object) {
+function renderCollection(items: any[], isObject: boolean = false) {
+  return items.map((item, index, array) => {
+    const key = isObject ? item[0] : null
+    const value = isObject ? item[1] : item
+    const formatState = formatStateValue(value)
+
+    return (
+      <>
+        {isObject && `${key}: `}
+        <span style={{ color: formatState?.color }}>
+          {formatState.rawDisplay}
+        </span>
+        {index !== array.length - 1 ? ', ' : ''}
+      </>
+    )
+  })
+}
+
+function DataKeysPreview(data: object) {
   if (isPlainObject(data)) {
-    const rootKeyString = Object.entries(data).map(([key, value]) => {
-      const format = formatStateType(value)
-      return `${key}: ${format?.rawDisplay || format.value}`
-    }).join(',  ')
-    return `{${rootKeyString}}`
+    const entries = Object.entries(data)
+    return () => (
+      <>
+        {'{'}
+        {renderCollection(entries, true)}
+        {'}'}
+      </>
+    )
   }
 
   if (isArray(data)) {
-    // const rootKeyString =
-    return `(${Array.from(data).length}) [${data}]`
+    const arrayData = Array.from(data)
+    return () => (
+      <>
+        {`(${arrayData.length}) `}
+        [
+        {renderCollection(arrayData)}
+        ]
+      </>
+    )
+  }
+
+  if (isSet(data)) {
+    const setData = Array.from(data)
+    return () => (
+      <>
+        {`Set(${setData.length}) `}
+        {`{`}
+        {renderCollection(setData)}
+        {`}`}
+      </>
+    )
   }
 }
-function colorByType(data: unknown) {
-  const colorMap = {
-    string: 'text-#D1977F',
-    number: 'text-#9980FF',
-    boolean: 'text-#9980FF',
-    undefined: 'text-#ABABAB',
-    symbol: 'text-#D1977F',
-    bigint: 'text-#ABABAB',
-    function: '',
-    object: '',
-  }
-  const type = typeof data
-  return colorMap[type] || 'text-#ABABAB'
+function CustomValuePreview(data: unknown) {
+  const formatState = formatStateValue(data)
+  return (
+    <span style={{ color: formatState?.color }} class="pl1rem">
+      {formatState.rawDisplay}
+    </span>
+  )
 }
 </script>
 
 <template>
-  <template v-if="typeof data === 'object' && data !== null">
+  <div v-if="typeof data === 'object' && data !== null" truncate>
     <ToggleExpanded
       :value="false"
       cursor-pointer
     />
-    <span font-state-field text-3.5 italic>
-      {{ getDataKeysPreview(data) }}
+    <span class="font-state-field text-3.5 italic">
+      <component :is="DataKeysPreview(data)" />
     </span>
-  </template>
-  <template v-else>
-    <span :class="colorByType(data)" pl1rem>
-      <template v-if="typeof data === 'bigint'">
-        {{ data }}{{ 'n' }}
-      </template>
-      <template v-else-if="typeof data === 'undefined'">
-        {{ 'undefined' }}
-      </template>
-      <template v-else>
-        {{ data }}
-      </template>
-    </span>
-  </template>
+  </div>
+  <component :is="CustomValuePreview(data)" v-else />
 </template>

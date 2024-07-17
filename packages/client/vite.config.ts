@@ -1,7 +1,6 @@
 /// <reference types="vitest" />
 
 import path from 'node:path'
-import fs from 'node:fs'
 import { defineConfig } from 'vite'
 import Vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
@@ -9,9 +8,8 @@ import AutoImport from 'unplugin-auto-import/vite'
 import UnoCSS from 'unocss/vite'
 import VueRouter from 'unplugin-vue-router/vite'
 import { VueRouterAutoImports } from 'unplugin-vue-router'
-import consola from 'consola'
+import vueJsx from '@vitejs/plugin-vue-jsx'
 
-let _resolvedConfig
 export default defineConfig({
   resolve: {
     alias: {
@@ -25,6 +23,7 @@ export default defineConfig({
         defineModel: true,
       },
     }),
+    vueJsx(),
 
     VueRouter(),
 

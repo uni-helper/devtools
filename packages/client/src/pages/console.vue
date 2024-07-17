@@ -66,14 +66,14 @@ function colorByType(data: ConsoleInfo['type']) {
         </template>
       </Navbar>
 
-      <div m-0.83rem>
+      <div mx-0.83rem>
         <div
           v-for="(consoleInfo, key) in consoleList" :key
           mb0.5 flex cursor-default items-center justify-between rounded hover:op85
           :class="colorByType(consoleInfo.type)"
         >
-          <div v-for="(data, index) in consoleInfo.messages" :key="index">
-            <RootStateViewer :data="data === null ? 'null' : data" />
+          <div v-for="(data, index) in consoleInfo.messages" :key="index" truncate>
+            <RootStateViewer :data />
           </div>
           <span
             mr1rem cursor-pointer text-sm text-gray font-300

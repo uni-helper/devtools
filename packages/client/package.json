@@ -25,6 +25,7 @@
   "dependencies": {
     "@trpc/client": "^10.45.2",
     "@uni-helper/devtools-shared": "workspace:*",
+    "@vue/devtools-kit": "^7.3.6",
     "@vue/devtools-ui": "^7.3.4",
     "@vueuse/core": "^10.9.0",
     "floating-vue": "^5.2.2",
@@ -43,6 +44,7 @@
     "@uni-helper/devtools": "workspace:*",
     "@unocss/reset": "^0.60.2",
     "@vitejs/plugin-vue": "^5.0.4",
+    "@vitejs/plugin-vue-jsx": "^4.0.0",
     "unocss": "^0.60.2",
     "unplugin-auto-import": "^0.17.6",
     "unplugin-vue-components": "^0.27.0",

@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2017",
     "jsx": "preserve",
+    "jsxImportSource": "vue",
     "lib": ["DOM", "ESNext"],
     "baseUrl": ".",
     "module": "ESNext",
@@ -14,7 +15,6 @@
       "vite/client",
       "unplugin-vue-router/client"
     ],
-    "allowJs": true,
     "strict": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,
