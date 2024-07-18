@@ -1,10 +1,13 @@
 export const stateTypeColorMap: Record<string, string> = {
   'null': '#ABABAB',
   'undefined': '#ABABAB',
-  'literal': '#9980FF',
-  'string': '#D1977F',
-  'bigint': '#D1977F',
+  'literal': '#9980eb',
+  'string': '#d19763',
+  'bigint': '#abab9f',
+  'symbol': '#d19774',
   'array': '',
+  'set': '',
+  'map': '',
   'plain-object': '',
   'unknown': '#ABABAB',
 }

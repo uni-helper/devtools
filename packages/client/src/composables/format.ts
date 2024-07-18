@@ -10,8 +10,8 @@ export function getStateValueType(value: unknown) {
   }
   else if (
     type === 'boolean'
-      || type === 'number'
-      || type === 'symbol'
+    || type === 'number'
+    || type === 'symbol'
   ) {
     return 'literal'
   }
@@ -19,6 +19,8 @@ export function getStateValueType(value: unknown) {
     return 'bigint'
   }
   else if (type === 'string') {
+    if ((value as string)!.startsWith('Symbol(') && (value as string)!.endsWith(')'))
+      return 'symbol'
     return 'string'
   }
   else if (isArray(value)) {
@@ -29,6 +31,9 @@ export function getStateValueType(value: unknown) {
   }
   else if (isSet(value)) {
     return 'set'
+  }
+  else if (isMap(value)) {
+    return 'map'
   }
   else {
     return 'unknown'
@@ -78,6 +83,14 @@ export function formatStateValue(value: unknown) {
       color,
     }
   }
+  else if (type === 'symbol') {
+    return {
+      rawType: type,
+      rawDisplay: value,
+      value,
+      color,
+    }
+  }
   else if (type === 'array') {
     return {
       rawType: 'array',
@@ -87,9 +100,19 @@ export function formatStateValue(value: unknown) {
     }
   }
   else if (type === 'set') {
+    const valueArray = Array.from(value as Set<any>)
     return {
       rawType: 'set',
-      rawDisplay: Array.from(value as Set<any>),
+      rawDisplay: `Set(${valueArray.length})`,
+      value,
+      color,
+    }
+  }
+  else if (type === 'map') {
+    const valueArray = Array.from(value as Map<any, any>)
+    return {
+      rawType: 'map',
+      rawDisplay: `Map(${valueArray.length})`,
       value,
       color,
     }

@@ -13,6 +13,7 @@ declare module 'vue' {
     AssetGridItem: typeof import('./src/components/assets/AssetGridItem.vue')['default']
     AssetListItem: typeof import('./src/components/assets/AssetListItem.vue')['default']
     AssetPreview: typeof import('./src/components/assets/AssetPreview.vue')['default']
+    ChildStateViewer: typeof import('./src/components/state/ChildStateViewer.vue')['default']
     CodeBlock: typeof import('./src/components/code/CodeBlock.vue')['default']
     CodeSnippets: typeof import('./src/components/code/CodeSnippets.vue')['default']
     ComponentTreeNode: typeof import('./src/components/components/ComponentTreeNode.vue')['default']

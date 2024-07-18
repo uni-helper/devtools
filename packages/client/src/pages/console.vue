@@ -29,6 +29,7 @@ function colorByType(data: ConsoleInfo['type']) {
   }
   return colorMap[data] || ''
 }
+console.log(consoleList.value)
 </script>
 
 <template>
@@ -69,7 +70,7 @@ function colorByType(data: ConsoleInfo['type']) {
       <div mx-0.83rem>
         <div
           v-for="(consoleInfo, key) in consoleList" :key
-          mb0.5 flex cursor-default items-center justify-between rounded hover:op85
+          mb0.5 flex cursor-default items-start justify-between rounded hover:op85
           :class="colorByType(consoleInfo.type)"
         >
           <div v-for="(data, index) in consoleInfo.messages" :key="index" truncate>

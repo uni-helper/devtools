@@ -24,7 +24,7 @@ function renderCollection(items: any[], isObject: boolean = false) {
 function DataKeysPreview(data: object) {
   if (isPlainObject(data)) {
     const entries = Object.entries(data)
-    return () => (
+    return (
       <>
         {'{'}
         {renderCollection(entries, true)}
@@ -33,9 +33,9 @@ function DataKeysPreview(data: object) {
     )
   }
 
-  if (isArray(data)) {
+  else if (isArray(data)) {
     const arrayData = Array.from(data)
-    return () => (
+    return (
       <>
         {`(${arrayData.length}) `}
         [
@@ -45,13 +45,25 @@ function DataKeysPreview(data: object) {
     )
   }
 
-  if (isSet(data)) {
+  else if (isSet(data)) {
     const setData = Array.from(data)
-    return () => (
+    return (
       <>
         {`Set(${setData.length}) `}
         {`{`}
         {renderCollection(setData)}
+        {`}`}
+      </>
+    )
+  }
+
+  else if (isMap(data)) {
+    const mapData = Array.from((data as Map<any, any>).entries())
+    return (
+      <>
+        {`Map(${mapData.length}) `}
+        {`{`}
+        {renderCollection(mapData, true)}
         {`}`}
       </>
     )
@@ -65,17 +77,22 @@ function CustomValuePreview(data: unknown) {
     </span>
   )
 }
+const isExpanded = ref(false)
+function toggleExpanded() {
+  isExpanded.value = !isExpanded.value
+}
 </script>
 
 <template>
-  <div v-if="typeof data === 'object' && data !== null" truncate>
+  <div v-if="typeof data === 'object' && data !== null" truncate @click="toggleExpanded">
     <ToggleExpanded
-      :value="false"
+      :value="isExpanded"
       cursor-pointer
     />
     <span class="font-state-field text-3.5 italic">
       <component :is="DataKeysPreview(data)" />
     </span>
+    <ChildStateViewer v-if="isExpanded" :data />
   </div>
   <component :is="CustomValuePreview(data)" v-else />
 </template>

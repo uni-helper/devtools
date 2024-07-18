@@ -5,6 +5,7 @@ export default antfu(
     unocss: false,
     formatters: true,
     ignores: [
+      '**/node_modules/**',
       '**/uniJs.js',
       'playground/**',
       '**/plugin/client/**',

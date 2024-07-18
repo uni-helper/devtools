@@ -11,6 +11,7 @@ function handelClick() {
   console.log([1,2,3,2,2,,2,2,,2,2,2,2,2,2,,2,2,,1,2,3,2,21,2,3,2,2,,2,2,,2,2,2,2,2,2,,2,2,,,,2,2,,2,2,2,2,2,2,,2,2,,])
   console.log([1,2,'123',3,2,{a:1,b:2}])
   console.log(new Set('aa'))
+  console.log(new Map([['a',1],['b',2]]))
 }
 </script>
 

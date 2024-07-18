@@ -15,7 +15,11 @@ if (clientState.value.route !== '/')
         h-full h-screen of-hidden font-sans bg-base
       >
         <SideNav v-if="!clientState.isFirstVisit" of-x-hidden of-y-auto />
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <KeepAlive>
+            <component :is="Component" />
+          </KeepAlive>
+        </RouterView>
       </div>
       <template #fallback>
         <AppConnecting />

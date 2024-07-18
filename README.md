@@ -64,7 +64,7 @@
           - [x] boolean
           - [x] undefined
           - [x] null
-          - [ ] Symbol
+          - [x] Symbol
         - [ ] 复杂类型
           - [ ] object
           - [ ] array
