@@ -1,7 +1,7 @@
 <script setup>
 import { ref, version } from 'vue'
 import { basename } from '@uni-helper/devtools-shared'
-import * as Pinia from 'pinia'
+import { getActivePinia } from 'pinia'
 
 const x = ref(0)
 const y = ref(0)
@@ -26,7 +26,7 @@ function handleTouchEnd() {
 }
 
 function getPiniaState() {
-  const state = JSON.parse(JSON.stringify(Pinia.getActivePinia().state.value))
+  const state = JSON.parse(JSON.stringify(getActivePinia().state.value))
   // 获取所有 stores 的信息
   return state
 }
@@ -35,6 +35,7 @@ function getPiniaState() {
 function extractComponentInfo(component) {
   const { type } = component.$
 
+  console.log(type)
   const name = type.name
     ? type.name
     : type.__name
@@ -56,11 +57,12 @@ function extractComponentInfo(component) {
 
 function handleTap() {
   const pages = getCurrentPages()
+  console.log(pages)
   const currentPage = pages[pages.length - 1]
   const components = extractComponentInfo(currentPage.$vm)
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
   const piniaState = getPiniaState()
-  console.log(Pinia.getActivePinia())
+  console.log(getActivePinia())
 
   const data = {
     currentPage: currentPage.route,
@@ -79,7 +81,7 @@ function handleTap() {
     },
   })
 }
-</script>
+</script>xz
 
 <template>
   <view

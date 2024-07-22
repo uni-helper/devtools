@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:stream'
 import polka from 'polka'
 import sirv from 'sirv'
 import ws from 'ws'
+import detectPort from 'detect-port'
 
 import { applyWSSHandler } from '@trpc/server/adapters/ws'
 import { createExpressMiddleware } from '@trpc/server/adapters/express'
@@ -38,14 +39,17 @@ export function createDevtoolServe(
       router: createAppRouter(resolvedConfig, eventEmitter, options),
     }),
   )
-  app.listen(port, () => {
-    uniDevToolsPrint(port)
-  })
 
   applyWSSHandler(({
     wss: new ws.Server({ server }),
     router: createAppRouter(resolvedConfig, eventEmitter, options),
   }))
+
+  detectPort(port).then((rightPort) => {
+    app.listen(rightPort, () => {
+      uniDevToolsPrint(rightPort)
+    })
+  })
 
   return app
 }

@@ -2,23 +2,42 @@
 import { stringify } from '@ungap/structured-clone/json'
 import { trpc } from './trpc'
 
-function stringifySymbolAndFunctions(obj, cache = new Set()) {
+function stringifySymbolAndFunctions(obj, cache = new WeakMap()) {
   if (!obj || typeof obj !== 'object' || cache.has(obj)) {
-    return
+    return obj
   }
-  cache.add(obj)
 
-  Object.keys(obj).forEach((key) => {
+  if (cache.get(obj)) {
+    return cache.get(obj)
+  }
+
+  const newObj = Array.isArray(obj) ? [] : {}
+  cache.set(obj, newObj)
+
+  for (const key of Object.keys(obj)) {
     const value = obj[key]
-    if (typeof value === 'function' || typeof value === 'symbol') {
-      obj[key] = value.toString()
-    }
-    else if (typeof value === 'object' && value !== null) {
-      stringifySymbolAndFunctions(value, cache)
-    }
-  })
+    const valueType = typeof value
 
-  cache.delete(obj)
+    if (valueType === 'function' || valueType === 'symbol') {
+      newObj[key] = value.toString()
+    }
+    else if (valueType === 'object' && value !== null) {
+      if (value instanceof Date) {
+        newObj[key] = new Date(value)
+      }
+      else if (value instanceof RegExp) {
+        newObj[key] = new RegExp(value)
+      }
+      else {
+        newObj[key] = stringifySymbolAndFunctions(value, cache)
+      }
+    }
+    else {
+      newObj[key] = value
+    }
+  }
+
+  return newObj
 }
 
 export function proxyConsole() {
@@ -34,8 +53,8 @@ export function proxyConsole() {
     apply(target, thisArg, argumentsList) {
       // 调用原始 console 方法
       Reflect.apply(target, thisArg, argumentsList)
-      stringifySymbolAndFunctions(argumentsList)
-      const messages = stringify(argumentsList)
+      const newObj = stringifySymbolAndFunctions(argumentsList)
+      const messages = stringify(newObj)
       /**
        * @typedef ConsoleInfo
        * @type {object}
