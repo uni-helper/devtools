@@ -1,43 +1,24 @@
 /* eslint-disable unicorn/error-message */
 import { stringify } from '@ungap/structured-clone/json'
+import { deepClone } from '@uni-helper/devtools-shared'
 import { trpc } from './trpc'
 
-function stringifySymbolAndFunctions(obj, cache = new WeakMap()) {
+function stringifySymbolAndFunctions(obj, cache = new Set()) {
   if (!obj || typeof obj !== 'object' || cache.has(obj)) {
-    return obj
+    return
   }
+  cache.add(obj)
 
-  if (cache.get(obj)) {
-    return cache.get(obj)
-  }
-
-  const newObj = Array.isArray(obj) ? [] : {}
-  cache.set(obj, newObj)
-
-  for (const key of Object.keys(obj)) {
-    const value = obj[key]
-    const valueType = typeof value
-
-    if (valueType === 'function' || valueType === 'symbol') {
-      newObj[key] = value.toString()
+  Object.entries(obj).forEach(([key, value]) => {
+    if (typeof value === 'function' || typeof value === 'symbol') {
+      obj[key] = value.toString()
     }
-    else if (valueType === 'object' && value !== null) {
-      if (value instanceof Date) {
-        newObj[key] = new Date(value)
-      }
-      else if (value instanceof RegExp) {
-        newObj[key] = new RegExp(value)
-      }
-      else {
-        newObj[key] = stringifySymbolAndFunctions(value, cache)
-      }
+    else if (typeof value === 'object' && value !== null) {
+      stringifySymbolAndFunctions(value, cache)
     }
-    else {
-      newObj[key] = value
-    }
-  }
+  })
 
-  return newObj
+  cache.delete(obj)
 }
 
 export function proxyConsole() {
@@ -53,8 +34,9 @@ export function proxyConsole() {
     apply(target, thisArg, argumentsList) {
       // 调用原始 console 方法
       Reflect.apply(target, thisArg, argumentsList)
-      const newObj = stringifySymbolAndFunctions(argumentsList)
-      const messages = stringify(newObj)
+      const clone = deepClone(argumentsList)
+      stringifySymbolAndFunctions(clone)
+      const messages = stringify(clone)
       /**
        * @typedef ConsoleInfo
        * @type {object}

@@ -12,6 +12,7 @@ function handelClick() {
   console.log([1,2,'123',3,2,{a:1,b:2}])
   console.log(new Set('aa'))
   console.log(new Map([['a',1],['b',2]]))
+  console.log(1,2,{a:1,b:2},5,6)
 }
 </script>
 

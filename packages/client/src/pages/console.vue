@@ -73,8 +73,10 @@ console.log(consoleList.value)
           mb0.5 flex cursor-default items-start justify-between rounded hover:op85
           :class="colorByType(consoleInfo.type)"
         >
-          <div v-for="(data, index) in consoleInfo.messages" :key="index" truncate>
-            <RootStateViewer :data />
+          <div>
+            <div v-for="(data, index) in consoleInfo.messages" :key="index" truncate>
+              <RootStateViewer :data />
+            </div>
           </div>
           <span
             mr1rem cursor-pointer text-sm text-gray font-300

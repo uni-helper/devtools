@@ -35,12 +35,11 @@ function getPiniaState() {
 function extractComponentInfo(component) {
   const { type } = component.$
 
-  console.log(type)
   const name = type.name
     ? type.name
     : type.__name
       ? type.__name
-      : basename(type.__file, '.vue')
+      : basename(type?.__file || '.vue', '.vue')
 
   if (name === 'UniDevTools')
     return null
@@ -57,12 +56,10 @@ function extractComponentInfo(component) {
 
 function handleTap() {
   const pages = getCurrentPages()
-  console.log(pages)
+  const piniaState = getPiniaState()
   const currentPage = pages[pages.length - 1]
   const components = extractComponentInfo(currentPage.$vm)
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
-  const piniaState = getPiniaState()
-  console.log(getActivePinia())
 
   const data = {
     currentPage: currentPage.route,
