@@ -78,7 +78,7 @@ function handleTap() {
     },
   })
 }
-</script>xz
+</script>
 
 <template>
   <view

@@ -9,6 +9,7 @@ import { getPagesInfo, importDevtools, inspectDevtools } from './logic'
 import type { Options } from './types'
 import type createRouter from './devtoolServer/rpc/index'
 import { pluginByEnv } from './logic/pluginByEnv'
+import { injectDevtoolInfo } from './inspects/injectDevtoolInfo'
 
 export * from './types'
 export type AppRouter = ReturnType<typeof createRouter>
@@ -77,6 +78,12 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
           },
         })
         return JSON.stringify(pages, null, 2)
+      }
+
+      /** 注入devtools组件信息 */
+      const vueFilter = createFilter(['**/*.vue'])
+      if (vueFilter(id)) {
+        return injectDevtoolInfo(src, id)
       }
     },
     load(id) {

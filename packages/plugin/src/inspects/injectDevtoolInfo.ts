@@ -1,0 +1,35 @@
+import { parse } from '@vue/compiler-sfc'
+import MagicString from 'magic-string'
+import { basename } from 'pathe'
+
+export function injectDevtoolInfo(code: string, id: string) {
+  const ms = new MagicString(code)
+  const { descriptor } = parse(code)
+  const script = descriptor.script
+  const inspectInfo = /* js */`
+    ;const __uni_devtoolInfo = {
+      name: ${basename(id, '.vue')},
+      filename: ${id},
+    }
+  `
+  if (script) {
+    ms.appendRight(script.loc.end.offset, inspectInfo)
+  }
+  else {
+    const inspectScript = /* js */`
+      <script>${inspectInfo}</script>
+    `
+    ms.append(inspectScript)
+  }
+
+  const map = ms.generateMap({
+    source: id,
+    file: `${id}.map`,
+    includeContent: true,
+  })
+
+  return {
+    code: ms.toString(),
+    map,
+  }
+}
