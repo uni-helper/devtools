@@ -3,6 +3,7 @@ import { version } from './../../package.json'
 import UniIcon from '/icon/uni_icon.png'
 
 const { initState } = useInitState()
+
 const pages = await trpc.getPages.query()
 const modules = await trpc.getComponent.query()
 

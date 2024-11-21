@@ -45,6 +45,11 @@ export interface Options {
    * vue-devtools Opthins
    */
   vueDevtoolsOptions: VitePluginVueDevToolsOptions
+  /**
+   * 客户端
+   * @default false
+   */
+  client: boolean
 }
 
 export interface ModuleInfo {

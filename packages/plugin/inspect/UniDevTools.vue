@@ -1,7 +1,13 @@
 <script setup>
-import { ref, version } from 'vue'
+import { getCurrentInstance, onMounted, ref } from 'vue'
 import { basename } from '@uni-helper/devtools-shared'
-import { getActivePinia } from 'pinia'
+import { getCurrentPage } from './initMPClient'
+
+onMounted(() => {
+  getCurrentPage()
+})
+
+console.log('====================================================')
 
 const x = ref(0)
 const y = ref(0)
@@ -26,9 +32,9 @@ function handleTouchEnd() {
 }
 
 function getPiniaState() {
-  const state = JSON.parse(JSON.stringify(getActivePinia().state.value))
+  // const state = JSON.parse(JSON.stringify(getActivePinia().state.value))
   // 获取所有 stores 的信息
-  return state
+  // return state
 }
 
 /** 递归获取组件名称和地址 */
@@ -55,6 +61,7 @@ function extractComponentInfo(component) {
 }
 
 function handleTap() {
+  console.log(getCurrentInstance())
   const pages = getCurrentPages()
   const piniaState = getPiniaState()
   const currentPage = pages[pages.length - 1]
@@ -63,7 +70,6 @@ function handleTap() {
 
   const data = {
     currentPage: currentPage.route,
-    vueVersion: version,
     uniPlatform,
     uniCompileVersion,
     uniRuntimeVersion,

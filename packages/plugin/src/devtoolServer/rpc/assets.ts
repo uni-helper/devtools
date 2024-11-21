@@ -84,7 +84,9 @@ export async function getImageMeta(filepath: string) {
   if (_imageMetaCache.has(filepath))
     return _imageMetaCache.get(filepath)
   try {
-    const meta = imageMeta(await fs.readFile(filepath)) as ImageMeta
+    const fileBuffer = await fs.readFile(filepath)
+    const uint8Array = new Uint8Array(fileBuffer.buffer, fileBuffer.byteOffset, fileBuffer.byteLength)
+    const meta = imageMeta(uint8Array) as ImageMeta
     _imageMetaCache.set(filepath, meta)
     return meta
   }
