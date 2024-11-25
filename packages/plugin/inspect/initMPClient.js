@@ -7,7 +7,7 @@ export function initMPClient() {
 }
 
 function sendVersion() {
-  const { uniRuntimeVersion } = uni.getSystemInfoSync()
+  const { uniRuntimeVersion, uniPlatform } = uni.getSystemInfoSync()
 
   const vueVersion = version
   const uniVersion = uniRuntimeVersion
@@ -15,6 +15,7 @@ function sendVersion() {
   trpc.sendVersion.subscribe({
     vueVersion,
     uniVersion,
+    uniPlatform,
   }, {
     onComplete: () => {},
   })

@@ -25,6 +25,7 @@
   "dependencies": {
     "@trpc/client": "^10.45.2",
     "@uni-helper/devtools-shared": "workspace:*",
+    "@uni-helper/devtools-types": "workspace:*",
     "@vue/devtools-kit": "^7.3.6",
     "@vue/devtools-ui": "^7.3.4",
     "@vueuse/core": "^10.9.0",

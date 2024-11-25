@@ -104,6 +104,9 @@ importers:
       '@uni-helper/devtools-shared':
         specifier: workspace:*
         version: link:../shared
+      '@uni-helper/devtools-types':
+        specifier: workspace:*
+        version: link:../types
       '@vue/devtools-kit':
         specifier: ^7.3.6
         version: 7.3.6
@@ -189,6 +192,9 @@ importers:
       '@uni-helper/devtools-shared':
         specifier: workspace:*
         version: link:../shared
+      '@uni-helper/devtools-types':
+        specifier: workspace:*
+        version: link:../types
       '@uni-helper/trpc-client':
         specifier: workspace:*
         version: link:../trpc-client
@@ -346,6 +352,8 @@ importers:
       undici:
         specifier: ^6.0.1
         version: 6.19.2
+
+  packages/types: {}
 
   playground:
     dependencies:
