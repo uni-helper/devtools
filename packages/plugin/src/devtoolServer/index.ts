@@ -1,5 +1,6 @@
 import http from 'node:http'
 import { EventEmitter } from 'node:stream'
+import { exec, spawn } from 'node:child_process'
 import polka from 'polka'
 import sirv from 'sirv'
 import ws from 'ws'
@@ -48,6 +49,16 @@ export function createDevtoolServe(
   detectPort(port).then((rightPort) => {
     app.listen(rightPort, () => {
       uniDevToolsPrint(rightPort)
+      if (options?.client) {
+        exec(`ud client ${rightPort}`, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`exec error: ${error}`)
+            return
+          }
+          console.log(`stdout: ${stdout}`)
+          console.error(`stderr: ${stderr}`)
+        })
+      }
     })
   })
 

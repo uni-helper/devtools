@@ -23,7 +23,9 @@ export default defineConfig({
       dts: 'src/components.d.ts',
       directoryAsNamespace: true,
     }),
-    DevTools(),
+    DevTools({
+      client: true,
+    }),
     Uni(),
     // https://github.com/antfu/unplugin-auto-import
     AutoImport({

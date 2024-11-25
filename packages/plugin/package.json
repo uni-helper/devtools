@@ -40,7 +40,11 @@
       ]
     }
   },
+  "bin": {
+    "ud": "./cli/index.cjs"
+  },
   "files": [
+    "cli",
     "client",
     "dist",
     "inspect"

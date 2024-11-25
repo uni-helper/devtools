@@ -1,5 +1,5 @@
 {
-  "name": "@uni-helper/devtools-shared",
+  "name": "@uni-helper/devtools-cli",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -17,38 +17,16 @@
     "url": "https://github.com/flippedround/uni-devtools/issues"
   },
   "keywords": [
-    "vite"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./*": "./*"
-  },
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "./dist/*",
-        "./*"
-      ]
-    }
-  },
-  "files": [
-    "dist"
+    "cli"
   ],
   "scripts": {
-    "build": "tsup",
-    "stub": "tsup --watch",
+    "build": "unbuild",
+    "stub": "unbuild --stub",
     "test": "vitest"
   },
-  "dependencies": {
-    "json5": "^2.2.3",
-    "lz-string": "^1.5.0",
-    "rfdc": "^1.4.1"
+  "devDependencies": {
+    "@webviewjs/webview": "^0.1.3",
+    "cac": "^6.7.14",
+    "picocolors": "^1.1.1"
   }
 }

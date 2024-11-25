@@ -10,7 +10,6 @@ import type { Options } from './types'
 import type createRouter from './devtoolServer/rpc/index'
 import { pluginByEnv } from './logic/pluginByEnv'
 import { injectDevtoolInfo } from './inspects/injectDevtoolInfo'
-import { open } from './webview'
 
 export * from './types'
 export type AppRouter = ReturnType<typeof createRouter>
@@ -20,9 +19,6 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
     return _plugin
   }
   const port = options?.port || 5015
-  if (options?.client) {
-    open(port)
-  }
   const inspect = loadInspectPlugin()
   const [pagesPath, pages] = getPagesInfo(options?.pageJsonPath)
   const rootPath = pagesPath.replace('pages.json', '')
