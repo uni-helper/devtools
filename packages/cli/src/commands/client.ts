@@ -4,6 +4,7 @@ export function open(port: string) {
   const app = new Application()
   const window = app.createBrowserWindow({
     title: 'Uni Devtools',
+    alwaysOnTop: true,
   })
   window.createWebview({
     url: `http://localhost:${port}`,

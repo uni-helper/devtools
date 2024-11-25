@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import process from 'node:process'
+import readline from 'node:readline'
 import cac from 'cac'
 import c from 'picocolors'
 import { version } from '../package.json'
@@ -32,3 +33,8 @@ cli.on('command:*', () => {
 })
 
 cli.parse()
+
+const rl = readline.createInterface({ input: process.stdin })
+rl.on('line', (input) => {
+  console.log(`Received: ${input}`)
+})

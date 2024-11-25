@@ -1,6 +1,6 @@
 import http from 'node:http'
 import { EventEmitter } from 'node:stream'
-import { exec, spawn } from 'node:child_process'
+import { exec } from 'node:child_process'
 import polka from 'polka'
 import sirv from 'sirv'
 import ws from 'ws'
@@ -13,6 +13,7 @@ import type { ResolvedConfig } from 'vite'
 import { DIR_CLIENT, DIR_TMP_INSPECT } from '../dir'
 import { uniDevToolsPrint } from '../utils/print'
 import type { Options } from '../types'
+import { openInDevtools } from '../openCommands'
 import createAppRouter from './rpc/index'
 
 const eventEmitter = new EventEmitter()
@@ -50,14 +51,7 @@ export function createDevtoolServe(
     app.listen(rightPort, () => {
       uniDevToolsPrint(rightPort)
       if (options?.client) {
-        exec(`ud client ${rightPort}`, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`exec error: ${error}`)
-            return
-          }
-          console.log(`stdout: ${stdout}`)
-          console.error(`stderr: ${stderr}`)
-        })
+        openInDevtools(rightPort)
       }
     })
   })
