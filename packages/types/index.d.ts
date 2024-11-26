@@ -11,11 +11,7 @@ export interface ComponentTreeNode {
   children?: ComponentTreeNode[]
 }
 
-/** 初始化状态 */
-export interface InitState {
-  /** 当前页面 */
-  currentPage: string
-
+export interface VersionState {
   /** uni运行版本 */
   uniVersion: string
 
@@ -24,6 +20,12 @@ export interface InitState {
 
   /** vue版本 */
   vueVersion: string
+}
+
+/** 初始化状态 */
+export interface InitState extends VersionState {
+  /** 当前页面 */
+  currentPage: string
 
   /** 当前页面组件 */
   components: ComponentTreeNode

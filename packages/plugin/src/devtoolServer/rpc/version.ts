@@ -1,14 +1,15 @@
 import type { EventEmitter } from 'node:stream'
 import { z } from 'zod'
 import { observable } from '@trpc/server/observable'
-import type { InitState } from '@uni-helper/devtools-types'
+import type { VersionState } from '@uni-helper/devtools-types'
 import { publicProcedure, router } from './../trpc'
 
 export function versionRouter(eventEmitter: EventEmitter) {
   const { input, subscription } = publicProcedure
+  let versionState: VersionState | null
 
   return router({
-    sendVersion: input(
+    setVersion: input(
       z.object({
         vueVersion: z.string(),
         uniVersion: z.string(),
@@ -16,16 +17,23 @@ export function versionRouter(eventEmitter: EventEmitter) {
       }),
     ).subscription(({ input }) => {
       eventEmitter.emit('version', input)
+      versionState = input
     }),
     onVersion: subscription(() => {
-      return observable<InitState>((emit) => {
-        const versionHandler = (data: InitState) => {
+      return observable<VersionState>((emit) => {
+        console.log('on version')
+        console.log(versionState)
+        const versionHandler = (data: VersionState) => {
           emit.next(data)
         }
 
         eventEmitter.on('version', versionHandler)
 
+        if (versionState) {
+          emit.next(versionState)
+        }
         return () => {
+          console.log('off version')
           eventEmitter.off('version', versionHandler)
         }
       })

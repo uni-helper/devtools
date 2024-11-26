@@ -1,27 +1,34 @@
-import { parse } from '@vue/compiler-sfc'
 import MagicString from 'magic-string'
 import { basename } from 'pathe'
+import { parseJS, parseSFC } from '../utils/parse'
 
-export function injectDevtoolInfo(code: string, id: string) {
+export async function injectDevtoolInfo(code: string, id: string) {
   const ms = new MagicString(code)
-  const { descriptor } = parse(code)
+  const descriptor = parseSFC(code)
   const script = descriptor.script
-  const inspectInfo = /* js */`
-    ;const __uni_devtoolInfo = {
-      name: "${basename(id, '.vue')}",
-      filename: "${id}",
-    }
-  `
+
+  const inspectInfo = `
+  fileName: "${basename(id, '.vue')}",
+  filePath: "${id}",`
+
+  const exportInspectInfo = `;export default {${inspectInfo}}`
 
   if (script) {
-    ms.appendRight(script.loc.end.offset, inspectInfo)
+    const content = script.content
+    const ast = parseJS(content)
+    const exportDefaultStart = ast.body.find(node => node.type === 'ExportDefaultDeclaration')?.declaration.start
+
+    if (!exportDefaultStart) {
+      ms.appendRight(script.loc.end.offset, exportInspectInfo)
+    }
+    else {
+      ms.appendRight(exportDefaultStart + 1, inspectInfo)
+    }
   }
   else {
     const lang = descriptor.scriptSetup?.lang
     const langContet = lang === 'ts' ? 'lang="ts"' : ''
-    const inspectScript = /* js */`
-      <script ${langContet}>${inspectInfo}</script>
-    `
+    const inspectScript = `<script ${langContet}>${exportInspectInfo}</script>`
     ms.append(inspectScript)
   }
 

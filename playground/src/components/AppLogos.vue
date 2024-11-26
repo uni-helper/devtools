@@ -1,20 +1,4 @@
-<script setup lang="ts">
-function handelClick() {
-  console.log({
-    aa:1,
-    bb:'111',
-    cc: {
-      dd: true
-    },
-    ee: [1,2,3]
-  })
-  console.log([1,2,3,2,2,,2,2,,2,2,2,2,2,2,,2,2,,1,2,3,2,21,2,3,2,2,,2,2,,2,2,2,2,2,2,,2,2,,,,2,2,,2,2,2,2,2,2,,2,2,,])
-  console.log([1,2,'123',3,2,{a:1,b:2}])
-  console.log(new Set('aa'))
-  console.log(new Map([['a',1],['b',2]]))
-  console.log(1,2,{a:1,b:2},5,6)
-}
-</script>
+
 
 <template>
   <view inline-flex cursor-default text-2xl font-300>
@@ -44,3 +28,14 @@ function handelClick() {
     </view>
   </view>
 </template>
+
+<script lang="ts">
+// export default {
+//   name: 'AppLogos',
+//   methods: {
+//     handelClick() {
+//       this.$emit('click')
+//     },
+//   },
+// }
+</script>

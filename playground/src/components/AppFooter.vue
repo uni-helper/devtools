@@ -1,4 +1,8 @@
 <script lang="ts" setup>
+defineOptions({
+  name: 'AppFooter-1',
+})
+
 function handleClickGithub() {
   if (window?.open) {
     window.open('https://github.com/uni-helper/vitesse-uni-app')

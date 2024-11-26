@@ -1,9 +1,9 @@
-import { parse } from '@vue/compiler-sfc'
 import MagicString from 'magic-string'
+import { parseSFC } from '../utils/parse'
 
 export async function inspectDevtools(code: string, id: string) {
   const ms = new MagicString(code)
-  const { descriptor } = parse(code)
+  const descriptor = parseSFC(code)
   const { template } = descriptor
   const end = template?.loc.end.offset
   if (end)

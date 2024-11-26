@@ -1,14 +1,9 @@
 <script setup>
 import { getCurrentInstance, onMounted, ref } from 'vue'
-import { basename } from '@uni-helper/devtools-shared'
-import { getCurrentPage } from './initMPClient'
-
-onMounted(() => {
-  getCurrentPage()
-})
+import { setCurrentPage } from './initMPClient'
 
 console.log('====================================================')
-
+setCurrentPage()
 const x = ref(0)
 const y = ref(0)
 const dragging = ref(false)
@@ -37,35 +32,11 @@ function getPiniaState() {
   // return state
 }
 
-/** 递归获取组件名称和地址 */
-function extractComponentInfo(component) {
-  const { type } = component.$
-
-  const name = type.name
-    ? type.name
-    : type.__name
-      ? type.__name
-      : basename(type?.__file || '.vue', '.vue')
-
-  if (name === 'UniDevTools')
-    return null
-
-  const file = type.__file
-  const componentInfo = { name, file }
-
-  if (component.$children?.length > 0) {
-    componentInfo.children = component.$children.map(extractComponentInfo).filter(c => c !== null)
-  }
-
-  return componentInfo
-}
-
 function handleTap() {
   console.log(getCurrentInstance())
   const pages = getCurrentPages()
   const piniaState = getPiniaState()
   const currentPage = pages[pages.length - 1]
-  const components = extractComponentInfo(currentPage.$vm)
   const { uniPlatform, uniCompileVersion, uniRuntimeVersion } = uni.getSystemInfoSync()
 
   const data = {
@@ -73,7 +44,6 @@ function handleTap() {
     uniPlatform,
     uniCompileVersion,
     uniRuntimeVersion,
-    components,
     piniaState,
   }
   uni.navigateTo({

@@ -7,11 +7,12 @@ import { parseStack } from 'error-stack-parser-es/lite'
 import { extractPathByStack, sourceFile } from '../../utils/sourceFile'
 import { openInBrowser, openInEditor } from '../../openCommands'
 import type { ConsoleInfo, ModuleInfo, Options } from './../../types'
-import { getPagesInfo } from './../../logic'
 import { mergeRouters, publicProcedure, router } from './../trpc'
 import { DIR_INSPECT_LIST } from './../../dir'
 import { getImageMeta, getStaticAssets, getTextAssetContent } from './assets'
 import { versionRouter } from './version'
+import { pageRouter } from './page'
+import { componentRouter } from './component'
 
 export default function (
   config: ResolvedConfig,
@@ -21,15 +22,6 @@ export default function (
   const { query, input, subscription } = publicProcedure
 
   const routes = router({
-    getComponent: query(() => {
-      const json = readJsonSync(DIR_INSPECT_LIST)
-      return json.modules as ModuleInfo[]
-    }),
-    getPages: query(() => {
-      const [_, pages] = getPagesInfo(options?.pageJsonPath)
-      console.log(pages)
-      return pages
-    }),
     staticAssets: query(() => {
       return getStaticAssets(config)
     }),
@@ -83,5 +75,7 @@ export default function (
   return mergeRouters(
     routes,
     versionRouter(eventEmitter),
+    pageRouter(eventEmitter, options),
+    componentRouter(eventEmitter),
   )
 }

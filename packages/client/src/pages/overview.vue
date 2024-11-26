@@ -2,7 +2,7 @@
 import { version } from './../../package.json'
 import UniIcon from '/icon/uni_icon.png'
 
-const { initState } = useInitState()
+const { versionState } = useInitState()
 
 const pages = await trpc.getPages.query()
 const modules = await trpc.getComponent.query()
@@ -28,11 +28,11 @@ const vueModules = modules?.filter(module => module.id.endsWith('vue')).length
       <div flex="~ gap2 wrap">
         <div p4 theme-card-green flex="~ col auto">
           <img :src="UniIcon" h-7.5 w-7.5>
-          <code>v{{ initState?.uniCompileVersion }}</code>
+          <code>v{{ versionState?.uniVersion }}</code>
         </div>
         <div p4 theme-card-green flex="~ col auto">
           <div i-logos-vue text-3xl />
-          <code>v{{ initState?.vueVersion }}</code>
+          <code>v{{ versionState?.vueVersion }}</code>
         </div>
         <RouterLink flex="~ col auto" to="/pages" replace min-w-40 p4 theme-card-lime>
           <div i-carbon-tree-view-alt text-3xl />

@@ -24,7 +24,7 @@ export default defineConfig({
       directoryAsNamespace: true,
     }),
     DevTools({
-      client: true,
+      client: false,
     }),
     Uni(),
     // https://github.com/antfu/unplugin-auto-import
