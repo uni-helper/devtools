@@ -4,6 +4,7 @@ export const useInitState = createGlobalState(
   () => {
     const initState = ref<InitState>({})
     const versionState = ref<VersionState>()
+    const currentPage = ref('')
     const loading = ref(false)
     function init() {
       trpc.onVersion.subscribe(undefined, {
@@ -13,11 +14,12 @@ export const useInitState = createGlobalState(
       })
       trpc.onCurrentPage.subscribe(undefined, {
         onData: (data) => {
-          initState.value.currentPage = data
+          currentPage.value = data
         },
       })
       trpc.onComponentTree.subscribe(undefined, {
         onData: (data) => {
+          console.log(data)
           initState.value.components = data
         },
       })
@@ -27,6 +29,7 @@ export const useInitState = createGlobalState(
       init,
       loading,
       initState,
+      currentPage,
       versionState,
     }
   },

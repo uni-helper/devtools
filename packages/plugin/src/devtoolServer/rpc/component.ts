@@ -20,8 +20,9 @@ export function componentRouter(eventEmitter: EventEmitter) {
       const json = readJsonSync(DIR_INSPECT_LIST)
       return json.modules as ModuleInfo[]
     }),
-    setComponentTree: input(ComponentTreeNodeSchema).subscription(({ input }) => {
-      eventEmitter.emit('setCurrentPage', input)
+    setComponentTree: input(z.unknown()).subscription(({ input }) => {
+      eventEmitter.emit('setComponentTree', input)
+      console.log('setComponentTree', input)
       componentTree = input
     }),
     onComponentTree: subscription(() => {
@@ -29,12 +30,12 @@ export function componentRouter(eventEmitter: EventEmitter) {
         const handler = (page: ComponentTreeNode) => {
           emit.next(page)
         }
-        eventEmitter.on('setCurrentPage', handler)
+        eventEmitter.on('setComponentTree', handler)
         if (componentTree) {
           emit.next(componentTree)
         }
         return () => {
-          eventEmitter.off('setCurrentPage', handler)
+          eventEmitter.off('setComponentTree', handler)
         }
       })
     }),

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { VueBadge, VueInput } from '@vue/devtools-ui'
 
-const { initState } = useInitState()
+const { currentPage: _currentPage } = useInitState()
 
 // const params = new URLSearchParams(window.location.search)
-const currentPage = toRaw(initState.value!.currentPage)
+const currentPage = toRaw(_currentPage.value)
 const routeInput = ref(currentPage)
 const pages = await trpc.getPages.query()
 const pageCount = pages.length
