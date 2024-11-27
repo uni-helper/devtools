@@ -2,7 +2,7 @@ import type { EventEmitter } from 'node:stream'
 import { z } from 'zod'
 import { observable } from '@trpc/server/observable'
 import type { ComponentTreeNode, ModuleInfo } from '@uni-helper/devtools-types'
-import { readJsonSync } from 'fs-extra'
+import fs from 'fs-extra'
 import { DIR_INSPECT_LIST } from '../../dir'
 import { publicProcedure, router } from './../trpc'
 
@@ -17,13 +17,13 @@ export function componentRouter(eventEmitter: EventEmitter) {
 
   return router({
     getComponent: query(() => {
-      const json = readJsonSync(DIR_INSPECT_LIST)
+      const json = fs.readJsonSync(DIR_INSPECT_LIST)
       return json.modules as ModuleInfo[]
     }),
     setComponentTree: input(z.unknown()).subscription(({ input }) => {
       eventEmitter.emit('setComponentTree', input)
       console.log('setComponentTree', input)
-      componentTree = input
+      componentTree = input as ComponentTreeNode
     }),
     onComponentTree: subscription(() => {
       return observable<ComponentTreeNode>((emit) => {

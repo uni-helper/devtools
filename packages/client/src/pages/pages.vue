@@ -4,15 +4,27 @@ import { VueBadge, VueInput } from '@vue/devtools-ui'
 const { currentPage: _currentPage } = useInitState()
 
 // const params = new URLSearchParams(window.location.search)
-const currentPage = toRaw(_currentPage.value)
+const currentPage = toRaw(_currentPage)
 const routeInput = ref(currentPage)
 const pages = await trpc.getPages.query()
 const pageCount = pages.length
 
 function handlePush(page: typeof pages[number]) {
-  // @ts-expect-error 有uni方法
-  uni[page.tabBar ? 'switchTab' : 'redirectTo']({
-    url: `/${page.path}`,
+  const url = `/${page.path}`
+
+  // @ts-expect-error uni在webview的js-sdk中有getEnv方法
+  uni.getEnv(({ h5 }) => {
+    if (h5) {
+      trpc.changeCurrentPage.mutate({
+        isTabBar: Boolean(page.tabBar),
+        page: url,
+      })
+    }
+    else {
+      uni[page.tabBar ? 'switchTab' : 'redirectTo']({
+        url: `/${page.path}`,
+      })
+    }
   })
 }
 </script>

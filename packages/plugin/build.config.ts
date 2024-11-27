@@ -16,4 +16,11 @@ export default defineBuildConfig({
     emitCJS: true,
     inlineDependencies: true,
   },
+  // hooks: {
+  //   'build:before': function (ctx) {
+  //     ctx.options.externals = ctx.options.externals.filter(
+  //       v => v !== 'ws',
+  //     )
+  //   },
+  // },
 })

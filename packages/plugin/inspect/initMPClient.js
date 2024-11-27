@@ -25,12 +25,14 @@ export function setVersion() {
 /**
  * 递归获取组件名称和地址
  * @param {*} component
- * @returns {import("@uni-helper/devtools-types").ComponentTreeNode}
+ * @returns {import("@uni-helper/devtools-types").ComponentTreeNode | null}
  */
 function extractComponentInfo(component) {
   const { type } = component.$
 
-  const name = type.fileName
+  const name = type.fileName || 'App'
+  if (name === 'UniDevTools')
+    return null
   const file = type.filePath
   const componentInfo = { name, file }
 
@@ -60,6 +62,22 @@ export function setCurrentPage() {
     })
     console.log('setCurrentPage', currentPage.route)
     console.log('setComponentTree', componentTree)
+
+    trpc.onChangeCurrentPage.subscribe(undefined, {
+      onData: (data) => {
+        console.log('onChangeCurrentPage', data)
+        if (data.isTabBar) {
+          uni.switchTab({
+            url: data.page,
+          })
+        }
+        else {
+          uni.redirectTo({
+            url: data.page,
+          })
+        }
+      },
+    })
   })
 }
 

@@ -1,5 +1,5 @@
 import type { Plugin } from 'vite'
-import { outputFileSync, removeSync } from 'fs-extra'
+import fs from 'fs-extra'
 import { createFilter } from 'vite'
 import JSON5 from 'json5'
 import { createDevtoolServe } from './devtoolServer'
@@ -46,13 +46,13 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
        * 会检查文件是否存在，
        * 在插件开始时写入临时空文件骗过uni-app
        */
-      outputFileSync(`${rootPath}__uni_devtools_page__temp/index.vue`, '')
+      fs.outputFileSync(`${rootPath}__uni_devtools_page__temp/index.vue`, '')
     },
     buildEnd() {
       /**
        * uni-app编译结束后，删除临时文件
        */
-      removeSync(`${rootPath}__uni_devtools_page__temp`)
+      fs.removeSync(`${rootPath}__uni_devtools_page__temp`)
     },
     transform(src, id) {
       /** 在main.js文件里注册Devtools组件 */

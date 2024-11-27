@@ -8,7 +8,6 @@ export function open(port: string) {
     width: 1600,
     height: 900,
   })
-  console.log(window.getCurrentMonitor())
   window.createWebview({
     url: `http://localhost:${port}`,
     enableDevtools: false,

@@ -1,6 +1,5 @@
 import http from 'node:http'
-import { EventEmitter } from 'node:stream'
-import { exec } from 'node:child_process'
+import { EventEmitter } from 'node:events'
 import polka from 'polka'
 import sirv from 'sirv'
 import ws from 'ws'

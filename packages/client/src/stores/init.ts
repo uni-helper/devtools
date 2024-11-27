@@ -15,6 +15,7 @@ export const useInitState = createGlobalState(
       trpc.onCurrentPage.subscribe(undefined, {
         onData: (data) => {
           currentPage.value = data
+          console.log('currentPage', data)
         },
       })
       trpc.onComponentTree.subscribe(undefined, {
