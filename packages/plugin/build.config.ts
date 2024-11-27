@@ -1,5 +1,6 @@
 import { defineBuildConfig } from 'unbuild'
 
+const buildPkgs = ['open', 'mime']
 export default defineBuildConfig({
   entries: [
     'src/index',
@@ -16,11 +17,11 @@ export default defineBuildConfig({
     emitCJS: true,
     inlineDependencies: true,
   },
-  // hooks: {
-  //   'build:before': function (ctx) {
-  //     ctx.options.externals = ctx.options.externals.filter(
-  //       v => v !== 'ws',
-  //     )
-  //   },
-  // },
+  hooks: {
+    'build:before': function (ctx) {
+      ctx.options.externals = ctx.options.externals.filter(
+        v => !buildPkgs.includes(v as string),
+      )
+    },
+  },
 })
