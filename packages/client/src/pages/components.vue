@@ -1,25 +1,21 @@
 <script setup lang="ts">
-const { initState } = useInitState()
+import type { ComponentTreeNode } from '@uni-helper/devtools-types'
 
 const filterName = ref('')
-trpc.onUpdate.subscribe('test', {
-  onData: (data) => {
-    console.log('onData', data)
-  },
-  onStarted() {
-    console.log('onStarted')
+
+const data = ref<ComponentTreeNode[]>()
+trpc.onComponentTree.subscribe(undefined, {
+  onData: (value) => {
+    data.value = [value]
   },
 })
-async function handleClick() {
-  await trpc.update.mutate('123123')
-}
 </script>
 
 <template>
-  <PanelGrids block h-screen of-auto @click="handleClick">
+  <PanelGrids block h-screen of-auto>
     <Navbar v-model:search="filterName" :no-padding="true" />
     <div no-scrollbar flex-1 select-none overflow-hidden px2>
-      <ComponentTreeNode :data="initState!.components" />
+      <TreeViewer :data="data!" :with-tag="true" :depth="0" />
     </div>
   </PanelGrids>
 </template>

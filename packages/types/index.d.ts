@@ -8,6 +8,7 @@ export interface ModuleInfo {
 export interface ComponentTreeNode {
   name: string
   file: string
+  id: string
   children?: ComponentTreeNode[]
 }
 

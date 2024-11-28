@@ -34,7 +34,11 @@ function extractComponentInfo(component) {
   if (name === 'UniDevTools')
     return null
   const file = type.filePath
-  const componentInfo = { name, file }
+  const componentInfo = {
+    name,
+    file,
+    id: component.$.uid,
+  }
 
   if (component.$children?.length > 0) {
     componentInfo.children = component.$children.map(extractComponentInfo).filter(c => c !== null)
@@ -44,6 +48,7 @@ function extractComponentInfo(component) {
 }
 
 export function setCurrentPage() {
+  console.log('initMPClient')
   onShow(() => {
     // eslint-disable-next-line no-undef
     const pages = getCurrentPages()
@@ -60,8 +65,6 @@ export function setCurrentPage() {
     trpc.setComponentTree.subscribe(componentTree, {
       onComplete: () => {},
     })
-    console.log('setCurrentPage', currentPage.route)
-    console.log('setComponentTree', componentTree)
 
     trpc.onChangeCurrentPage.subscribe(undefined, {
       onData: (data) => {

@@ -22,6 +22,7 @@ declare module 'vue' {
     IconTitle: typeof import('./src/components/common/IconTitle.vue')['default']
     IframeView: typeof import('./src/components/common/IframeView.vue')['default']
     Navbar: typeof import('./src/components/common/Navbar.vue')['default']
+    NodeTag: typeof import('./src/components/basic/NodeTag.vue')['default']
     PanelGrids: typeof import('./src/components/common/PanelGrids.vue')['default']
     RootStateViewer: typeof import('./src/components/state/RootStateViewer.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -34,5 +35,6 @@ declare module 'vue' {
     StateFieldsTree: typeof import('./src/components/state/StateFieldsTree.vue')['default']
     TabIcon: typeof import('./src/components/TabIcon.vue')['default']
     ToggleExpanded: typeof import('./src/components/common/ToggleExpanded.vue')['default']
+    TreeViewer: typeof import('./src/components/tree/TreeViewer.vue')['default']
   }
 }
