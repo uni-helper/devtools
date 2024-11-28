@@ -34,7 +34,7 @@ declare module 'vue' {
     StateFields: typeof import('./src/components/state/StateFields.vue')['default']
     StateFieldsTree: typeof import('./src/components/state/StateFieldsTree.vue')['default']
     TabIcon: typeof import('./src/components/TabIcon.vue')['default']
-    ToggleExpanded: typeof import('./src/components/common/ToggleExpanded.vue')['default']
+    ToggleExpanded: typeof import('./src/components/basic/ToggleExpanded.vue')['default']
     TreeViewer: typeof import('./src/components/tree/TreeViewer.vue')['default']
   }
 }

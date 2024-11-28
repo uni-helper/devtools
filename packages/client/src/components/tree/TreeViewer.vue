@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ComponentTreeNode } from '@uni-helper/devtools-types'
+import { VueIcon } from '@vue/devtools-ui'
 import ToggleExpanded from '~/components/basic/ToggleExpanded.vue'
 import ComponentTreeViewer from '~/components/tree/TreeViewer.vue'
 import { useSelect } from '~/composables/select'
@@ -57,10 +58,15 @@ function select(id: string) {
           <span v-if="withTag" class="text-gray-400 dark:text-gray-600 group-hover:(text-white op50) [.active_&]:(op50 text-white!)">&gt;</span>
         </span>
       </div>
-      <div
+      <VueIcon
         v-if="item.file"
-        i-material-symbols:my-location-outline-rounded mr3 op-0 group-focus:op50 group-hover:op-50
-        class="hover:op-100!"
+        v-tooltip="'Open in Editor'"
+        title="Open in Editor"
+        icon="i-material-symbols:my-location-outline-rounded"
+
+        action mr3 flex-none op-0 group-focus:op50 group-hover:op-50
+        :class="{ 'op-100!': selectedNodeId === item.id }"
+        :border="false"
         @click="openInEditor(item.file)"
       />
     </div>

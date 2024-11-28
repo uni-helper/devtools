@@ -4,6 +4,7 @@ import { VueInput } from '@vue/devtools-ui'
 const props = defineProps<{
   search?: string
   noPadding?: boolean
+  loading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -28,6 +29,8 @@ watch(input, () => {
         <VueInput
           v-if="search !== undefined"
           v-model="input"
+          :loading="loading"
+          clearable
           placeholder="Search..."
           left-icon="i-carbon-search"
           class="flex-auto"
