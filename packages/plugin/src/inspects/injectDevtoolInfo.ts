@@ -5,10 +5,11 @@ import { parseJS, parseSFC } from '../utils/parse'
 export async function injectDevtoolInfo(code: string, id: string) {
   const ms = new MagicString(code)
   const descriptor = parseSFC(code)
-  const script = descriptor.script
+  const { script, scriptSetup } = descriptor
 
+  const fileName = basename(id, '.vue')
   const inspectInfo = `
-  fileName: "${basename(id, '.vue')}",
+  fileName: "${fileName}",
   filePath: "${id}",`
 
   const exportInspectInfo = `;export default {${inspectInfo}}`
@@ -18,17 +19,16 @@ export async function injectDevtoolInfo(code: string, id: string) {
     const ast = parseJS(content)
     const exportDefaultStart = ast.body.find(node => node.type === 'ExportDefaultDeclaration')?.declaration.start
 
-    if (!exportDefaultStart) {
-      ms.appendRight(script.loc.end.offset, exportInspectInfo)
+    if (exportDefaultStart) {
+      ms.appendRight(exportDefaultStart + 1, inspectInfo)
     }
     else {
-      ms.appendRight(exportDefaultStart + 1, inspectInfo)
+      ms.appendRight(script.loc.end.offset, exportInspectInfo)
     }
   }
   else {
-    const lang = descriptor.scriptSetup?.lang
-    const langContet = lang === 'ts' ? 'lang="ts"' : ''
-    const inspectScript = `<script ${langContet}>${exportInspectInfo}</script>`
+    const langAttr = scriptSetup?.lang ? `lang="${scriptSetup.lang}"` : ''
+    const inspectScript = `<script ${langAttr}>${exportInspectInfo}</script>`
     ms.append(inspectScript)
   }
 

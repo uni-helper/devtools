@@ -36,7 +36,7 @@ const SHORTCUTS = [
 ]
 
 export function uniDevToolsPrint(port: number) {
-  console.clear()
+  // console.clear()
   console.log()
   console.log(`  ${c.green('➜')}  ${c.bold('Uni Devtools')}: ${c.magenta(`http://localhost:${port}`)}`)
   console.log(`  ${c.dim('press ')}${c.bold('h')}${c.dim(` to show help`)}`)

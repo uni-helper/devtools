@@ -1,7 +1,7 @@
 
 
 <template>
-  <view inline-flex cursor-default text-2xl font-300>
+  <view class="'aaa'" inline-flex cursor-default text-2xl font-300>
     <view
       flex
       flex-col
@@ -26,6 +26,9 @@
         Vite
       </text>
     </view>
+  </view>
+  <view>
+    test
   </view>
 </template>
 
