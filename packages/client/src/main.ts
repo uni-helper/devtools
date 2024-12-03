@@ -3,9 +3,9 @@ import { createMemoryHistory, createRouter } from 'vue-router/auto'
 import App from './App.vue'
 
 import '@unocss/reset/tailwind.css'
-import './styles/main.css'
 import 'uno.css'
-import 'floating-vue/dist/style.css'
+import '@vue/devtools-ui/style.css'
+import './styles/main.css'
 
 /** uni JS-SDK */
 import './utils/uniJs.js'

@@ -62,7 +62,7 @@ function select(id: string) {
         v-if="item.file"
         v-tooltip="'Open in Editor'"
         title="Open in Editor"
-        icon="i-material-symbols:my-location-outline-rounded"
+        icon="i-carbon-script-reference"
 
         action mr3 flex-none op-0 group-focus:op50 group-hover:op-50
         :class="{ 'op-100!': selectedNodeId === item.id }"

@@ -29,7 +29,6 @@ export function setVersion() {
  */
 function extractComponentInfo(component) {
   const { type } = component.$
-
   const name = type.fileName || 'App'
   if (name === 'UniDevTools')
     return null
@@ -61,6 +60,7 @@ export function setCurrentPage() {
     )
 
     const vm = currentPage.$vm
+    console.log('setCurrentPage', vm)
     const componentTree = extractComponentInfo(vm)
     trpc.setComponentTree.subscribe(componentTree, {
       onComplete: () => {},

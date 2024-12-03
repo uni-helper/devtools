@@ -1,32 +1,15 @@
 <script setup lang="ts">
-import { VueBadge, VueInput } from '@vue/devtools-ui'
+import type { PageMeta } from '@uni-helper/devtools-types'
+import { VueInput } from '@vue/devtools-ui'
+import { Pane, Splitpanes } from 'splitpanes'
 
 const { currentPage: _currentPage } = useInitState()
 
-// const params = new URLSearchParams(window.location.search)
 const currentPage = toRaw(_currentPage)
 const routeInput = ref(currentPage)
 const pages = await trpc.getPages.query()
 const pageCount = pages.length
-
-function handlePush(page: typeof pages[number]) {
-  const url = `/${page.path}`
-
-  // @ts-expect-error uni在webview的js-sdk中有getEnv方法
-  uni.getEnv(({ h5 }) => {
-    if (h5) {
-      trpc.changeCurrentPage.mutate({
-        isTabBar: Boolean(page.tabBar),
-        page: url,
-      })
-    }
-    else {
-      uni[page.tabBar ? 'switchTab' : 'redirectTo']({
-        url: `/${page.path}`,
-      })
-    }
-  })
-}
+const selectedMeta = ref<PageMeta>()
 </script>
 
 <template>
@@ -42,34 +25,24 @@ function handlePush(page: typeof pages[number]) {
           class="text-green!"
         />
       </div>
-      <SectionBlock
-        icon="i-carbon-tree-view-alt"
-        text="All Pages"
-        :description="`${pageCount} Pages registered in your application`"
-        :padding="false"
-      >
-        <div cursor-pointer px4 space-y-2>
-          <div
-            v-for="page in pages"
-            :key="page.path"
-            @click="handlePush(page)"
+      <Splitpanes class="of-hidden">
+        <Pane size="70" class="of-auto!">
+          <SectionBlock
+            icon="i-carbon-tree-view-alt"
+            text="All Pages"
+            :description="`${pageCount} Pages registered in your application`"
+            :padding="false"
           >
-            <VueBadge
-              v-if="page.tabBar"
-              mr2 bg-green-400:10 text-green-400
-            >
-              tabBar
-            </VueBadge>
-            <span
-              flex="inline gap3"
-              items-center
-              :class="page.path.includes(routeInput) ? 'text-green-400' : ''"
-            >
-              {{ `/${page.path}` }}
-            </span>
-          </div>
-        </div>
-      </SectionBlock>
+            <PageTable
+              :route-input="routeInput"
+              @select-meta="(meta: PageMeta) => selectedMeta = meta"
+            />
+          </SectionBlock>
+        </Pane>
+        <Pane v-if="!!selectedMeta" size="30" class="of-auto!">
+          <RouteMetaDetail :meta="selectedMeta" @close="selectedMeta = undefined" />
+        </Pane>
+      </Splitpanes>
     </div>
   </PanelGrids>
 </template>

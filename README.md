@@ -11,10 +11,10 @@
 - [x] 使用tRPC
   - [x] 适配uni-app trpc(仅适配支持websocket)
 - [x] tab重构
-- [ ] ~~封装小程序JS-SDK~~ 使用websocket传递数据
+- [x] ~~封装小程序JS-SDK~~ 使用websocket传递数据
 - [x] build时不执行plugin
 - [x] 支持在浏览器打开页面
-- [ ] ~~浏览器窗口数据传递~~ 使用websocket传递数据
+- [x] ~~浏览器窗口数据传递~~ 使用websocket传递数据
 - [x] 欢迎页面
 - [x] overview页面
 - [ ] pages页面
@@ -22,11 +22,13 @@
   - [x] 渲染页面
   - [x] 页面跳转
   - [x] 页面搜素
-  - [ ] 路由传参
+  - [x] 路由传参
+  - [x] 打开组件代码位置vscode
+  - [x] page配置信息显示
 - [ ] 组件页面
   - [x] 组件渲染
-  - [ ] 组件搜索
-  - [ ] 组件跳转代码位置vscode
+  - [x] 组件搜索
+  - [x] 组件跳转代码位置vscode
   - [ ] 组件文件数据
 - [x] 资源页面
   - [x] 获取静态资源

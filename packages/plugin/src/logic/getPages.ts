@@ -21,20 +21,14 @@ export function getPagesPath(pagesPath?: string) {
 export function getPagesInfo(pagesPath?: string) {
   const path = getPagesPath(pagesPath)
   const pagesJson = JSON5.parse<PagesJson>(fs.readFileSync(path, 'utf-8'))
+  const tabBarSet = new Set(pagesJson.tabBar?.list.map(item => item.pagePath))
 
-  const pages = pagesJson.pages
-  const tabBarList = pagesJson.tabBar?.list.map(item => item.pagePath)
-  tabBarList?.forEach((item) => {
-    pages.forEach((page) => {
-      if (page.path === item)
-        page.tabBar = true
-      else
-        page.tabBar = false
-    })
-  })
+  const pages = pagesJson.pages.map(page => ({
+    path: page.path,
+    filePath: path.replace(/pages\.json$/, `${page.path}.vue`),
+    meta: page,
+    tabBar: tabBarSet.has(page.path),
+  }))
 
-  return [
-    path,
-    pages,
-  ] as const
+  return [path, pages] as const
 }

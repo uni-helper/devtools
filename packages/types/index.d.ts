@@ -34,3 +34,13 @@ export interface InitState extends VersionState {
   /** pinia数据 */
   piniaState: { [key: string]: any }
 }
+
+export interface PageMeta extends Record<string | number | symbol, unknown> {
+}
+/** PageInfo */
+export interface PageInfo {
+  path: string
+  tabBar: boolean
+  meta: PageMeta
+  filePath: string
+}
