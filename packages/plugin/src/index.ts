@@ -5,11 +5,12 @@ import JSON5 from 'json5'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
 import { getDevtoolsPage } from './utils/getDevtoolsPage'
-import { getPagesInfo, importDevtools, inspectDevtools } from './logic'
+import { getPagesInfo, inspectDevtools } from './logic'
 import type { Options } from './types'
 import type createRouter from './devtoolServer/rpc/index'
 import { pluginByEnv } from './logic/pluginByEnv'
-import { injectDevtoolInfo } from './inspects/injectDevtoolInfo'
+import { injectDevtoolInfo } from './injects/injectVueFile'
+import { injectImportDevtools } from './injects/injectMainFile'
 
 export * from './types'
 export type AppRouter = ReturnType<typeof createRouter>
@@ -58,7 +59,7 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
       /** 在main.js文件里注册Devtools组件 */
       const filterMainFile = createFilter(['src/main.(ts|js)', 'main.(ts|js)'])
       if (filterMainFile(id))
-        return importDevtools(src, id)
+        return injectImportDevtools(src, id)
 
       /** 在根组件里插入Devtools组件 */
       const pagesInclude = pages.map(page => `**/${page.path}.vue`)
