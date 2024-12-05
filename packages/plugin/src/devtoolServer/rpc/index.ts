@@ -11,6 +11,7 @@ import { getImageMeta, getStaticAssets, getTextAssetContent } from './assets'
 import { versionRouter } from './version'
 import { pageRouter } from './page'
 import { componentRouter } from './component'
+import { piniaRouter } from './pinia'
 
 export default function (
   config: ResolvedConfig,
@@ -75,5 +76,6 @@ export default function (
     versionRouter(eventEmitter),
     pageRouter(eventEmitter, options),
     componentRouter(eventEmitter),
+    piniaRouter(eventEmitter),
   )
 }

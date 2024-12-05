@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ComponentTreeNode } from '@uni-helper/devtools-types'
+import type { InspectorTree } from '@vue/devtools-kit'
 import { VueIcon } from '@vue/devtools-ui'
 import ToggleExpanded from '~/components/basic/ToggleExpanded.vue'
 import ComponentTreeViewer from '~/components/tree/TreeViewer.vue'
@@ -7,15 +8,15 @@ import { useSelect } from '~/composables/select'
 import { useToggleExpanded } from '~/composables/toggle-expanded'
 
 withDefaults(defineProps<{
-  data: ComponentTreeNode[]
-  depth: number
-  withTag: boolean
+  data: ComponentTreeNode[] | InspectorTree[]
+  depth?: number
+  withTag?: boolean
 }>(), {
   depth: 0,
   withTag: false,
 })
 
-const emit = defineEmits(['hover', 'leave'])
+const emit = defineEmits(['hover', 'leave', 'change'])
 
 const selectedNodeId = defineModel()
 const { expanded, toggleExpanded } = useToggleExpanded()
@@ -23,6 +24,11 @@ const { select: _select } = useSelect()
 
 function select(id: string) {
   selectedNodeId.value = id
+  emit('change', id)
+}
+
+function normalizeLabel(item: ComponentTreeNode | InspectorTree) {
+  return ('name' in item && item?.name) || ('label' in item && item.label)
 }
 </script>
 
@@ -54,12 +60,12 @@ function select(id: string) {
         <span v-else pl5 />
         <span font-state-field>
           <span v-if="withTag" class="text-gray-400 dark:text-gray-600 group-hover:(text-white op50) [.active_&]:(op50 text-white!)">&lt;</span>
-          <span group-hover:text-white class="ws-nowrap [.active_&]:(text-white)">{{ item.name }}</span>
+          <span group-hover:text-white class="ws-nowrap [.active_&]:(text-white)">{{ normalizeLabel(item) }}</span>
           <span v-if="withTag" class="text-gray-400 dark:text-gray-600 group-hover:(text-white op50) [.active_&]:(op50 text-white!)">&gt;</span>
         </span>
       </div>
       <VueIcon
-        v-if="item.file"
+        v-if="(item as ComponentTreeNode).file"
         v-tooltip="'Open in Editor'"
         title="Open in Editor"
         icon="i-carbon-script-reference"
@@ -67,7 +73,7 @@ function select(id: string) {
         action mr3 flex-none op-0 group-focus:op50 group-hover:op-50
         :class="{ 'op-100!': selectedNodeId === item.id }"
         :border="false"
-        @click="openInEditor(item.file)"
+        @click="openInEditor((item as ComponentTreeNode).file)"
       />
     </div>
     <div v-if="item?.children?.length && (expanded.includes(item.id) || depth < 2)">

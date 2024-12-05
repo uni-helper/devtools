@@ -1,98 +1,64 @@
-<script setup lang="tsx">
-defineProps<{
-  data?: unknown
-}>()
+<script setup lang="ts">
+import type { CustomInspectorState } from '@vue/devtools-kit'
+import { watchEffect } from 'vue'
+import ChildStateViewer from './ChildStateViewer.vue'
+import ToggleExpanded from '~/components/basic/ToggleExpanded.vue'
+import { createStateEditorContext } from '~/composables/state-editor'
+import { useToggleExpanded } from '~/composables/toggle-expanded'
 
-function renderCollection(items: any[], isObject: boolean = false) {
-  return items.map((item, index, array) => {
-    const key = isObject ? item[0] : null
-    const value = isObject ? item[1] : item
-    const formatState = formatStateValue(value)
+const props = withDefaults(defineProps<{
+  data: Record<string, CustomInspectorState[]>
+  nodeId: string
+  inspectorId: string
+  disableEdit?: boolean
+  expandedStateId?: string
+}>(), {
+  disableEdit: false,
+  expandedStateId: '',
+})
 
-    return (
-      <>
-        {isObject && `${key}: `}
-        <span style={{ color: formatState?.color }}>
-          {formatState.rawDisplay}
-        </span>
-        {index !== array.length - 1 ? ', ' : ''}
-      </>
-    )
-  })
-}
-
-function DataKeysPreview(data: object) {
-  if (isPlainObject(data)) {
-    const entries = Object.entries(data)
-    return (
-      <>
-        {'{'}
-        {renderCollection(entries, true)}
-        {'}'}
-      </>
-    )
-  }
-
-  else if (isArray(data)) {
-    const arrayData = Array.from(data)
-    return (
-      <>
-        {`(${arrayData.length}) `}
-        [
-        {renderCollection(arrayData)}
-        ]
-      </>
-    )
-  }
-
-  else if (isSet(data)) {
-    const setData = Array.from(data)
-    return (
-      <>
-        {`Set(${setData.length}) `}
-        {`{`}
-        {renderCollection(setData)}
-        {`}`}
-      </>
-    )
-  }
-
-  else if (isMap(data)) {
-    const mapData = Array.from((data as Map<any, any>).entries())
-    return (
-      <>
-        {`Map(${mapData.length}) `}
-        {`{`}
-        {renderCollection(mapData, true)}
-        {`}`}
-      </>
-    )
+function initEditorContext() {
+  return {
+    nodeId: props.nodeId,
+    inspectorId: props.inspectorId,
+    disableEdit: props.disableEdit,
   }
 }
-function CustomValuePreview(data: unknown) {
-  const formatState = formatStateValue(data)
-  return (
-    <span style={{ color: formatState?.color }} class="pl1rem">
-      {formatState.rawDisplay}
-    </span>
-  )
-}
-const isExpanded = ref(false)
-function toggleExpanded() {
-  isExpanded.value = !isExpanded.value
-}
+
+const { context } = createStateEditorContext(initEditorContext())
+watchEffect(() => {
+  context.value = initEditorContext()
+})
+
+const { expanded, toggleExpanded } = useToggleExpanded(props.expandedStateId)
 </script>
 
 <template>
-  <div v-if="typeof data === 'object' && data !== null" truncate @click="toggleExpanded">
-    <ToggleExpanded
-      :value="isExpanded"
-      cursor-pointer
-    />
-    <span class="font-state-field text-3.5 italic">
-      <component :is="DataKeysPreview(data)" />
-    </span>
-    <ChildStateViewer v-if="isExpanded" :data />
+  <div>
+    <div
+      v-for="(item, key, index) in data"
+      :key="index"
+    >
+      <div
+        class="flex items-center"
+        :class="[item?.length && 'cursor-pointer hover:(bg-active)']"
+        @click="toggleExpanded(`${index}`)"
+      >
+        <ToggleExpanded
+          v-if="item?.length"
+          :value="expanded.includes(`${index}`)"
+        />
+        <!-- placeholder -->
+        <span v-else pl5 />
+        <span font-state-field text-3.5 text-hex-a3a3a3>
+          {{ key }}
+        </span>
+      </div>
+      <div
+        v-if="item?.length && expanded.includes(`${index}`)"
+      >
+        <ChildStateViewer :data="item" :index="`${index}`" :expanded-state-id="expandedStateId" />
+      </div>
+    </div>
   </div>
-  <component :is="CustomValuePreview(data)" v-else />
 </template>

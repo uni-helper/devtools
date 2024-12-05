@@ -9,11 +9,6 @@ import { publicProcedure, router } from './../trpc'
 export function componentRouter(eventEmitter: EventEmitter) {
   const { input, subscription, query } = publicProcedure
   let componentTree: ComponentTreeNode
-  const ComponentTreeNodeSchema: z.ZodSchema<ComponentTreeNode> = z.object({
-    name: z.string(),
-    file: z.string(),
-    children: z.lazy(() => z.array(ComponentTreeNodeSchema).optional()),
-  })
 
   return router({
     getComponent: query(() => {
@@ -22,7 +17,6 @@ export function componentRouter(eventEmitter: EventEmitter) {
     }),
     setComponentTree: input(z.unknown()).subscription(({ input }) => {
       eventEmitter.emit('setComponentTree', input)
-      console.log('setComponentTree', input)
       componentTree = input as ComponentTreeNode
     }),
     onComponentTree: subscription(() => {

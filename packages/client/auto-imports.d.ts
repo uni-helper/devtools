@@ -26,6 +26,7 @@ declare global {
   const createReusableTemplate: typeof import('@vueuse/core')['createReusableTemplate']
   const createSelectedContext: typeof import('./src/composables/select')['createSelectedContext']
   const createSharedComposable: typeof import('@vueuse/core')['createSharedComposable']
+  const createStateEditorContext: typeof import('./src/composables/state-editor')['createStateEditorContext']
   const createTemplatePromise: typeof import('@vueuse/core')['createTemplatePromise']
   const createUnrefFn: typeof import('@vueuse/core')['createUnrefFn']
   const customRef: typeof import('vue')['customRef']
@@ -40,6 +41,7 @@ declare global {
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
   const extendRef: typeof import('@vueuse/core')['extendRef']
+  const filterInspectorState: typeof import('./src/utils/search')['filterInspectorState']
   const formatStateType: typeof import('./src/composables/formatStateType')['formatStateType']
   const formatStateValue: typeof import('./src/composables/format')['formatStateValue']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
@@ -106,10 +108,12 @@ declare global {
   const resolveComponent: typeof import('vue')['resolveComponent']
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
+  const searchDeepInObject: typeof import('./src/utils/search')['searchDeepInObject']
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
   const shiki: typeof import('./src/composables/shiki')['shiki']
+  const specialTokenToString: typeof import('./src/utils/search')['specialTokenToString']
   const stateTypeColorMap: typeof import('./src/constants/stateColorMap')['stateTypeColorMap']
   const syncRef: typeof import('@vueuse/core')['syncRef']
   const syncRefs: typeof import('@vueuse/core')['syncRefs']
@@ -205,6 +209,7 @@ declare global {
   const useFullscreen: typeof import('@vueuse/core')['useFullscreen']
   const useGamepad: typeof import('@vueuse/core')['useGamepad']
   const useGeolocation: typeof import('@vueuse/core')['useGeolocation']
+  const useHover: typeof import('./src/composables/hover')['useHover']
   const useId: typeof import('vue')['useId']
   const useIdle: typeof import('@vueuse/core')['useIdle']
   const useImage: typeof import('@vueuse/core')['useImage']
@@ -268,6 +273,9 @@ declare global {
   const useSorted: typeof import('@vueuse/core')['useSorted']
   const useSpeechRecognition: typeof import('@vueuse/core')['useSpeechRecognition']
   const useSpeechSynthesis: typeof import('@vueuse/core')['useSpeechSynthesis']
+  const useStateEditor: typeof import('./src/composables/state-editor')['useStateEditor']
+  const useStateEditorContext: typeof import('./src/composables/state-editor')['useStateEditorContext']
+  const useStateEditorDrafting: typeof import('./src/composables/state-editor')['useStateEditorDrafting']
   const useStepper: typeof import('@vueuse/core')['useStepper']
   const useStorage: typeof import('@vueuse/core')['useStorage']
   const useStorageAsync: typeof import('@vueuse/core')['useStorageAsync']
@@ -357,6 +365,7 @@ declare module 'vue' {
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
     readonly createSelectedContext: UnwrapRef<typeof import('./src/composables/select')['createSelectedContext']>
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
+    readonly createStateEditorContext: UnwrapRef<typeof import('./src/composables/state-editor')['createStateEditorContext']>
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
@@ -370,6 +379,7 @@ declare module 'vue' {
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
+    readonly filterInspectorState: UnwrapRef<typeof import('./src/utils/search')['filterInspectorState']>
     readonly formatStateType: UnwrapRef<typeof import('./src/composables/formatStateType')['formatStateType']>
     readonly formatStateValue: UnwrapRef<typeof import('./src/composables/format')['formatStateValue']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
@@ -435,10 +445,12 @@ declare module 'vue' {
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
+    readonly searchDeepInObject: UnwrapRef<typeof import('./src/utils/search')['searchDeepInObject']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly shiki: UnwrapRef<typeof import('./src/composables/shiki')['shiki']>
+    readonly specialTokenToString: UnwrapRef<typeof import('./src/utils/search')['specialTokenToString']>
     readonly stateTypeColorMap: UnwrapRef<typeof import('./src/constants/stateColorMap')['stateTypeColorMap']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
@@ -530,6 +542,7 @@ declare module 'vue' {
     readonly useFullscreen: UnwrapRef<typeof import('@vueuse/core')['useFullscreen']>
     readonly useGamepad: UnwrapRef<typeof import('@vueuse/core')['useGamepad']>
     readonly useGeolocation: UnwrapRef<typeof import('@vueuse/core')['useGeolocation']>
+    readonly useHover: UnwrapRef<typeof import('./src/composables/hover')['useHover']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useIdle: UnwrapRef<typeof import('@vueuse/core')['useIdle']>
     readonly useImage: UnwrapRef<typeof import('@vueuse/core')['useImage']>
@@ -592,6 +605,9 @@ declare module 'vue' {
     readonly useSorted: UnwrapRef<typeof import('@vueuse/core')['useSorted']>
     readonly useSpeechRecognition: UnwrapRef<typeof import('@vueuse/core')['useSpeechRecognition']>
     readonly useSpeechSynthesis: UnwrapRef<typeof import('@vueuse/core')['useSpeechSynthesis']>
+    readonly useStateEditor: UnwrapRef<typeof import('./src/composables/state-editor')['useStateEditor']>
+    readonly useStateEditorContext: UnwrapRef<typeof import('./src/composables/state-editor')['useStateEditorContext']>
+    readonly useStateEditorDrafting: UnwrapRef<typeof import('./src/composables/state-editor')['useStateEditorDrafting']>
     readonly useStepper: UnwrapRef<typeof import('@vueuse/core')['useStepper']>
     readonly useStorage: UnwrapRef<typeof import('@vueuse/core')['useStorage']>
     readonly useStorageAsync: UnwrapRef<typeof import('@vueuse/core')['useStorageAsync']>

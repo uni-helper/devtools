@@ -1,11 +1,36 @@
+import { stringify } from '@vue/devtools-kit'
+import { trpc } from './trpc'
+
+/**
+ *
+ * @param {string} id
+ * @param {*} state
+ */
+function sendPiniaState(id, state) {
+  const data = {
+    key: id,
+    value: state,
+  }
+
+  trpc.sendPiniaState.subscribe(
+    // @ts-ignore
+    {
+      [id]: stringify(data),
+    },
+    {
+      onComplete: () => {},
+    },
+  )
+}
+
 /**
  * @param {import("pinia").PiniaPluginContext} ctx
  */
-export default ({ store }) => {
-  console.log('store created', store.$id)
-  console.log('initState', store.$state)
+export default ({ store, options }) => {
+  sendPiniaState(store.$id, store.$state)
+  console.log('Pinia store', store)
+  console.log('Pinia options', options)
   store.$subscribe((mutation, state) => {
-    console.log(mutation.storeId)
-    console.log('store changed', state)
-  }, { detached: true })
+    sendPiniaState(mutation.storeId, state)
+  })
 }
