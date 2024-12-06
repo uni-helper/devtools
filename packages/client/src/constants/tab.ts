@@ -48,19 +48,19 @@ export const builtinTab = [
   [
     'advanced',
     [
-      // {
-      //   icon: 'i-carbon-network-4',
-      //   name: 'graph',
-      //   order: -100,
-      //   path: '/graph',
-      //   title: 'Graph',
-      // },
       {
         icon: 'i-tabler:terminal',
         name: 'console',
         order: 100,
         path: '/console',
         title: 'Console',
+      },
+      {
+        icon: 'i-carbon-network-4',
+        name: 'graph',
+        order: -100,
+        path: '/graph',
+        title: 'Graph',
       },
       {
         icon: 'i-carbon-ibm-watson-discovery',

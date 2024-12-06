@@ -35,16 +35,12 @@
     "nanoid": "^5.0.7",
     "shiki": "^1.7.0",
     "splitpanes": "^3.1.5",
+    "vis-network": "^9.1.9",
     "vue": "^3.4.27",
     "vue-router": "^4.3.2"
   },
   "devDependencies": {
-    "@iconify-json/carbon": "^1.1.33",
-    "@iconify-json/lets-icons": "^1.2.1",
-    "@iconify-json/logos": "^1.1.42",
-    "@iconify-json/material-symbols": "^1.2.8",
-    "@iconify-json/radix-icons": "^1.1.14",
-    "@iconify-json/tabler": "^1.1.116",
+    "@iconify/json": "^2.2.279",
     "@types/splitpanes": "^2.2.6",
     "@uni-helper/devtools": "workspace:*",
     "@unocss/reset": "^0.60.2",

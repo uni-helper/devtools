@@ -2,6 +2,11 @@ function clientStateFactory() {
   return {
     isFirstVisit: true,
     route: '/',
+    graphSettings: {
+      node_modules: false,
+      virtual: false,
+      lib: false,
+    },
   }
 }
 

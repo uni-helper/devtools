@@ -5,31 +5,24 @@ import { observable } from '@trpc/server/observable'
 import { parseStack } from 'error-stack-parser-es/lite'
 import { extractPathByStack, sourceFile } from '../../utils/sourceFile'
 import { openInBrowser, openInEditor } from '../../openCommands'
-import type { ConsoleInfo, ModuleInfo, Options } from './../../types'
+import type { ConsoleInfo, Options } from './../../types'
 import { mergeRouters, publicProcedure, router } from './../trpc'
-import { getImageMeta, getStaticAssets, getTextAssetContent } from './assets'
+import { AssetsRouter } from './assets'
 import { versionRouter } from './version'
 import { pageRouter } from './page'
 import { componentRouter } from './component'
 import { piniaRouter } from './pinia'
+import { ConfigRouter } from './config'
+import { GraphRouter } from './graph'
 
 export default function (
   config: ResolvedConfig,
   eventEmitter: EventEmitter,
   options?: Partial<Options>,
 ) {
-  const { query, input, subscription } = publicProcedure
+  const { input, subscription } = publicProcedure
 
   const routes = router({
-    staticAssets: query(() => {
-      return getStaticAssets(config)
-    }),
-    getImageMeta: input(z.string()).query(({ input }) => {
-      return getImageMeta(input)
-    }),
-    getTextAssetContent: input(z.string()).query(({ input }) => {
-      return getTextAssetContent(input)
-    }),
     openInEditor: input(z.string()).query((opts) => {
       openInEditor(opts.input, options?.launchEditor ?? 'code')
     }),
@@ -73,7 +66,10 @@ export default function (
 
   return mergeRouters(
     routes,
+    GraphRouter(),
+    AssetsRouter(config),
     versionRouter(eventEmitter),
+    ConfigRouter(config),
     pageRouter(eventEmitter, options),
     componentRouter(eventEmitter),
     piniaRouter(eventEmitter),

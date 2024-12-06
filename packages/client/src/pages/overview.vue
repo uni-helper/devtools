@@ -5,7 +5,7 @@ import UniIcon from '/icon/uni_icon.png'
 const { versionState } = useInitState()
 
 const pages = await trpc.getPages.query()
-const modules = await trpc.getComponent.query()
+const modules = await trpc.getModules.query()
 
 const vueModules = modules?.filter(module => module.id.endsWith('vue')).length
 </script>

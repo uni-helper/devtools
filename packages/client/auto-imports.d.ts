@@ -9,6 +9,7 @@ declare global {
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const builtinTab: typeof import('./src/constants/tab')['builtinTab']
+  const cleanupGraphRelatedStates: typeof import('./src/composables/graph')['cleanupGraphRelatedStates']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -41,12 +42,22 @@ declare global {
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
   const extendRef: typeof import('@vueuse/core')['extendRef']
+  const fileTypes: typeof import('./src/composables/graph')['fileTypes']
   const filterInspectorState: typeof import('./src/utils/search')['filterInspectorState']
   const formatStateType: typeof import('./src/composables/formatStateType')['formatStateType']
   const formatStateValue: typeof import('./src/composables/format')['formatStateValue']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
+  const getGraphFilterDataset: typeof import('./src/composables/graph')['getGraphFilterDataset']
   const getStateValueType: typeof import('./src/composables/format')['getStateValueType']
+  const graphDrawerData: typeof import('./src/composables/graph')['graphDrawerData']
+  const graphDrawerShow: typeof import('./src/composables/graph')['graphDrawerShow']
+  const graphEdges: typeof import('./src/composables/graph')['graphEdges']
+  const graphFilterNodeId: typeof import('./src/composables/graph')['graphFilterNodeId']
+  const graphNodes: typeof import('./src/composables/graph')['graphNodes']
+  const graphOptions: typeof import('./src/composables/graph')['graphOptions']
+  const graphSearchText: typeof import('./src/composables/graph')['graphSearchText']
+  const graphSettings: typeof import('./src/composables/graph')['graphSettings']
   const h: typeof import('vue')['h']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
   const inject: typeof import('vue')['inject']
@@ -87,7 +98,9 @@ declare global {
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const openInEditor: typeof import('./src/composables/openInEditor')['openInEditor']
+  const parseGraphRawData: typeof import('./src/composables/graph')['parseGraphRawData']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
+  const projectRoot: typeof import('./src/composables/graph')['projectRoot']
   const provide: typeof import('vue')['provide']
   const provideLocal: typeof import('@vueuse/core')['provideLocal']
   const reactify: typeof import('@vueuse/core')['reactify']
@@ -103,6 +116,7 @@ declare global {
   const refDefault: typeof import('@vueuse/core')['refDefault']
   const refThrottled: typeof import('@vueuse/core')['refThrottled']
   const refWithControl: typeof import('@vueuse/core')['refWithControl']
+  const removeRootPath: typeof import('./src/composables/graph')['removeRootPath']
   const renderCodeHighlight: typeof import('./src/composables/shiki')['renderCodeHighlight']
   const resetDevtoolsClientState: typeof import('./src/composables/state')['resetDevtoolsClientState']
   const resolveComponent: typeof import('vue')['resolveComponent']
@@ -129,6 +143,7 @@ declare global {
   const toTypeString: typeof import('./src/composables/formatStateType')['toTypeString']
   const toValue: typeof import('vue')['toValue']
   const toggleDark: typeof import('./src/composables/dark')['toggleDark']
+  const toggleGraphDrawer: typeof import('./src/composables/graph')['toggleGraphDrawer']
   const triggerRef: typeof import('vue')['triggerRef']
   const trpc: typeof import('./src/trpc/index')['trpc']
   const tryOnBeforeMount: typeof import('@vueuse/core')['tryOnBeforeMount']
@@ -139,6 +154,7 @@ declare global {
   const unref: typeof import('vue')['unref']
   const unrefElement: typeof import('@vueuse/core')['unrefElement']
   const until: typeof import('@vueuse/core')['until']
+  const updateGraphDrawerData: typeof import('./src/composables/graph')['updateGraphDrawerData']
   const useActiveElement: typeof import('@vueuse/core')['useActiveElement']
   const useAnimate: typeof import('@vueuse/core')['useAnimate']
   const useArrayDifference: typeof import('@vueuse/core')['useArrayDifference']
@@ -203,6 +219,7 @@ declare global {
   const useFetch: typeof import('@vueuse/core')['useFetch']
   const useFileDialog: typeof import('@vueuse/core')['useFileDialog']
   const useFileSystemAccess: typeof import('@vueuse/core')['useFileSystemAccess']
+  const useFileTypes: typeof import('./src/composables/graph')['useFileTypes']
   const useFocus: typeof import('@vueuse/core')['useFocus']
   const useFocusWithin: typeof import('@vueuse/core')['useFocusWithin']
   const useFps: typeof import('@vueuse/core')['useFps']
@@ -348,6 +365,7 @@ declare module 'vue' {
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly builtinTab: UnwrapRef<typeof import('./src/constants/tab')['builtinTab']>
+    readonly cleanupGraphRelatedStates: UnwrapRef<typeof import('./src/composables/graph')['cleanupGraphRelatedStates']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -379,12 +397,22 @@ declare module 'vue' {
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
+    readonly fileTypes: UnwrapRef<typeof import('./src/composables/graph')['fileTypes']>
     readonly filterInspectorState: UnwrapRef<typeof import('./src/utils/search')['filterInspectorState']>
     readonly formatStateType: UnwrapRef<typeof import('./src/composables/formatStateType')['formatStateType']>
     readonly formatStateValue: UnwrapRef<typeof import('./src/composables/format')['formatStateValue']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
+    readonly getGraphFilterDataset: UnwrapRef<typeof import('./src/composables/graph')['getGraphFilterDataset']>
     readonly getStateValueType: UnwrapRef<typeof import('./src/composables/format')['getStateValueType']>
+    readonly graphDrawerData: UnwrapRef<typeof import('./src/composables/graph')['graphDrawerData']>
+    readonly graphDrawerShow: UnwrapRef<typeof import('./src/composables/graph')['graphDrawerShow']>
+    readonly graphEdges: UnwrapRef<typeof import('./src/composables/graph')['graphEdges']>
+    readonly graphFilterNodeId: UnwrapRef<typeof import('./src/composables/graph')['graphFilterNodeId']>
+    readonly graphNodes: UnwrapRef<typeof import('./src/composables/graph')['graphNodes']>
+    readonly graphOptions: UnwrapRef<typeof import('./src/composables/graph')['graphOptions']>
+    readonly graphSearchText: UnwrapRef<typeof import('./src/composables/graph')['graphSearchText']>
+    readonly graphSettings: UnwrapRef<typeof import('./src/composables/graph')['graphSettings']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
@@ -424,7 +452,9 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly openInEditor: UnwrapRef<typeof import('./src/composables/openInEditor')['openInEditor']>
+    readonly parseGraphRawData: UnwrapRef<typeof import('./src/composables/graph')['parseGraphRawData']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
+    readonly projectRoot: UnwrapRef<typeof import('./src/composables/graph')['projectRoot']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('@vueuse/core')['provideLocal']>
     readonly reactify: UnwrapRef<typeof import('@vueuse/core')['reactify']>
@@ -440,6 +470,7 @@ declare module 'vue' {
     readonly refDefault: UnwrapRef<typeof import('@vueuse/core')['refDefault']>
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
+    readonly removeRootPath: UnwrapRef<typeof import('./src/composables/graph')['removeRootPath']>
     readonly renderCodeHighlight: UnwrapRef<typeof import('./src/composables/shiki')['renderCodeHighlight']>
     readonly resetDevtoolsClientState: UnwrapRef<typeof import('./src/composables/state')['resetDevtoolsClientState']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
@@ -464,6 +495,7 @@ declare module 'vue' {
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toTypeString: UnwrapRef<typeof import('./src/composables/formatStateType')['toTypeString']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
+    readonly toggleGraphDrawer: UnwrapRef<typeof import('./src/composables/graph')['toggleGraphDrawer']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly trpc: UnwrapRef<typeof import('./src/trpc/index')['trpc']>
     readonly tryOnBeforeMount: UnwrapRef<typeof import('@vueuse/core')['tryOnBeforeMount']>
@@ -474,6 +506,7 @@ declare module 'vue' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>
+    readonly updateGraphDrawerData: UnwrapRef<typeof import('./src/composables/graph')['updateGraphDrawerData']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
     readonly useAnimate: UnwrapRef<typeof import('@vueuse/core')['useAnimate']>
     readonly useArrayDifference: UnwrapRef<typeof import('@vueuse/core')['useArrayDifference']>
@@ -536,6 +569,7 @@ declare module 'vue' {
     readonly useFetch: UnwrapRef<typeof import('@vueuse/core')['useFetch']>
     readonly useFileDialog: UnwrapRef<typeof import('@vueuse/core')['useFileDialog']>
     readonly useFileSystemAccess: UnwrapRef<typeof import('@vueuse/core')['useFileSystemAccess']>
+    readonly useFileTypes: UnwrapRef<typeof import('./src/composables/graph')['useFileTypes']>
     readonly useFocus: UnwrapRef<typeof import('@vueuse/core')['useFocus']>
     readonly useFocusWithin: UnwrapRef<typeof import('@vueuse/core')['useFocusWithin']>
     readonly useFps: UnwrapRef<typeof import('@vueuse/core')['useFps']>

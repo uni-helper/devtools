@@ -1,11 +1,13 @@
-import fs from 'node:fs/promises'
 import fg from 'fast-glob'
 import { join, resolve } from 'pathe'
 import type { ResolvedConfig } from 'vite'
 import mime from 'mime'
 import type { ImageMeta } from 'image-meta'
 import { imageMeta } from 'image-meta'
+import { z } from 'zod'
+import fs from 'fs-extra'
 import type { AssetInfo, AssetType } from '../../types'
+import { publicProcedure, router } from './../trpc'
 
 function guessType(path: string): AssetType {
   if (/\.(?:png|jpe?g|jxl|gif|svg|webp|avif|ico|bmp|tiff?)$/i.test(path))
@@ -80,7 +82,7 @@ export async function getStaticAssets(config: ResolvedConfig): Promise<AssetInfo
 }
 
 const _imageMetaCache = new Map<string, ImageMeta | undefined>()
-export async function getImageMeta(filepath: string) {
+async function getImageMeta(filepath: string) {
   if (_imageMetaCache.has(filepath))
     return _imageMetaCache.get(filepath)
   try {
@@ -97,7 +99,7 @@ export async function getImageMeta(filepath: string) {
   }
 }
 
-export async function getTextAssetContent(filepath: string, limit = 300) {
+async function getTextAssetContent(filepath: string, limit = 300) {
   try {
     const content = await fs.readFile(filepath, 'utf-8')
     return content.slice(0, limit)
@@ -106,4 +108,20 @@ export async function getTextAssetContent(filepath: string, limit = 300) {
     console.error(e)
     return undefined
   }
+}
+
+export function AssetsRouter(config: ResolvedConfig) {
+  const { input, query } = publicProcedure
+
+  return router({
+    staticAssets: query(() => {
+      return getStaticAssets(config)
+    }),
+    getImageMeta: input(z.string()).query(({ input }) => {
+      return getImageMeta(input)
+    }),
+    getTextAssetContent: input(z.string()).query(({ input }) => {
+      return getTextAssetContent(input)
+    }),
+  })
 }

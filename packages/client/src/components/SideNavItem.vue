@@ -18,7 +18,7 @@ function onClick() {
       flex="~"
       hover="bg-active"
       text-secondary h-10 w-10 select-none items-center justify-center rounded-xl p1
-      exact-active-class="!text-primary bg-active"
+      exact-active-class="!text-primary bg-active c-primary-600"
       @click="onClick"
     >
       <TabIcon
