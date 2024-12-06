@@ -132,6 +132,9 @@ importers:
       '@iconify-json/carbon':
         specifier: ^1.1.33
         version: 1.2.4
+      '@iconify-json/lets-icons':
+        specifier: ^1.2.1
+        version: 1.2.1
       '@iconify-json/logos':
         specifier: ^1.1.42
         version: 1.2.3
@@ -2259,6 +2262,9 @@ packages:
 
   '@iconify-json/carbon@1.2.4':
     resolution: {integrity: sha512-DhW2jjMVGwV0DLHc0cmDYohdtGxMra8UuwgjHrryPy+rQX4gXhJwCBBVP2h2UG/92AoRCTn7zUJve4WvY5MLYg==}
+
+  '@iconify-json/lets-icons@1.2.1':
+    resolution: {integrity: sha512-ahSTwg1OTccHNEy3E1GuoRgazGpodIEbdjWp1V/7abur7efjTbtJyHfWVPRBF7yIWg0I8MKXrSGAkVVS1D1q8w==}
 
   '@iconify-json/logos@1.2.3':
     resolution: {integrity: sha512-JLHS5hgZP1b55EONAWNeqBUuriRfRNKWXK4cqYx0PpVaJfIIMiiMxFfvoQiX/bkE9XgkLhcKmDUqL3LXPdXPwQ==}
@@ -10538,6 +10544,10 @@ snapshots:
   '@humanwhocodes/retry@0.4.1': {}
 
   '@iconify-json/carbon@1.2.4':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/lets-icons@1.2.1':
     dependencies:
       '@iconify/types': 2.0.0
 

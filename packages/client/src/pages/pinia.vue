@@ -43,14 +43,17 @@ const filterTree = computed(() => {
 })
 
 const filterStateKey = ref('')
-const selectData = computed(() => {
-  console.log(selectId.value)
-  if (!selectId.value)
+const selectData = computed<Record<string, CustomInspectorState[]>>(() => {
+  if (!selectId.value || selectId.value === '__pinia_root')
     return state.value
+  console.log(state.value)
+  const selectData = state.value.state?.find(item => (item.key as unknown as string) === selectId.value)
+  console.log(selectData)
   return {
-    state: state.value.state?.find(item => (item.key as unknown as string) === selectId.value),
+    state: selectData ? [selectData] : [],
   }
 })
+
 const emptyState = computed(() => !selectData.value.state?.length)
 
 const displayState = computed(() => {
