@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <Empty>
     Not Found
-  </div>
+  </Empty>
 </template>

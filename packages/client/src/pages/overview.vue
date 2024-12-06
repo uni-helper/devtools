@@ -6,8 +6,12 @@ const { versionState } = useInitState()
 
 const pages = await trpc.getPages.query()
 const modules = await trpc.getModules.query()
-
 const vueModules = modules?.filter(module => module.id.endsWith('vue')).length
+
+// 打开浏览器地址
+function openInNewTab(url: string) {
+  trpc.openInBrowser.query(url)
+}
 </script>
 
 <template>
@@ -26,11 +30,11 @@ const vueModules = modules?.filter(module => module.id.endsWith('vue')).length
 
       <!-- Main Grid -->
       <div flex="~ gap2 wrap">
-        <div p4 theme-card-green flex="~ col auto">
+        <div cursor-pointer p4 theme-card-green flex="~ col auto" @click="openInNewTab('https://uniapp.dcloud.net.cn/')">
           <img :src="UniIcon" h-7.5 w-7.5>
           <code>v{{ versionState?.uniVersion }}</code>
         </div>
-        <div p4 theme-card-green flex="~ col auto">
+        <div cursor-pointer p4 theme-card-green flex="~ col auto" @click="openInNewTab('https://cn.vuejs.org/')">
           <div i-logos-vue text-3xl />
           <code>v{{ versionState?.vueVersion }}</code>
         </div>

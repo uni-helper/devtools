@@ -49,7 +49,12 @@ export interface Options {
    * 客户端
    * @default false
    */
-  client: boolean
+  openClient: boolean
+  /**
+   * 打开浏览器
+   * @default false
+   */
+  openBrowser: boolean
 }
 
 export interface ModuleInfo {

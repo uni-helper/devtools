@@ -1,5 +1,5 @@
 <script setup>
-import { getCurrentInstance, onMounted, ref } from 'vue'
+import { getCurrentInstance, ref } from 'vue'
 import { setCurrentPage } from './initMPClient'
 
 console.log('====================================================')

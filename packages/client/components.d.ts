@@ -17,6 +17,7 @@ declare module 'vue' {
     CodeBlock: typeof import('./src/components/code/CodeBlock.vue')['default']
     CodeSnippets: typeof import('./src/components/code/CodeSnippets.vue')['default']
     ComponentTreeNode: typeof import('./src/components/components/ComponentTreeNode.vue')['default']
+    DevToolsHeader: typeof import('./src/components/basic/DevToolsHeader.vue')['default']
     DevToolsLogo: typeof import('./src/components/common/DevToolsLogo.vue')['default']
     DockingPanel: typeof import('./src/components/common/DockingPanel.vue')['default']
     Empty: typeof import('./src/components/basic/Empty.vue')['default']
@@ -43,6 +44,7 @@ declare module 'vue' {
     StateFieldViewer: typeof import('./src/components/state/StateFieldViewer.vue')['default']
     TabIcon: typeof import('./src/components/TabIcon.vue')['default']
     ToggleExpanded: typeof import('./src/components/basic/ToggleExpanded.vue')['default']
+    TopNav: typeof import('./src/components/basic/TopNav.vue')['default']
     TreeViewer: typeof import('./src/components/tree/TreeViewer.vue')['default']
   }
 }

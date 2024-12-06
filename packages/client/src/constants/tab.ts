@@ -49,6 +49,13 @@ export const builtinTab = [
     'advanced',
     [
       {
+        icon: 'i-lucide:swatch-book',
+        name: 'documents',
+        order: -100,
+        path: '/documents',
+        title: 'Documents',
+      },
+      {
         icon: 'i-tabler:terminal',
         name: 'console',
         order: 100,

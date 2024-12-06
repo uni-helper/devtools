@@ -187,7 +187,7 @@ importers:
         specifier: workspace:*
         version: link:../trpc-client
       '@uni-helper/uni-env':
-        specifier: ^0.1.1
+        specifier: ^0.1.7
         version: 0.1.7
       '@vue/compiler-sfc':
         specifier: ^3.5.13
