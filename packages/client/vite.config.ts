@@ -58,6 +58,9 @@ export default defineConfig({
 
     Components({
       dts: true,
+      dirs: [
+        'src/components',
+      ],
     }),
 
     UnoCSS(),

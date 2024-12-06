@@ -12,7 +12,7 @@ import type { ResolvedConfig } from 'vite'
 import { DIR_CLIENT, DIR_TMP_INSPECT } from '../dir'
 import { uniDevToolsPrint } from '../utils/print'
 import type { Options } from '../types'
-import { openInDevtools } from '../openCommands'
+import { openInDevtools, savePort } from '../openCommands'
 import createAppRouter from './rpc/index'
 
 const eventEmitter = new EventEmitter()
@@ -49,8 +49,9 @@ export function createDevtoolServe(
   detectPort(port).then((rightPort) => {
     app.listen(rightPort, () => {
       uniDevToolsPrint(rightPort)
+      savePort(rightPort)
       if (options?.client) {
-        openInDevtools(rightPort)
+        openInDevtools()
       }
     })
   })

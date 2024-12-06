@@ -18,6 +18,7 @@ declare module 'vue' {
     CodeSnippets: typeof import('./src/components/code/CodeSnippets.vue')['default']
     ComponentTreeNode: typeof import('./src/components/components/ComponentTreeNode.vue')['default']
     DevToolsLogo: typeof import('./src/components/common/DevToolsLogo.vue')['default']
+    DockingPanel: typeof import('./src/components/common/DockingPanel.vue')['default']
     Empty: typeof import('./src/components/basic/Empty.vue')['default']
     FilepathItem: typeof import('./src/components/assets/FilepathItem.vue')['default']
     GraphDrawer: typeof import('./src/components/graph/GraphDrawer.vue')['default']

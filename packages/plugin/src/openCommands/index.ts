@@ -25,8 +25,13 @@ export function openInEditor(
   )
 }
 
-export function openInDevtools(port: number) {
-  exec(`ud client ${port}`, (error, stdout, stderr) => {
+let PORT = 5015
+export function savePort(port: number) {
+  PORT = port
+}
+
+export function openInDevtools() {
+  exec(`ud client ${PORT}`, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`)
       return

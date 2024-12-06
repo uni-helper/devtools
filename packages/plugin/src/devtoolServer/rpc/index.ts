@@ -14,6 +14,7 @@ import { componentRouter } from './component'
 import { piniaRouter } from './pinia'
 import { ConfigRouter } from './config'
 import { GraphRouter } from './graph'
+import { OpenRouter } from './open'
 
 export default function (
   config: ResolvedConfig,
@@ -23,14 +24,6 @@ export default function (
   const { input, subscription } = publicProcedure
 
   const routes = router({
-    openInEditor: input(z.string()).query((opts) => {
-      openInEditor(opts.input, options?.launchEditor ?? 'code')
-    }),
-    openInBrowser: input(z.string()).query(async (opts) => {
-      await openInBrowser(opts.input)
-
-      return { success: true }
-    }),
     sendConsole: input(
       z.object({
         type: z.string(),
@@ -66,6 +59,7 @@ export default function (
 
   return mergeRouters(
     routes,
+    OpenRouter(options),
     GraphRouter(),
     AssetsRouter(config),
     versionRouter(eventEmitter),

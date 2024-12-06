@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { VueButton, VueDropdown, VueIcon } from '@vue/devtools-ui'
+import { VueDropdown } from '@vue/devtools-ui'
 import Logo from '/icon.png'
 import type { Tab } from '~/constants/tab'
-
-async function handleClick() {
-  await trpc.openInBrowser.query(window.location.href)
-}
 </script>
 
 <template>
@@ -28,12 +24,7 @@ async function handleClick() {
           <!-- <img :src="Icon" alt=""> -->
         </button>
         <template #popper>
-          <div flex="~ gap-2" px3 py2>
-            <VueButton outlined type="primary" @click="handleClick">
-              <VueIcon icon="i-carbon-launch" />
-              在浏览器打开
-            </VueButton>
-          </div>
+          <DockingPanel />
         </template>
       </VueDropdown>
     </div>
