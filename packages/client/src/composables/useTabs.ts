@@ -106,5 +106,5 @@ export function useTabs() {
     },
   })
 
-  return { builtinTab }
+  return builtinTab
 }

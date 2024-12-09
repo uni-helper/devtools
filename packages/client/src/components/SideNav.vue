@@ -2,6 +2,8 @@
 import { VueDropdown } from '@vue/devtools-ui'
 import Logo from '/icon.png'
 import type { Tab } from '~/constants/tab'
+
+const builtinTab = useTabs()
 </script>
 
 <template>
