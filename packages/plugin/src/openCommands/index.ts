@@ -1,4 +1,5 @@
 import { exec } from 'node:child_process'
+import process from 'node:process'
 import open from 'open'
 import launch from 'launch-editor'
 import type { Options } from '../types'
@@ -25,12 +26,8 @@ export function openInEditor(
   )
 }
 
-let PORT = 5015
-export function savePort(port: number) {
-  PORT = port
-}
-
 export function openInDevtools() {
+  const PORT = process.env.UNI_DEVTOOLS_PORT
   exec(`ud client ${PORT}`, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`)

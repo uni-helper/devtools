@@ -14,6 +14,7 @@ import { piniaRouter } from './pinia'
 import { ConfigRouter } from './config'
 import { GraphRouter } from './graph'
 import { OpenRouter } from './open'
+import { TabRouter } from './tabs'
 
 export default function (
   config: ResolvedConfig,
@@ -66,5 +67,6 @@ export default function (
     pageRouter(eventEmitter, options),
     componentRouter(eventEmitter),
     piniaRouter(eventEmitter),
+    TabRouter(eventEmitter),
   )
 }

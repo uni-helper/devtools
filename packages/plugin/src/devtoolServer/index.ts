@@ -1,5 +1,6 @@
 import http from 'node:http'
 import { EventEmitter } from 'node:events'
+import process from 'node:process'
 import polka from 'polka'
 import sirv from 'sirv'
 import ws from 'ws'
@@ -9,10 +10,11 @@ import { applyWSSHandler } from '@trpc/server/adapters/ws'
 import { createExpressMiddleware } from '@trpc/server/adapters/express'
 
 import type { ResolvedConfig } from 'vite'
+import { addCustomTab } from '@uni-helper/devtools-kit'
 import { DIR_CLIENT, DIR_TMP_INSPECT } from '../dir'
 import { uniDevToolsPrint } from '../utils/print'
 import type { Options } from '../types'
-import { openInBrowser, openInDevtools, savePort } from '../openCommands'
+import { openInBrowser, openInDevtools } from '../openCommands'
 import createAppRouter from './rpc/index'
 
 const eventEmitter = new EventEmitter()
@@ -49,12 +51,13 @@ export function createDevtoolServe(
   detectPort(port).then((rightPort) => {
     app.listen(rightPort, () => {
       uniDevToolsPrint(rightPort)
-      savePort(rightPort)
+      process.env.UNI_DEVTOOLS_PORT = String(rightPort)
       if (options?.openBrowser) {
         openInBrowser(`http://localhost:${rightPort}`)
       }
       if (options?.openClient) {
         openInDevtools()
+        addCustomTab()
       }
     })
   })

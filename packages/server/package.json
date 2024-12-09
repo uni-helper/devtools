@@ -1,5 +1,5 @@
 {
-  "name": "@uni-helper/devtools-shared",
+  "name": "@uni-helper/devtools-server",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -47,8 +47,9 @@
     "test": "vitest"
   },
   "dependencies": {
-    "json5": "^2.2.3",
-    "lz-string": "^1.5.0",
-    "rfdc": "^1.4.1"
+    "@trpc/client": "10.45.2",
+    "birpc": "^0.2.19",
+    "h3": "^1.13.0",
+    "socket.io": "^4.8.1"
   }
 }

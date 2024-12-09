@@ -1,5 +1,5 @@
 {
-  "name": "@uni-helper/devtools-shared",
+  "name": "@uni-helper/devtools-kit",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -47,8 +47,6 @@
     "test": "vitest"
   },
   "dependencies": {
-    "json5": "^2.2.3",
-    "lz-string": "^1.5.0",
-    "rfdc": "^1.4.1"
+    "@trpc/client": "10.45.2"
   }
 }

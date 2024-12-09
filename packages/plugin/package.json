@@ -5,7 +5,7 @@
   "description": "",
   "author": "FliPPeDround <flippedround@qq.com>",
   "license": "MIT",
-  "funding": "https://afdian.net/a/flippedround",
+  "funding": "https://afdian.com/a/flippedround",
   "homepage": "https://github.com/flippedround/uni-devtools#readme",
   "repository": {
     "type": "git",
@@ -57,7 +57,8 @@
     "vite": ">=3.1.0"
   },
   "dependencies": {
-    "@trpc/server": "^10.45.2",
+    "@trpc/server": "10.45.2",
+    "@uni-helper/devtools-kit": "workspace:*",
     "@uni-helper/devtools-shared": "workspace:*",
     "@uni-helper/devtools-types": "workspace:*",
     "@uni-helper/trpc-client": "workspace:*",

@@ -1,3 +1,4 @@
+import process from 'node:process'
 import type { Plugin } from 'vite'
 import fs from 'fs-extra'
 import { createFilter } from 'vite'
@@ -20,6 +21,7 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
     return _plugin
   }
   const port = options?.port || 5015
+  process.env.UNI_DEVTOOLS_PORT = String(port)
   const inspect = loadInspectPlugin()
   const [pagesPath, pages] = getPagesInfo(options?.pageJsonPath)
   const rootPath = pagesPath.replace('pages.json', '')
