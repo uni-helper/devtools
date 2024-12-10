@@ -1,6 +1,6 @@
 {
   "name": "vitesse-uni-app",
-  "version": "0.0.1-beta.5",
+  "version": "0.0.1-beta.6",
   "private": true,
   "packageManager": "pnpm@8.14.1",
   "license": "MIT",
