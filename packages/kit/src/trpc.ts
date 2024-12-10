@@ -5,7 +5,6 @@ import {
   wsLink,
 } from '@trpc/client'
 import ws from 'ws'
-import type { AppRouter } from './../../plugin/src/index'
 
 function isNodeEnvironment() {
   return typeof process !== 'undefined' && process.versions != null && process.versions.node != null
@@ -18,7 +17,7 @@ export function createTrpc() {
       url: `ws://localhost:${port}/trpc`,
       WebSocket: ws as unknown as typeof WebSocket,
     })
-    return createTRPCProxyClient<AppRouter>({
+    return createTRPCProxyClient({
       links: [
         wsLink({ client: wsClient }),
       ],

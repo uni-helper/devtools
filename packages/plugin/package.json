@@ -1,6 +1,6 @@
 {
   "name": "@uni-helper/devtools",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "packageManager": "pnpm@9.0.2",
   "description": "",
   "author": "FliPPeDround <flippedround@qq.com>",
@@ -44,6 +44,7 @@
     "ud": "./dist/cli/index.cjs"
   },
   "files": [
+    "cli",
     "client",
     "dist",
     "inspect"

@@ -17,6 +17,7 @@ declare module 'vue' {
     CodeBlock: typeof import('./src/components/code/CodeBlock.vue')['default']
     CodeSnippets: typeof import('./src/components/code/CodeSnippets.vue')['default']
     ComponentTreeNode: typeof import('./src/components/components/ComponentTreeNode.vue')['default']
+    CustomTabComponent: typeof import('./src/components/CustomTabComponent.vue')['default']
     DevToolsHeader: typeof import('./src/components/basic/DevToolsHeader.vue')['default']
     DevToolsLogo: typeof import('./src/components/common/DevToolsLogo.vue')['default']
     DockingPanel: typeof import('./src/components/common/DockingPanel.vue')['default']

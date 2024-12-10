@@ -1,8 +1,7 @@
 {
   "name": "@uni-helper/devtools-kit",
   "type": "module",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.1",
   "packageManager": "pnpm@9.0.2",
   "description": "devtools for uni",
   "author": "FliPPeDround <flippedround@qq.com>",
@@ -44,9 +43,11 @@
   "scripts": {
     "build": "tsup",
     "stub": "tsup --watch",
-    "test": "vitest"
+    "prepublishOnly": "build",
+    "release": "bumpp"
   },
   "dependencies": {
-    "@trpc/client": "10.45.2"
+    "@trpc/client": "10.45.2",
+    "@vue/devtools-kit": "^7.6.7"
   }
 }

@@ -6,11 +6,13 @@ import { publicProcedure, router } from './../trpc'
 
 export function TabRouter(eventEmitter: EventEmitter) {
   const { input, subscription } = publicProcedure
+  const tabs: Set<CustomTab> = new Set()
 
   return router({
     sendTab: input(z.unknown()).subscription(({ input }) => {
       console.log('sendTab', input)
       eventEmitter.emit('tab', input)
+      tabs.add(input as CustomTab)
     }),
     onTab: subscription(() => {
       return observable<CustomTab>((emit) => {
@@ -19,6 +21,9 @@ export function TabRouter(eventEmitter: EventEmitter) {
         }
 
         eventEmitter.on('tab', tabHandler)
+
+        if (tabs.size)
+          tabs.forEach(emit.next)
 
         return () => {
           eventEmitter.off('tab', tabHandler)

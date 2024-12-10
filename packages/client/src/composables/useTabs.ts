@@ -1,3 +1,8 @@
+// @unocss-include
+
+import type { CustomTab } from '@vue/devtools-kit'
+import type { ModuleBuiltinTab } from '~/types'
+
 export interface TabItem {
   icon: string
   name: string
@@ -64,13 +69,13 @@ export function useTabs() {
           path: '/documents',
           title: 'Documents',
         },
-        {
-          icon: 'i-tabler:terminal',
-          name: 'console',
-          order: 100,
-          path: '/console',
-          title: 'Console',
-        },
+        // {
+        //   icon: 'i-tabler:terminal',
+        //   name: 'console',
+        //   order: 100,
+        //   path: '/console',
+        //   title: 'Console',
+        // },
         {
           icon: 'i-carbon-network-4',
           name: 'graph',
@@ -89,22 +94,32 @@ export function useTabs() {
     ],
   ])
 
+  const CUSTOM_TAB_VIEW = 'custom-tab-view'
+
   trpc.onTab.subscribe(undefined, {
     onData: (data) => {
       const category = data.category || 'app'
       builtinTab.value.forEach(([c, tabs]) => {
         if (c === category) {
-          tabs.push({
-            icon: data.icon!,
-            name: data.name,
-            order: -100,
-            path: `/${data.name}`,
-            title: data.title,
-          })
+          if (!tabs.find(t => t.name === data.name)) {
+            tabs.push({
+              ...data,
+              path: `/${CUSTOM_TAB_VIEW}/${data.name}`,
+            } as unknown as TabItem)
+          }
         }
       })
     },
   })
 
-  return builtinTab
+  const flattenedTabs = computed(() => {
+    return builtinTab.value.reduce((prev, [_, tabs]) => {
+      tabs.forEach((tab) => {
+        prev.push(tab)
+      })
+      return prev
+    }, [] as Array<ModuleBuiltinTab | CustomTab>)
+  })
+
+  return { builtinTab, flattenedTabs }
 }

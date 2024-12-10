@@ -23,6 +23,7 @@ declare module 'vue-router/auto-routes' {
     '/assets': RouteRecordInfo<'/assets', '/assets', Record<never, never>, Record<never, never>>,
     '/components': RouteRecordInfo<'/components', '/components', Record<never, never>, Record<never, never>>,
     '/console': RouteRecordInfo<'/console', '/console', Record<never, never>, Record<never, never>>,
+    '/custom-tab-view/[name]': RouteRecordInfo<'/custom-tab-view/[name]', '/custom-tab-view/:name', { name: ParamValue<true> }, { name: ParamValue<false> }>,
     '/documents': RouteRecordInfo<'/documents', '/documents', Record<never, never>, Record<never, never>>,
     '/graph': RouteRecordInfo<'/graph', '/graph', Record<never, never>, Record<never, never>>,
     '/inspect': RouteRecordInfo<'/inspect', '/inspect', Record<never, never>, Record<never, never>>,

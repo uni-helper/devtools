@@ -14,5 +14,6 @@ const app = createApp(App)
 const router = createRouter({
   history: createMemoryHistory(),
 })
+console.log(router)
 app.use(router)
 app.mount('#app')

@@ -11,7 +11,6 @@ const SHORTCUTS = [
     description: 'open Uni Devtools client',
     action: () => {
       openInDevtools()
-      addCustomTab()
     },
   },
   {

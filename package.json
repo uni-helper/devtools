@@ -1,7 +1,7 @@
 {
   "name": "@uni-helper/devtools-monorepo",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@9.0.2",
   "description": "devtools for uni",
@@ -31,6 +31,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest",
+    "release": "bumpp -r",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "npx simple-git-hooks"
   },
