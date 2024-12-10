@@ -43,7 +43,6 @@
   "scripts": {
     "build": "tsup",
     "stub": "tsup --watch",
-    "prepublishOnly": "build",
     "release": "bumpp"
   },
   "dependencies": {
