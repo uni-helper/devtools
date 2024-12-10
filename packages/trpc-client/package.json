@@ -1,6 +1,6 @@
 {
   "name": "@uni-helper/trpc-client",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "The tRPC uni-app client library",
   "author": "FliPPeDround <flippedround@qq.com>",
   "license": "MIT",
