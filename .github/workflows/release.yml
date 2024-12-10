@@ -13,15 +13,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - name: Set node
-        uses: actions/setup-node@v3
+      - name: Setup node
+        uses: actions/setup-node@v4
         with:
-          node-version: 18.x
-          cache: pnpm
-          registry-url: 'https://registry.npmjs.org'
+          node-version: 20
+          registry-url: https://registry.npmjs.com/
 
       - run: npx changelogithub
         continue-on-error: true
@@ -32,7 +31,7 @@ jobs:
         run: corepack enable
 
       - name: Install Dependencies
-        run: pnpm i
+        run: pnpm i -frozen-lockfile
 
       - name: PNPM build
         run: pnpm run build
