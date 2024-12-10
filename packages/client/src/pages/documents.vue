@@ -50,45 +50,49 @@ const baseDocumentData = [
 </script>
 
 <template>
-  <SectionBlock
-    text="Developer Documents"
-    description="more information about uni-app vue and miniprogram"
-  >
-    <div grid="~ cols-2" gap-2>
-      <VueCard
-        v-for="item in baseDocumentData"
-        :key="item.id"
-        hover="shadow-green-500/30"
-        flex cursor-pointer justify-between p4 transition-shadow text-base
-        @click="openInBrowser(item.path)"
+  <PanelGrids block h-full of-hidden class="drawer-container relative">
+    <div h-full w-full of-auto>
+      <SectionBlock
+        text="Developer Documents"
+        description="more information about uni-app vue and miniprogram"
       >
-        <div>
-          <div mb3 text-xl font-600>
-            {{ item.label }}
-          </div>
-          <div hover="op90" mb1 flex items-center gap-1 op50>
-            <div i-lucide:link />
-            {{ extractDomain(item.path) }}
-          </div>
-          <div
-            v-if="item.github"
-            flex items-center gap-1 op50
-            hover="op90"
-            @click.stop="openInBrowser(item.github)"
+        <div grid="~ cols-2" gap-2>
+          <VueCard
+            v-for="item in baseDocumentData"
+            :key="item.id"
+            hover="shadow-green-500/30"
+            flex cursor-pointer justify-between p4 transition-shadow text-base
+            @click="openInBrowser(item.path)"
           >
-            <div i-lucide:github />
-            {{ extractRepoPath(item.github) }}
-          </div>
+            <div>
+              <div mb3 text-xl font-600>
+                {{ item.label }}
+              </div>
+              <div hover="op90" mb1 flex items-center gap-1 op50>
+                <div i-lucide:link />
+                {{ extractDomain(item.path) }}
+              </div>
+              <div
+                v-if="item.github"
+                flex items-center gap-1 op50
+                hover="op90"
+                @click.stop="openInBrowser(item.github)"
+              >
+                <div i-lucide:github />
+                {{ extractRepoPath(item.github) }}
+              </div>
+            </div>
+            <div>
+              <div mr2 rounded-lg bg-dark p-2>
+                <TabIcon
+                  text-4xl
+                  :icon="item.icon"
+                />
+              </div>
+            </div>
+          </VueCard>
         </div>
-        <div>
-          <div mr2 rounded-lg bg-dark p-2>
-            <TabIcon
-              text-4xl
-              :icon="item.icon"
-            />
-          </div>
-        </div>
-      </VueCard>
+      </SectionBlock>
     </div>
-  </SectionBlock>
+  </PanelGrids>
 </template>
