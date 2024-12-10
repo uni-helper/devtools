@@ -97,6 +97,7 @@ declare global {
   const onUnmounted: typeof import('vue')['onUnmounted']
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
+  const openInBrowser: typeof import('./src/utils/openInBrowser')['openInBrowser']
   const openInEditor: typeof import('./src/composables/openInEditor')['openInEditor']
   const parseGraphRawData: typeof import('./src/composables/graph')['parseGraphRawData']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
@@ -451,6 +452,7 @@ declare module 'vue' {
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
+    readonly openInBrowser: UnwrapRef<typeof import('./src/utils/openInBrowser')['openInBrowser']>
     readonly openInEditor: UnwrapRef<typeof import('./src/composables/openInEditor')['openInEditor']>
     readonly parseGraphRawData: UnwrapRef<typeof import('./src/composables/graph')['parseGraphRawData']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
