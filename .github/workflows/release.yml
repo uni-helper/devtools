@@ -28,7 +28,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
-      - run: corepack enable
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Install Dependencies
         run: pnpm i
 
