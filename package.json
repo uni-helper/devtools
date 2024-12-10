@@ -1,7 +1,7 @@
 {
   "name": "@uni-helper/devtools-monorepo",
   "type": "module",
-  "version": "0.0.1-beta.3",
+  "version": "0.0.1-beta.4",
   "private": true,
   "packageManager": "pnpm@9.0.2",
   "description": "devtools for uni",
