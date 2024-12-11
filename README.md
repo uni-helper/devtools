@@ -7,7 +7,7 @@
 ## Install
 
 ```bash
-pnpm add -D @uni-helper/uni-devtools
+pnpm add -D @uni-helper/devtools
 ```
 
 ## Usage
