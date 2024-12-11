@@ -55,9 +55,8 @@ export function createDevtoolServe(
       if (options?.openBrowser) {
         openInBrowser(`http://localhost:${rightPort}`)
       }
-      if (options?.openClient) {
+      if (options?.openDesktop) {
         openInDevtools()
-        addCustomTab()
       }
     })
   })

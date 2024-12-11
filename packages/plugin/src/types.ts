@@ -46,10 +46,10 @@ export interface Options {
    */
   vueDevtoolsOptions: VitePluginVueDevToolsOptions
   /**
-   * 客户端
+   * 打开客户端
    * @default false
    */
-  openClient: boolean
+  openDesktop: boolean
   /**
    * 打开浏览器
    * @default false
