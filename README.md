@@ -4,6 +4,10 @@
 🏗 Working in Progress
 </pre>
 
+</br>
+
+<p align="center"><img  src=".github/assets/demo.png"></p>
+
 ## Install
 
 ```bash
@@ -38,7 +42,7 @@ export default defineConfig({
 
 This project exists thanks to all the people who contribute.
 
-## 🙇🏻‍♂️[sponsors](https://afdian.com/a/flippedround)
+## 🙇🏻‍♂️ [sponsors](https://afdian.com/a/flippedround)
 
 <p align="center">
   <a href="https://afdian.com/a/flippedround">

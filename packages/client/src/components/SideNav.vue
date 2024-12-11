@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { VueDropdown } from '@vue/devtools-ui'
-import Logo from '/icon.png'
+import Logo from '/loading_icon.png'
 import type { Tab } from '~/constants/tab'
 
 const { builtinTab } = useTabs()
