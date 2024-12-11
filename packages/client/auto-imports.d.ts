@@ -48,6 +48,7 @@ declare global {
   const formatStateValue: typeof import('./src/composables/format')['formatStateValue']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
+  const getEnv: typeof import('./src/utils/index')['getEnv']
   const getGraphFilterDataset: typeof import('./src/composables/graph')['getGraphFilterDataset']
   const getStateValueType: typeof import('./src/composables/format')['getStateValueType']
   const graphDrawerData: typeof import('./src/composables/graph')['graphDrawerData']
@@ -404,6 +405,7 @@ declare module 'vue' {
     readonly formatStateValue: UnwrapRef<typeof import('./src/composables/format')['formatStateValue']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
+    readonly getEnv: UnwrapRef<typeof import('./src/utils/index')['getEnv']>
     readonly getGraphFilterDataset: UnwrapRef<typeof import('./src/composables/graph')['getGraphFilterDataset']>
     readonly getStateValueType: UnwrapRef<typeof import('./src/composables/format')['getStateValueType']>
     readonly graphDrawerData: UnwrapRef<typeof import('./src/composables/graph')['graphDrawerData']>

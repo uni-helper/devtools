@@ -31,7 +31,7 @@ export default defineConfig({
 
 - Clone this repository
 - Install dependencies using `pnpm install`
-- Create custom template using `pnpm dev`
+- Start development server using `pnpm dev`
 - Run interactive tests using `pnpm play`
 
 ## 💝 Contributors

@@ -11,6 +11,7 @@ export function open(port: string) {
   window.createWebview({
     url: `http://localhost:${port}`,
     enableDevtools: false,
+    preload: /* js */`window.__devtools_desktop_env=true`,
   })
   app.run()
 }

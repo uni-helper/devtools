@@ -10,16 +10,18 @@ async function openInClient() {
 function refreshPage() {
   location.reload()
 }
+
+const env = getEnv()
 </script>
 
 <template>
   <div>
     <div px3 py2 border="b base" flex="~ gap-2">
-      <VueButton outlined type="primary" @click="opeInBrowser">
+      <VueButton v-if="env !== 'h5'" outlined type="primary" @click="opeInBrowser">
         <VueIcon icon="i-icon-park-outline:browser-safari" />
         在浏览器打开
       </VueButton>
-      <VueButton outlined type="primary" @click="openInClient">
+      <VueButton v-if="env !== 'desktop'" outlined type="primary" @click="openInClient">
         <VueIcon icon="i-material-symbols:desktop-windows-outline-sharp" />
         在客户端打开
       </VueButton>

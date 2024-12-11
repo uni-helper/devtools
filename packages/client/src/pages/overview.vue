@@ -7,11 +7,6 @@ const { versionState } = useInitState()
 const pages = await trpc.getPages.query()
 const modules = await trpc.getModules.query()
 const vueModules = modules?.filter(module => module.id.endsWith('vue')).length
-
-// 打开浏览器地址
-function openInNewTab(url: string) {
-  trpc.openInBrowser.query(url)
-}
 </script>
 
 <template>
@@ -30,11 +25,11 @@ function openInNewTab(url: string) {
 
       <!-- Main Grid -->
       <div flex="~ gap2 wrap">
-        <div cursor-pointer p4 theme-card-green flex="~ col auto" @click="openInNewTab('https://uniapp.dcloud.net.cn/')">
+        <div cursor-pointer p4 theme-card-green flex="~ col auto" @click="openInBrowser('https://uniapp.dcloud.net.cn/')">
           <img :src="UniIcon" h-7.5 w-7.5>
           <code>v{{ versionState?.uniVersion }}</code>
         </div>
-        <div cursor-pointer p4 theme-card-green flex="~ col auto" @click="openInNewTab('https://cn.vuejs.org/')">
+        <div cursor-pointer p4 theme-card-green flex="~ col auto" @click="openInBrowser('https://cn.vuejs.org/')">
           <div i-logos-vue text-3xl />
           <code>v{{ versionState?.vueVersion }}</code>
         </div>
@@ -49,26 +44,26 @@ function openInNewTab(url: string) {
       </div>
 
       <div flex="~ gap-6 wrap" mt-5 items-center justify-center>
-        <a href="https://github.com/flippedround/uni-devtools" target="_blank" flex="~ gap1" items-center op50 hover="op100 text-blue" transition>
+        <div flex="~ gap1" cursor-pointer items-center op50 hover="op100 text-blue" transition @click="openInBrowser('https://github.com/uni-helper/devtools')">
           <div i-carbon-star />
           Star on GitHub
-        </a>
-        <a href="https://github.com/flippedround/uni-devtools/discussions/111" target="_blank" flex="~ gap1" items-center op50 hover="op100 text-yellow" transition>
+        </div>
+        <div flex="~ gap1" cursor-pointer items-center op50 hover="op100 text-yellow" transition @click="openInBrowser('https://github.com/uni-helper/devtools/discussions/2')">
           <div i-carbon-data-enrichment />
           Ideas & Suggestions
-        </a>
-        <a href="https://github.com/flippedround/uni-devtools/discussions/112" target="_blank" flex="~ gap1" items-center op50 hover="op100 text-lime" transition>
+        </div>
+        <div flex="~ gap1" cursor-pointer items-center op50 hover="op100 text-lime" transition @click="openInBrowser('https://github.com/uni-helper/devtools/discussions/3')">
           <div i-carbon-plan />
           Project Roadmap
-        </a>
-        <a href="https://github.com/flippedround/uni-devtools/issues" target="_blank" flex="~ gap1" items-center op50 hover="op100 text-rose" transition>
+        </div>
+        <div flex="~ gap1" cursor-pointer items-center op50 hover="op100 text-rose" transition @click="openInBrowser('https://github.com/uni-helper/devtools/issues')">
           <div i-carbon-debug />
           Bug Reports
-        </a>
-        <RouterLink to="/settings" flex="~ gap1" replace inline-block items-center op50 hover:op80>
+        </div>
+        <!-- <RouterLink to="/settings" flex="~ gap1" replace inline-block items-center op50 hover:op80>
           <div i-carbon-settings />
           Settings
-        </RouterLink>
+        </RouterLink> -->
       </div>
     </div>
   </PanelGrids>
