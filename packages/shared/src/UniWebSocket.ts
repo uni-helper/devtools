@@ -2,60 +2,57 @@ interface EventListeners {
   [type: string]: EventListener[]
 }
 
-export class UniWebSocket implements WebSocket {
-  public readonly CONNECTING = 0 as const
-  public readonly OPEN = 1 as const
-  public readonly CLOSING = 2 as const
-  public readonly CLOSED = 3 as const
+export class UniWebSocket {
+  static readonly CONNECTING: number = 0
+  static readonly OPEN: number = 1
+  static readonly CLOSING: number = 2
+  static readonly CLOSED: number = 3
 
   public readonly url: string
-  public readonly protocol: string
+  public readonly protocols?: string | string[]
 
   private socketTask: UniApp.SocketTask | null = null
   private listeners: EventListeners = {}
-  private __readyState: number = this.CONNECTING
+  private _readyState: number = UniWebSocket.CONNECTING
 
-  public binaryType: BinaryType = 'blob'
-  public bufferedAmount: number = 0
-  public extensions: string = ''
-  public onclose: ((this: WebSocket, ev: CloseEvent) => any) | null = null
-  public onerror: ((this: WebSocket, ev: Event) => any) | null = null
-  public onmessage: ((this: WebSocket, ev: MessageEvent) => any) | null = null
-  public onopen: ((this: WebSocket, ev: Event) => any) | null = null
+  public onclose: ((this: UniWebSocket, ev: CloseEvent) => any) | null = null
+  public onerror: ((this: UniWebSocket, ev: Event) => any) | null = null
+  public onmessage: ((this: UniWebSocket, ev: MessageEvent) => any) | null = null
+  public onopen: ((this: UniWebSocket, ev: Event) => any) | null = null
 
-  constructor(url: string, protocol?: string | string[]) {
+  constructor(url: string, protocols?: string | string[]) {
     this.url = url
-    this.protocol = Array.isArray(protocol) ? protocol.join(',') : protocol || ''
+    this.protocols = protocols
     this.init()
   }
 
   public get readyState(): number {
-    return this.__readyState
+    return this._readyState
   }
 
   private init(): void {
     this.socketTask = uni.connectSocket({
       url: this.url,
-      protocols: this.protocol.split(','),
+      protocols: Array.isArray(this.protocols) ? this.protocols : this.protocols ? [this.protocols] : [],
       complete: () => {},
     })
 
     this.socketTask.onOpen(() => {
-      this.__readyState = this.OPEN
-      this.dispatchEvent(new Event('open'))
+      this._readyState = UniWebSocket.OPEN
+      this.dispatchEvent('open')
     })
 
     this.socketTask.onClose((event) => {
-      this.__readyState = this.CLOSED
-      this.dispatchEvent(new CloseEvent('close', { code: event.code, reason: event.reason }))
+      this._readyState = UniWebSocket.CLOSED
+      this.dispatchEvent('close', { code: event.code, reason: event.reason })
     })
 
     this.socketTask.onError((error) => {
-      this.dispatchEvent(new CustomEvent('error', { detail: { cause: error } }))
+      this.dispatchEvent('error', error)
     })
 
     this.socketTask.onMessage((message) => {
-      this.dispatchEvent(new MessageEvent('message', { data: message.data }))
+      this.dispatchEvent('message', { data: message.data })
     })
   }
 
@@ -75,16 +72,14 @@ export class UniWebSocket implements WebSocket {
     }
   }
 
-  public dispatchEvent(event: Event): boolean {
-    const type = event.type
+  private dispatchEvent(type: string, event: any = {}): void {
     if (this.listeners[type]) {
       this.listeners[type].forEach(listener => listener(event))
     }
-    return true
   }
 
   public send(data: string): void {
-    if (this.__readyState === this.OPEN && this.socketTask) {
+    if (this._readyState === UniWebSocket.OPEN && this.socketTask) {
       this.socketTask.send({
         data,
         fail: (error) => {
@@ -98,17 +93,21 @@ export class UniWebSocket implements WebSocket {
   }
 
   public close(code: number = 1000, reason: string = ''): void {
-    if ((this.__readyState === this.OPEN || this.__readyState === this.CONNECTING) && this.socketTask) {
+    if ((this._readyState === UniWebSocket.OPEN || this._readyState === UniWebSocket.CONNECTING) && this.socketTask) {
       this.socketTask.close({
         code,
         reason,
         success: () => {
-          this.__readyState = this.CLOSING
+          this._readyState = UniWebSocket.CLOSING
         },
         fail: (error) => {
           console.error('WebSocket close error:', error)
         },
       })
     }
+  }
+
+  public onClose(callback: EventListener): void {
+    this.addEventListener('close', callback)
   }
 }

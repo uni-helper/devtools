@@ -1,5 +1,5 @@
 import { stringify } from '@vue/devtools-kit'
-import { trpc } from './trpc'
+// import { trpc } from './trpc'
 
 /**
  *
@@ -11,7 +11,11 @@ function sendPiniaState(id, state) {
     key: id,
     value: state,
   }
-
+  /**
+   * @type {import("@trpc/client").CreateTRPCProxyClient<import("./../src/index").AppRouter>}
+   */
+  // @ts-ignore
+  const trpc = uni.$trpc
   trpc.sendPiniaState.subscribe(
     // @ts-ignore
     {

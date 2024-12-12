@@ -1,7 +1,7 @@
 import { globSync } from 'fast-glob'
 import fs from 'fs-extra'
 import JSON5 from 'json5'
-import type { PagesJson } from './../types'
+import type { PagesJson } from '../types'
 
 export function getPagesPath(pagesPath?: string) {
   if (pagesPath)

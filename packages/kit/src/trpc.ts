@@ -23,4 +23,8 @@ export function createTrpc() {
       ],
     })
   }
+  else {
+    // @ts-expect-error runtime only
+    return uni.$trpc
+  }
 }

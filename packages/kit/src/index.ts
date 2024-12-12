@@ -17,9 +17,8 @@ function resolveIcon(icon?: string) {
 }
 
 export function addCustomTab(tab: CustomTab) {
-  console.log('addCustomTab', tab)
   const trpc = createTrpc()!
-  // @ts-expect-error type not important
+
   trpc.sendTab.subscribe({
     ...tab,
     icon: resolveIcon(tab.icon),

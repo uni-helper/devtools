@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { openInBrowser, openInDevtools, openInEditor } from '../../openCommands'
+import type { Options } from '../../types'
 import { publicProcedure, router } from './../trpc'
-import type { Options } from './../../types'
 
 export function OpenRouter(options?: Partial<Options>) {
   const { input, query } = publicProcedure

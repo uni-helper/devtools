@@ -1,5 +1,8 @@
 import type { VitePluginVueDevToolsOptions } from 'vite-plugin-vue-devtools'
 
+import type { CreateTRPCProxyClient } from '@trpc/client'
+import type { AppRouter } from './index'
+
 export interface Options {
   // define your plugin options here
 }

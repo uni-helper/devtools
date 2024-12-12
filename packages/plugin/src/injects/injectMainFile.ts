@@ -49,8 +49,10 @@ export function injectImportDevtools(code: string, id: string) {
     `import UniDevTools from '@uni-helper/devtools/inspect/UniDevTools.vue';`,
     // `import {proxyConsole} from '@uni-helper/devtools/inspect/proxyConsole.js';`,
     `import {initMPClient} from '@uni-helper/devtools/inspect/initMPClient.js';`,
+    `import {trpc} from '@uni-helper/devtools/inspect/trpc.js'`,
   ]
   const injectFunc = [
+    `uni.$trpc = trpc`,
     // `proxyConsole();`,
     `initMPClient();`,
   ]

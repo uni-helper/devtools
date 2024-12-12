@@ -1,13 +1,16 @@
 import { version } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { trpc } from './trpc'
 
 export function setVersion() {
   const { uniRuntimeVersion, uniPlatform } = uni.getSystemInfoSync()
 
   const vueVersion = version
   const uniVersion = uniRuntimeVersion
-
+  /**
+   * @type {import("@trpc/client").CreateTRPCProxyClient<import("./../src/index").AppRouter>}
+   */
+  // @ts-ignore
+  const trpc = uni.$trpc
   trpc.setVersion.subscribe({
     vueVersion,
     uniVersion,
@@ -47,7 +50,11 @@ function extractComponentInfo(component) {
 }
 
 export function setCurrentPage() {
-  console.log('initMPClient')
+  /**
+   * @type {import("@trpc/client").CreateTRPCProxyClient<import("./../src/index").AppRouter>}
+   */
+  // @ts-ignore
+  const trpc = uni.$trpc
   onShow(() => {
     // eslint-disable-next-line no-undef
     const pages = getCurrentPages()
