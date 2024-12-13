@@ -1,7 +1,7 @@
 {
   "name": "@uni-helper/devtools-kit",
   "type": "module",
-  "version": "0.0.1-beta.7",
+  "version": "0.0.1-beta.8",
   "packageManager": "pnpm@9.0.2",
   "description": "devtools for uni",
   "author": "FliPPeDround <flippedround@qq.com>",
