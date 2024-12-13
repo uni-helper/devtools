@@ -104,7 +104,8 @@ export function useTabs() {
           if (!tabs.find(t => t.name === data.name)) {
             tabs.push({
               ...data,
-              path: `/${CUSTOM_TAB_VIEW}/${data.name}`,
+              // @ts-expect-error custom tab path
+              path: data?.path ?? `/${CUSTOM_TAB_VIEW}/${data.name}`,
             } as unknown as TabItem)
           }
         }

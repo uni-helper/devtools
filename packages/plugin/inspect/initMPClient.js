@@ -16,12 +16,7 @@ export function setVersion() {
     uniVersion,
     uniPlatform,
   }, {
-    onComplete: () => { console.log('sendVersion success') },
-  })
-  console.log('sendVersion', {
-    vueVersion,
-    uniVersion,
-    uniPlatform,
+    onComplete: () => {},
   })
 }
 
@@ -67,7 +62,6 @@ export function setCurrentPage() {
     )
 
     const vm = currentPage.$vm
-    console.log('setCurrentPage', vm)
     const componentTree = extractComponentInfo(vm)
     trpc.setComponentTree.subscribe(componentTree, {
       onComplete: () => {},
@@ -75,7 +69,6 @@ export function setCurrentPage() {
 
     trpc.onChangeCurrentPage.subscribe(undefined, {
       onData: (data) => {
-        console.log('onChangeCurrentPage', data)
         if (data.isTabBar) {
           uni.switchTab({
             url: data.page,

@@ -1,8 +1,5 @@
 import type { VitePluginVueDevToolsOptions } from 'vite-plugin-vue-devtools'
 
-import type { CreateTRPCProxyClient } from '@trpc/client'
-import type { AppRouter } from './index'
-
 export interface Options {
   // define your plugin options here
 }
@@ -50,14 +47,14 @@ export interface Options {
   vueDevtoolsOptions: VitePluginVueDevToolsOptions
   /**
    * 打开客户端
-   * @default false
+   * @default true
    */
-  openDesktop: boolean
+  desktop: boolean
   /**
    * 打开浏览器
    * @default false
    */
-  openBrowser: boolean
+  browser: boolean
 }
 
 export interface ModuleInfo {

@@ -10,7 +10,6 @@ import { applyWSSHandler } from '@trpc/server/adapters/ws'
 import { createExpressMiddleware } from '@trpc/server/adapters/express'
 
 import type { ResolvedConfig } from 'vite'
-import { addCustomTab } from '@uni-helper/devtools-kit'
 import { DIR_CLIENT, DIR_TMP_INSPECT } from '../dir'
 import { uniDevToolsPrint } from '../utils/print'
 import type { Options } from '../types'
@@ -48,14 +47,19 @@ export function createDevtoolServe(
     router: createAppRouter(resolvedConfig, eventEmitter, options),
   }))
 
+  const {
+    desktop = true,
+    browser = false,
+  } = options || {}
+
   detectPort(port).then((rightPort) => {
     app.listen(rightPort, () => {
       uniDevToolsPrint(rightPort)
       process.env.UNI_DEVTOOLS_PORT = String(rightPort)
-      if (options?.openBrowser) {
+      if (browser) {
         openInBrowser(`http://localhost:${rightPort}`)
       }
-      if (options?.openDesktop) {
+      if (desktop) {
         openInDevtools()
       }
     })

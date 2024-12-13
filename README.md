@@ -23,9 +23,7 @@ import DevTools from '@uni-helper/devtools'
 
 export default defineConfig({
   plugins: [
-    DevTools({
-      openDesktop: true,
-    }),
+    DevTools(),
     Uni(),
   ],
 })
