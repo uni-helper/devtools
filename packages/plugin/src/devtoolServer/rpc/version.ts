@@ -21,8 +21,6 @@ export function versionRouter(eventEmitter: EventEmitter) {
     }),
     onVersion: subscription(() => {
       return observable<VersionState>((emit) => {
-        console.log('on version')
-        console.log(versionState)
         const versionHandler = (data: VersionState) => {
           emit.next(data)
         }
@@ -33,7 +31,6 @@ export function versionRouter(eventEmitter: EventEmitter) {
           emit.next(versionState)
         }
         return () => {
-          console.log('off version')
           eventEmitter.off('version', versionHandler)
         }
       })

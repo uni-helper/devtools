@@ -2,13 +2,12 @@
 import readline from 'node:readline'
 import process from 'node:process'
 import c from 'picocolors'
-import { addCustomTab } from '@uni-helper/devtools-kit'
 import { openInBrowser, openInDevtools } from '../openCommands'
 
 const SHORTCUTS = [
   {
     key: 'd',
-    description: 'open Uni Devtools client',
+    description: 'open Uni Devtools client in desktop',
     action: () => {
       openInDevtools()
     },
