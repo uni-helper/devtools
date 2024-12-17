@@ -14,4 +14,8 @@ export const DIR_TMP = join(tmpdir(), '.uni-devtools')
 
 export const DIR_TMP_INSPECT = join(DIR_TMP, '.inspect')
 
+export const DIR_TMP_VISUALIZER = join(DIR_TMP, '.visualizer')
+
+export const DIR_TMP_VISUALIZER_NAME = join(DIR_TMP_VISUALIZER, 'index.html')
+
 export const DIR_INSPECT_LIST = join(DIR_TMP_INSPECT, 'reports', 'list.json')

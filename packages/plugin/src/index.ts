@@ -10,6 +10,7 @@ import { injectDevtoolInfo } from './injects/injectVueFile'
 import { injectImportDevtools } from './injects/injectMainFile'
 import { injectPageFile } from './injects/injectPageFile'
 import { getPagesInfo } from './logic'
+import { loadVisualizerPlugin } from './loadOtherPlugin/visualizerPlugin'
 
 export * from './types'
 export type AppRouter = ReturnType<typeof createRouter>
@@ -21,6 +22,7 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
   const port = options?.port || 5015
   process.env.UNI_DEVTOOLS_PORT = String(port)
   const inspect = loadInspectPlugin()
+  const visualizer = loadVisualizerPlugin()
   const [_, pages] = getPagesInfo(options?.pageJsonPath)
 
   const plugin = <Plugin>{
@@ -59,5 +61,5 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
       }
     },
   }
-  return [plugin, inspect]
+  return [plugin, inspect, visualizer]
 }

@@ -90,6 +90,13 @@ export function useTabs() {
           path: '/inspect',
           title: 'Inspect',
         },
+        {
+          icon: 'i-carbon:analytics',
+          name: 'visualizer',
+          order: -100,
+          path: '/visualizer',
+          title: 'Visualizer',
+        },
       ],
     ],
   ])

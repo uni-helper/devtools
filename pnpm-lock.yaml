@@ -301,6 +301,9 @@ importers:
       posthtml:
         specifier: ^0.16.6
         version: 0.16.6
+      rollup-plugin-visualizer:
+        specifier: ^5.12.0
+        version: 5.12.0(rollup@3.29.5)
       unbuild:
         specifier: ^2.0.0
         version: 2.0.0(typescript@5.7.2)(vue-tsc@2.1.10(typescript@5.7.2))
@@ -310,12 +313,6 @@ importers:
 
   packages/shared:
     dependencies:
-      json5:
-        specifier: ^2.2.3
-        version: 2.2.3
-      lz-string:
-        specifier: ^1.5.0
-        version: 1.5.0
       rfdc:
         specifier: ^1.4.1
         version: 1.4.1
@@ -5890,10 +5887,6 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lz-string@1.5.0:
-    resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
-    hasBin: true
-
   magic-string-ast@0.6.3:
     resolution: {integrity: sha512-C9sgUzVZtUtzCBoMdYtwrIRQ4IucGRFGgdhkjL7PXsVfPYmTuWtewqzk7dlipaCMWH/gOYehW9rgMoa4Oebtpw==}
     engines: {node: '>=16.14.0'}
@@ -6926,6 +6919,16 @@ packages:
     peerDependencies:
       rollup: ^3.29.4 || ^4
       typescript: ^4.5 || ^5.0
+
+  rollup-plugin-visualizer@5.12.0:
+    resolution: {integrity: sha512-8/NU9jXcHRs7Nnj07PF2o4gjxmm9lXIrZ8r175bT9dK8qoLlvKTwRMArRCMgpMGlq8CTLugRvEmyMeMXIU2pNQ==}
+    engines: {node: '>=14'}
+    hasBin: true
+    peerDependencies:
+      rollup: 2.x || 3.x || 4.x
+    peerDependenciesMeta:
+      rollup:
+        optional: true
 
   rollup@3.29.5:
     resolution: {integrity: sha512-GVsDdsbJzzy4S/v3dqWPJ7EfvZJfCHiDqe80IyrF59LYuP+e6U1LJoUqeuqRbwAWoMNoXivMNeNAOf5E22VA1w==}
@@ -15570,8 +15573,6 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lz-string@1.5.0: {}
-
   magic-string-ast@0.6.3:
     dependencies:
       magic-string: 0.30.13
@@ -16534,6 +16535,15 @@ snapshots:
       typescript: 5.7.2
     optionalDependencies:
       '@babel/code-frame': 7.26.2
+
+  rollup-plugin-visualizer@5.12.0(rollup@3.29.5):
+    dependencies:
+      open: 8.4.2
+      picomatch: 2.3.1
+      source-map: 0.7.4
+      yargs: 17.7.2
+    optionalDependencies:
+      rollup: 3.29.5
 
   rollup@3.29.5:
     optionalDependencies:
