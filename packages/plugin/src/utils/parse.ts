@@ -1,5 +1,5 @@
 import type { SFCDescriptor } from 'vue/compiler-sfc'
-import { parse as VueParser } from 'vue/compiler-sfc'
+import { parse as VueParser, compileScript } from 'vue/compiler-sfc'
 import { parse as AcornParser } from 'acorn'
 
 export function parseSFC(code: string): SFCDescriptor {
@@ -19,6 +19,13 @@ export function parseSFC(code: string): SFCDescriptor {
       '[@uni-helper/devtools] Vue3\'s "@vue/compiler-sfc" is required.',
     )
   }
+}
+
+export function parseScript(descriptor: SFCDescriptor, id: string) {
+  return compileScript(
+    descriptor,
+    { id },
+  )
 }
 
 export function parseJS(code: string) {

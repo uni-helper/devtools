@@ -28,7 +28,7 @@ export default async () => {
         directoryAsNamespace: true,
       }),
       DevTools({
-        client: false,
+        desktop: false,
       }),
       Uni(),
       // https://github.com/antfu/unplugin-auto-import

@@ -27,5 +27,15 @@ export function componentRouter(eventEmitter: EventEmitter) {
         }
       })
     }),
+    sendComponentData: input(
+      z.object({
+        fileName: z.string(),
+        key: z.string(),
+        value: z.string(),
+      }),
+    ).subscription(({ input }) => {
+      // eventEmitter.emit('sendComponentData', input)
+      console.log('sendComponentData', input)
+    }),
   })
 }
