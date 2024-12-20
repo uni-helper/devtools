@@ -36,7 +36,7 @@ export async function injectDevtoolInfo(code: string, id: string) {
     const constent = parseScript(descriptor, id)
     const bindings = constent.bindings
     if (bindings) {
-      const validSoures = ['vue']
+      const validSoures = ['vue', '@dcloudio/uni-app']
       const imports = Object.entries(constent.imports || {}).map(([key, value]) => {
         if (validSoures.includes(value.source) || value.source.endsWith('.vue')) {
           return key
@@ -56,9 +56,8 @@ export async function injectDevtoolInfo(code: string, id: string) {
       if (watchBindings.length > 0) {
         const watchCode = `
         ;import {setupProxy} from '@uni-helper/devtools/inspect/setupProxy.js';
-        ;const bindings = [${watchBindings.map(binding => `{'key': '${binding}', 'value': ${binding}}`).join(', ')}];
-        ;setupProxy(bindings, '${fileName}');
-  `
+        ;const bindings = {${watchBindings.join(', ')}};
+        ;setupProxy(bindings, '${fileName}');`
         const end = scriptSetup.loc.end.offset
         ms.appendRight(end, watchCode)
       }

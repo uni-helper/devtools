@@ -31,7 +31,7 @@ export function componentRouter(eventEmitter: EventEmitter) {
       z.object({
         fileName: z.string(),
         key: z.string(),
-        value: z.string(),
+        value: z.union([z.string(), z.array(z.string())]),
       }),
     ).subscription(({ input }) => {
       // eventEmitter.emit('sendComponentData', input)

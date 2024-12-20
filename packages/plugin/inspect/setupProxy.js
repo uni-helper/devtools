@@ -3,7 +3,7 @@ import { stringify } from '@vue/devtools-kit'
 
 /**
  *
- * @param {{key: string, value: *}[]} bindings
+ * @param {Record<string, *>} bindings
  * @param {string} fileName
  */
 export function setupProxy(bindings, fileName) {
@@ -12,22 +12,23 @@ export function setupProxy(bindings, fileName) {
    */
   // @ts-ignore
   const trpc = uni.$trpc
-  bindings.forEach((binding) => {
+  for (const key in bindings) {
     watch(
-      () => binding.value,
+      () => bindings[key],
       (newValue) => {
-        console.log('watch', binding, newValue)
-        console.log(trpc)
         trpc.sendComponentData.subscribe(
           {
             fileName,
-            key: binding.key,
-            value: stringify(newValue),
+            key,
+            value: stringify([newValue]),
           },
-          { onComplete: () => console.log('Data sent successfully'), onError: error => console.error('Error sending data', error) },
+          {
+            onComplete: () => {},
+            onError: error => console.error(error),
+          },
         )
       },
       { deep: true, immediate: true },
     )
-  })
+  }
 }
