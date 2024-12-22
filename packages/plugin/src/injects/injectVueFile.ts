@@ -15,28 +15,30 @@ export async function injectDevtoolInfo(code: string, id: string) {
 
   const exportInspectInfo = `;export default {${inspectInfo}}`
 
-  // TODO? 优化--共用一个parse
-  // TODO! 支持具名默认导出
-  if (script) {
-    const content = script.content
-    const ast = parseJS(content)
-    const exportDefaultStart = ast.body.find(node => node.type === 'ExportDefaultDeclaration')?.declaration.start
-
-    if (exportDefaultStart) {
-      ms.appendRight(exportDefaultStart + 1, inspectInfo)
-    }
-    else {
-      ms.appendRight(script.loc.end.offset, exportInspectInfo)
-    }
-  }
-  else {
-    const langAttr = scriptSetup?.lang ? `lang="${scriptSetup.lang}"` : ''
-    const inspectScript = `<script ${langAttr}>${exportInspectInfo}</script>`
-    ms.append(inspectScript)
-  }
-
   if (scriptSetup || script) {
     const content = parseScript(descriptor, id)
+    const ast = content.scriptAst
+    const ExportDefaultDeclarationNode = ast?.find(node => node.type === 'ExportDefaultDeclaration')
+
+    const exportNodeEndLoc = ExportDefaultDeclarationNode?.end
+    const hasExtra = ExportDefaultDeclarationNode?.extra
+    // inject component file data
+
+    if (script) {
+      if (exportNodeEndLoc) {
+        ms.appendLeft(exportNodeEndLoc - 1, hasExtra ? inspectInfo : `,${inspectInfo}`)
+      }
+      else {
+        ms.appendRight(script.loc.end.offset, exportInspectInfo)
+      }
+    }
+    else {
+      const langAttr = scriptSetup?.lang ? `lang="${scriptSetup.lang}"` : ''
+      const inspectScript = `<script ${langAttr}>${exportInspectInfo}</script>`
+      ms.append(inspectScript)
+    }
+
+    // inject watch
     const bindings = content.bindings
     if (bindings) {
       const validSoures = ['vue', '@dcloudio/uni-app']
@@ -71,9 +73,7 @@ export async function injectDevtoolInfo(code: string, id: string) {
           ms.appendRight(end, watchCode)
         }
         else {
-          const ast = content.scriptAst
           const scriptStartLoc = content.loc.start.offset
-          const ExportDefaultDeclarationNode = ast?.find(node => node.type === 'ExportDefaultDeclaration')
           if (ExportDefaultDeclarationNode) {
             const ObjectExpressionNode = ExportDefaultDeclarationNode.declaration as ObjectExpression
             const SetupNode = ObjectExpressionNode.properties.find((node: any) => {
@@ -93,29 +93,13 @@ export async function injectDevtoolInfo(code: string, id: string) {
             }
             // option api
             else {
-              ms.appendRight(scriptStartLoc!, `;import { stringify } from '@vue/devtools-kit';`)
+              ms.appendRight(scriptStartLoc!, `;import {positionWatchBindings} from '@uni-helper/devtools/inspect/setupProxy.js';`)
 
-              const exportNodeEndLoc = ExportDefaultDeclarationNode.end
-              const hasExtra = ExportDefaultDeclarationNode.extra
               const watchCode = /* js */`
-              ${hasExtra ? '' : ','}watch: {
+              watch: {
                 '$data': {
                   handler(newValue) {
-                  console.log("option",newValue)
-                    for (const key in newValue) {
-                      const trpc = uni.$trpc
-                      trpc.sendComponentData.subscribe(
-                        {
-                          fileName: '${fileName}',
-                          key,
-                          value: stringify([newValue[key]]),
-                        },
-                        {
-                          onComplete: () => {},
-                          onError: error => console.error(error),
-                        },
-                      )
-                    }
+                    positionWatchBindings(newValue, '${fileName}')
                   },
                   deep: true,
                   immediate: true,
@@ -128,6 +112,10 @@ export async function injectDevtoolInfo(code: string, id: string) {
         }
       }
     }
+  }
+  else {
+    const inspectScript = `<script>${exportInspectInfo}</script>`
+    ms.append(inspectScript)
   }
 
   const map = ms.generateMap({

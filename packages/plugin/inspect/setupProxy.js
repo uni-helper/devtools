@@ -32,3 +32,29 @@ export function setupProxy(bindings, fileName) {
     )
   }
 }
+
+/**
+ *
+ * @param {Record<string, *>} newValue
+ * @param {string} fileName
+ */
+export function positionWatchBindings(newValue, fileName) {
+  /**
+   * @type {import("@trpc/client").CreateTRPCProxyClient<import("./../src/index").AppRouter>}
+   */
+  // @ts-ignore
+  const trpc = uni.$trpc
+  for (const key in newValue) {
+    trpc.sendComponentData.subscribe(
+      {
+        fileName,
+        key,
+        value: stringify([newValue[key]]),
+      },
+      {
+        onComplete: () => {},
+        onError: error => console.error(error),
+      },
+    )
+  }
+}
