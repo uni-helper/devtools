@@ -1,20 +1,20 @@
 # 🔺🔹🔸🔻Uni DevTools
 
 <pre align="center">
-🏗 Working in Progress
+🏗 积极开发中💪，暂不建议在生产中使用
 </pre>
 
 </br>
 
 <p align="center"><img  src=".github/assets/demo.png"></p>
 
-## Install
+## 安装
 
 ```bash
 pnpm add -D @uni-helper/devtools
 ```
 
-## Usage
+## 使用
 
 ```ts
 import { defineConfig } from 'vite'
@@ -29,16 +29,16 @@ export default defineConfig({
 })
 ```
 
-## 💻 Development
+## 💻 开发
 
-- Clone this repository
-- Install dependencies using `pnpm install`
-- Start development server using `pnpm dev`
-- Run interactive tests using `pnpm play`
+- `fork`并`clone`本仓库
+- 使用`pnpm install`安装依赖
+- 使用`pnpm dev`编译代码
+- 使用`pnpm play`运行交互式测试
 
-## 💝 Contributors
+## 💝 贡献
 
-This project exists thanks to all the people who contribute.
+任何人都可以参与到这个项目的贡献中，欢迎大家参与讨论和贡献代码。
 
 ## 🙇🏻‍♂️ [sponsors](https://afdian.com/a/flippedround)
 
