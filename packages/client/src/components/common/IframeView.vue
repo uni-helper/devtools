@@ -5,6 +5,7 @@ const iframeCacheMap = new Map<string, HTMLIFrameElement>()
 <script setup lang="ts">
 const props = defineProps<{
   src: string
+  injectStyle?: string
 }>()
 
 const colorMode = useColorMode()
@@ -28,6 +29,13 @@ onMounted(() => {
     try {
       iframeEl.value.style.opacity = '0.01'
       iframeEl.value.onload = () => {
+        if (props.injectStyle) {
+          const iframeDoc = iframeEl.value!.contentDocument || iframeEl.value!.contentWindow!.document
+          const style = document.createElement('style')
+          style.textContent = props.injectStyle
+          iframeDoc.head.appendChild(style)
+        }
+
         syncColorMode()
         iframeEl.value!.style.opacity = '1'
         iframeLoaded.value = true
