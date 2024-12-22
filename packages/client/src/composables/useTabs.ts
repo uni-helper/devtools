@@ -91,7 +91,7 @@ export function useTabs() {
           title: 'Inspect',
         },
         {
-          icon: 'i-carbon:analytics',
+          icon: 'i-stash:chart-pie-light',
           name: 'visualizer',
           order: -100,
           path: '/visualizer',

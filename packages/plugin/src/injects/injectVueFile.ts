@@ -1,7 +1,7 @@
 import MagicString from 'magic-string'
 import { basename } from 'pathe'
 import type { FunctionExpression, ObjectExpression } from 'acorn'
-import { parseJS, parseSFC, parseScript } from '../utils/parse'
+import { parseSFC, parseScript } from '../utils/parse'
 
 export async function injectDevtoolInfo(code: string, id: string) {
   const ms = new MagicString(code)
