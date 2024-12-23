@@ -1,4 +1,4 @@
-import { watch } from 'vue'
+import { getCurrentInstance, watch } from 'vue'
 import { stringify } from '@vue/devtools-kit'
 
 /**
@@ -20,6 +20,8 @@ export function setupProxy(bindings, fileName) {
           {
             fileName,
             key,
+            // @ts-ignore
+            id: getCurrentInstance().uid,
             value: stringify([newValue]),
           },
           {
@@ -37,8 +39,9 @@ export function setupProxy(bindings, fileName) {
  *
  * @param {Record<string, *>} newValue
  * @param {string} fileName
+ * @param {number} id
  */
-export function positionWatchBindings(newValue, fileName) {
+export function positionWatchBindings(newValue, fileName, id) {
   /**
    * @type {import("@trpc/client").CreateTRPCProxyClient<import("./../src/index").AppRouter>}
    */
@@ -49,6 +52,7 @@ export function positionWatchBindings(newValue, fileName) {
       {
         fileName,
         key,
+        id,
         value: stringify([newValue[key]]),
       },
       {

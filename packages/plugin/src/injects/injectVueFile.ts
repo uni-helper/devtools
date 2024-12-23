@@ -99,7 +99,8 @@ export async function injectDevtoolInfo(code: string, id: string) {
               watch: {
                 '$data': {
                   handler(newValue) {
-                    positionWatchBindings(newValue, '${fileName}')
+                    const id = this.$.uid
+                    positionWatchBindings(newValue, '${fileName}', id)
                   },
                   deep: true,
                   immediate: true,

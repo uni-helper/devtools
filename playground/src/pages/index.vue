@@ -9,6 +9,7 @@ import CompositionScript from '@/components/CompositionScript.vue';
   <InputEntry />
   <TestComp />
   <OptionsScript />
+  <OptionsScript />
   <CompositionScript />
 </template>
 
