@@ -83,7 +83,14 @@ const displayState = computed(() => {
           <div class="grid grid-cols-[1fr_auto] mb1 items-center gap2 pb1" border="b dashed base">
             <VueInput v-model="filterStateKey" placeholder="filter Pinia state" />
           </div>
-          <RootStateViewer v-if="!emptyState" class="no-scrollbar flex-1 overflow-scroll" :data="displayState" :node-id="piniaRootLabel[0].id" inspector-id="pinia" expanded-state-id="pinia-store-state" />
+          <RootStateViewer
+            v-if="!emptyState"
+            class="no-scrollbar flex-1 overflow-scroll"
+            :data="displayState"
+            :node-id="piniaRootLabel[0].id"
+            inspector-id="pinia"
+            expanded-state-id="pinia-store-state"
+          />
           <Empty v-else>
             No Data
           </Empty>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ComponentTreeNode } from '@uni-helper/devtools-types'
 import { computed, ref } from 'vue'
+import { Pane, Splitpanes } from 'splitpanes'
+import { VueInput } from '@vue/devtools-ui'
 
 let data: ComponentTreeNode[] = []
 const tree = ref<ComponentTreeNode[]>([])
@@ -10,6 +12,15 @@ trpc.onComponentTree.subscribe(undefined, {
     tree.value = [value]
   },
 })
+
+function handleDateById(id: number) {
+  console.log(id)
+  trpc.onComponentData.subscribe(id, {
+    onData: (value) => {
+      console.log(value)
+    },
+  })
+}
 
 const filterComponentName = ref('')
 const searchTerm = computed(() => filterComponentName.value.trim().toLowerCase())
@@ -52,14 +63,42 @@ watchDebounced(
   },
   { debounce: 300 },
 )
+
+const filterStateKey = ref('')
 </script>
 
 <template>
   <PanelGrids block h-screen of-auto>
-    <Navbar v-model:search="filterComponentName" :no-padding="true" />
+    <Splitpanes class="flex-1 overflow-auto">
+      <Pane border="r base" size="40" h-full>
+        <div class="p2">
+          <div class="grid grid-cols-[1fr_auto] mb1 items-center gap2 pb1" border="b dashed base">
+            <VueInput v-model="filterComponentName" placeholder="filter component name" />
+          </div>
 
-    <div no-scrollbar flex-1 select-none overflow-hidden px2>
-      <TreeViewer :data="tree" :with-tag="true" :depth="0" />
-    </div>
+          <div no-scrollbar flex-1 select-none overflow-hidden px2>
+            <TreeViewer :data="tree" :with-tag="true" :depth="0" @change="handleDateById" />
+          </div>
+        </div>
+      </Pane>
+      <Pane size="60">
+        <div class="h-full flex flex-col p2">
+          <div class="grid grid-cols-[1fr_auto] mb1 items-center gap2 pb1" border="b dashed base">
+            <VueInput v-model="filterStateKey" placeholder="filter Pinia state" />
+          </div>
+          <!-- <RootStateViewer
+            v-if="!emptyState"
+            class="no-scrollbar flex-1 overflow-scroll"
+            :data="displayState"
+            :node-id="piniaRootLabel[0].id"
+            inspector-id="pinia"
+            expanded-state-id="pinia-store-state"
+          /> -->
+          <Empty>
+            No Data
+          </Empty>
+        </div>
+      </Pane>
+    </Splitpanes>
   </PanelGrids>
 </template>

@@ -4,9 +4,8 @@ import { stringify } from '@vue/devtools-kit'
 /**
  *
  * @param {Record<string, *>} bindings
- * @param {string} fileName
  */
-export function setupProxy(bindings, fileName) {
+export function setupProxy(bindings) {
   /**
    * @type {import("@trpc/client").CreateTRPCProxyClient<import("./../src/index").AppRouter>}
    */
@@ -18,7 +17,6 @@ export function setupProxy(bindings, fileName) {
       (newValue) => {
         trpc.sendComponentData.subscribe(
           {
-            fileName,
             key,
             // @ts-ignore
             id: getCurrentInstance().uid,
@@ -38,10 +36,9 @@ export function setupProxy(bindings, fileName) {
 /**
  *
  * @param {Record<string, *>} newValue
- * @param {string} fileName
  * @param {number} id
  */
-export function positionWatchBindings(newValue, fileName, id) {
+export function positionWatchBindings(newValue, id) {
   /**
    * @type {import("@trpc/client").CreateTRPCProxyClient<import("./../src/index").AppRouter>}
    */
@@ -50,7 +47,6 @@ export function positionWatchBindings(newValue, fileName, id) {
   for (const key in newValue) {
     trpc.sendComponentData.subscribe(
       {
-        fileName,
         key,
         id,
         value: stringify([newValue[key]]),

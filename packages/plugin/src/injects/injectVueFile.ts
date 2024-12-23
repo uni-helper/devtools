@@ -62,7 +62,7 @@ export async function injectDevtoolInfo(code: string, id: string) {
         const importWatchCode = `;import {setupProxy} from '@uni-helper/devtools/inspect/setupProxy.js';`
         const setupProxyCode = `
         ;const bindings = {${watchBindings.join(', ')}};
-        ;setupProxy(bindings, '${fileName}');
+        ;setupProxy(bindings);
         `
         if (scriptSetup) {
           const watchCode = `
@@ -100,7 +100,7 @@ export async function injectDevtoolInfo(code: string, id: string) {
                 '$data': {
                   handler(newValue) {
                     const id = this.$.uid
-                    positionWatchBindings(newValue, '${fileName}', id)
+                    positionWatchBindings(newValue, id)
                   },
                   deep: true,
                   immediate: true,

@@ -89,3 +89,10 @@ export function isMap<K, V>(value: any): value is Map<K, V> {
   return value instanceof Map
 }
 // #endregion
+export function mapToObject<K extends string | number | symbol, V>(map: Map<K, V>): Record<K, V> {
+  const obj = {} as Record<K, V>
+  map.forEach((value, key) => {
+    obj[key] = value
+  })
+  return obj
+}
