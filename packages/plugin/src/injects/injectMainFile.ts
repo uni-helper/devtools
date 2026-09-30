@@ -65,7 +65,7 @@ export function injectImportDevtools(code: string, id: string) {
       ms.appendRight(position, `.use(piniaPluginProxy)`)
     }
     else {
-      console.log(c.bgRedBright(' UNI-DEVTOOLS '), `未找到${c.bgRedBright(' createPinia ')}，请检查pinia是否被正确引入`)
+      console.log(c.yellow(' UNI-DEVTOOLS '), `未找到 createPinia 调用，Pinia 状态管理功能将不可用。如需使用，请在 main.ts 中正确初始化 Pinia`)
     }
   }
 

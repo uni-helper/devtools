@@ -115,3 +115,33 @@ export function positionWatchBindings(newValue, id) {
     )
   }
 }
+
+/**
+ * 为 Options API 组件设置双向绑定
+ * @param {*} vm - Vue 组件实例 (this)
+ */
+export function setupOptionsApiProxy(vm) {
+  /**
+   * @type {import("@trpc/client").CreateTRPCProxyClient<import("./../src/index").AppRouter>}
+   */
+  // @ts-ignore
+  const trpc = uni.$trpc
+  const componentId = vm.$.uid
+
+  console.log('[setupOptionsApiProxy] Setting up for component', componentId)
+
+  // 监听来自 DevTools 的更新请求
+  trpc.onUpdateComponentData.subscribe(undefined, {
+    onData: (data) => {
+      console.log('[setupOptionsApiProxy] Received update request:', data)
+      if (data.id === componentId && data.key in vm.$data) {
+        const oldValue = vm.$data[data.key]
+        console.log('[setupOptionsApiProxy] Updating', data.key, 'from', oldValue, 'to', data.value)
+        // 直接修改 $data
+        vm.$data[data.key] = data.value
+        console.log('[setupOptionsApiProxy] Updated successfully, new value:', vm.$data[data.key])
+      }
+    },
+    onError: error => console.error('[setupOptionsApiProxy] Error receiving update:', error),
+  })
+}

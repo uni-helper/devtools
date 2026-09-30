@@ -1,5 +1,9 @@
 <script setup lang="ts">
 const name = ref('')
+
+const value = computed(() => {
+  return name.value + "新值"
+})
 function go() {
   if (name.value) {
     uni.navigateTo({
@@ -43,5 +47,6 @@ function go() {
         GO
       </button>
     </view>
+    <view >{{ value }}</view>
   </view>
 </template>

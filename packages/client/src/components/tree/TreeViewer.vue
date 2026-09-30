@@ -78,7 +78,7 @@ function normalizeLabel(item: ComponentTreeNode | InspectorTree) {
     </div>
     <div v-if="item?.children?.length && (expanded.includes(item.id) || depth < 2)">
       <ComponentTreeViewer
-        v-model="selectedNodeId" :data="item?.children" :depth="depth + 1" :with-tag="withTag" @hover="(id) => emit('hover', id)" @leave="emit('leave')"
+        v-model="selectedNodeId" :data="item?.children" :depth="depth + 1" :with-tag="withTag" @change="(id) => emit('change', id)" @hover="(id) => emit('hover', id)" @leave="emit('leave')"
       />
     </div>
   </div>

@@ -40,6 +40,7 @@ declare module 'vue' {
     SectionBlock: typeof import('./src/components/common/SectionBlock.vue')['default']
     SideNav: typeof import('./src/components/SideNav.vue')['default']
     SideNavItem: typeof import('./src/components/SideNavItem.vue')['default']
+    StateField: typeof import('./src/components/StateField.vue')['default']
     StateFieldEditor: typeof import('./src/components/state/StateFieldEditor.vue')['default']
     StateFieldInputEditor: typeof import('./src/components/state/StateFieldInputEditor.vue')['default']
     StateFieldViewer: typeof import('./src/components/state/StateFieldViewer.vue')['default']

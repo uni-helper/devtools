@@ -93,7 +93,7 @@ export async function injectDevtoolInfo(code: string, id: string) {
             }
             // option api
             else {
-              ms.appendRight(scriptStartLoc!, `;import {positionWatchBindings} from '@uni-helper/devtools/inspect/setupProxy.js';`)
+              ms.appendRight(scriptStartLoc!, `;import {positionWatchBindings, setupOptionsApiProxy} from '@uni-helper/devtools/inspect/setupProxy.js';`)
 
               const watchCode = /* js */`
               watch: {
@@ -105,7 +105,10 @@ export async function injectDevtoolInfo(code: string, id: string) {
                   deep: true,
                   immediate: true,
                 },
-              }
+              },
+              created() {
+                setupOptionsApiProxy(this)
+              },
               `
               ms.appendLeft(exportNodeEndLoc! - 1, watchCode)
             }
