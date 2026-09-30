@@ -1,6 +1,7 @@
 import process from 'node:process'
 import type { Plugin } from 'vite'
 import { createFilter } from 'vite'
+import detectPort from 'detect-port'
 import { createDevtoolServe } from './devtoolServer'
 import { loadInspectPlugin } from './loadOtherPlugin/inspectPlugin'
 import type { Options } from './types'
@@ -20,6 +21,7 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
     return _plugin
   }
   const port = options?.port || 5015
+  let actualPort = port
   process.env.UNI_DEVTOOLS_PORT = String(port)
   const inspect = loadInspectPlugin()
   const visualizer = loadVisualizerPlugin()
@@ -28,16 +30,23 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
   const plugin = <Plugin>{
     name: 'uni-devtools',
     enforce: 'pre',
-    config() {
+    async config() {
+      // 在 config 阶段同步检测可用端口
+      actualPort = await detectPort(port)
+      if (actualPort !== port) {
+        console.warn(`[uni-devtools] Port ${port} is already in use, will use port ${actualPort}`)
+      }
+      process.env.UNI_DEVTOOLS_PORT = String(actualPort)
+
       return {
         define: {
-          __UNI_DEVTOOLS_PORT__: JSON.stringify(port),
+          __UNI_DEVTOOLS_PORT__: JSON.stringify(actualPort),
         },
       }
     },
     configResolved(resolvedConfig) {
       createDevtoolServe({
-        port,
+        port: actualPort,
         resolvedConfig,
         options,
       })
@@ -48,15 +57,16 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
       if (filterMainFile(id))
         return injectImportDevtools(src, id)
 
-      /** 在根组件里获取组件信息 */
-      const pagesInclude = pages.map(page => `**/${page.path}.vue`)
-      const filterPages = createFilter(pagesInclude)
-      if (filterPages(id))
-        return injectPageFile(src, id)
-
       /** 注入devtools组件信息 */
       const vueFilter = createFilter(['**/*.vue'])
       if (vueFilter(id)) {
+        /** 在页面组件里注入 setCurrentPage */
+        const pagesInclude = pages.map(page => `**/${page.path}.vue`)
+        const filterPages = createFilter(pagesInclude)
+        if (filterPages(id)) {
+          src = injectPageFile(src, id).code
+        }
+
         return injectDevtoolInfo(src, id)
       }
     },

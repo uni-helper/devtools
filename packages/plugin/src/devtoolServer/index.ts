@@ -4,7 +4,6 @@ import process from 'node:process'
 import polka from 'polka'
 import sirv from 'sirv'
 import ws from 'ws'
-import detectPort from 'detect-port'
 
 import { applyWSSHandler } from '@trpc/server/adapters/ws'
 import { createExpressMiddleware } from '@trpc/server/adapters/express'
@@ -54,17 +53,16 @@ export function createDevtoolServe(
     browser = false,
   } = options || {}
 
-  detectPort(port).then((rightPort) => {
-    app.listen(rightPort, () => {
-      uniDevToolsPrint(rightPort)
-      process.env.UNI_DEVTOOLS_PORT = String(rightPort)
-      if (browser) {
-        openInBrowser(`http://localhost:${rightPort}`)
-      }
-      if (desktop) {
-        openInDevtools()
-      }
-    })
+  // port 参数已经是经过 detectPort 检测后的可用端口
+  app.listen(port, () => {
+    uniDevToolsPrint(port)
+    process.env.UNI_DEVTOOLS_PORT = String(port)
+    if (browser) {
+      openInBrowser(`http://localhost:${port}`)
+    }
+    if (desktop) {
+      openInDevtools()
+    }
   })
 
   return app
