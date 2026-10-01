@@ -29,13 +29,16 @@
   </view>
 </template>
 
-<script lang="ts">
-// export default {
-//   name: 'AppLogos',
-//   methods: {
-//     handelClick() {
-//       this.$emit('click')
-//     },
-//   },
-// }
+<script lang="ts" setup>
+defineOptions({
+  name: 'AppLogos',
+})
+
+const emit = defineEmits<{
+  (e: 'click'): void
+}>()
+
+function handelClick() {
+  emit('click')
+}
 </script>

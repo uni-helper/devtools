@@ -6,11 +6,13 @@ import UniHelperLayouts from '@uni-helper/vite-plugin-uni-layouts'
 import UniHelperComponents from '@uni-helper/vite-plugin-uni-components'
 import AutoImport from 'unplugin-auto-import/vite'
 
-import DevTools from '@uni-helper/devtools'
 // https://vitejs.dev/config/
 export default async () => {
   const UnoCSS = (await import('unocss/vite')).default
-  // const DevTools = (await import('@uni-helper/devtools')).default
+  // Devframe 插件是 ESM-only，经预打包产物 + 原生动态 import 加载
+  // （非字面量 specifier 避免 esbuild 在 CJS 配置里把它转写成 require）
+  const devframePluginUrl = '../packages/devframe/dist/plugin.mjs'
+  const { UniDevtoolsPlugin } = await import(/* @vite-ignore */ devframePluginUrl)
 
   return defineConfig({
     plugins: [
@@ -27,9 +29,8 @@ export default async () => {
         dts: 'src/components.d.ts',
         directoryAsNamespace: true,
       }),
-      DevTools({
-        desktop: false,
-      }),
+      // Devframe 架构：探针 + node 侧 relay + 面板
+      UniDevtoolsPlugin(),
       Uni(),
       // https://github.com/antfu/unplugin-auto-import
       AutoImport({
