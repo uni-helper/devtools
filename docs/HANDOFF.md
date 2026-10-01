@@ -127,7 +127,11 @@ cd playground && pnpm dev:mp-weixin               # 真机链路（微信开发�
   - W5 路由页面栈 Pages 标签（agy：pages.json 解析 + getCurrentPages + 导航；commit f26f542）
   - W7 渲染钩子树推送（编译期包 render，~0.3s 到面板，2s 轮询降级为兜底；commit 5853254）
   - 回归基线：vitest 35 例 / e2e 5+2 / eslint 0 / tsc 0 错 / 双 build / mp 产物语法全检
-- ⏳ W6 Timeline：agy 进行中（T-2d81ad，允许「调查后如实降级」结局）
+- ✅ W6 Timeline **如实降级**（agy T-2d81ad 调查：官方 Timeline 纯 push 事件流无快照、
+  硬编码 4 大 Web DOM/Performance 图层、EncodedValue 强契约，mp 沙箱缺原生支撑；
+  tab 维持禁用，后续方案与 3~4 人日估算见 `~/.seedmux/team/tasks/T-2d81ad/reply.md`）
+- ✅ 修复官方 SideNavItem 点击死代码（三元内联语句只求值不调用→整页跳转丢 ?mock），
+  Pinia inspector mock 全链路 CDP 冒烟通过
 - ⏳ **待用户真机复验**：新功能（匿名命名/Setup 状态/Pinia/Pages/深路径编辑/渲染推送）
   在微信开发者工具里的实际效果
 
@@ -160,6 +164,11 @@ cd playground && pnpm dev:mp-weixin               # 真机链路（微信开发�
     （如 `__uniDevtoolsNotifyRender`），不是注入处的本地别名。
 12. **mock fixtures 必须深拷贝返回**：真实传输层每次响应都是全新对象，mock 返回同一引用
     会切断 Vue computed 链（只有 mock 环境才出现的假 bug）。
+13. **Vue 内联三元 handler 只求值不调用**：`@click="cond ? undefined : fn"` 编译为
+    `$event => (cond ? undefined : fn)`——fn 永不执行，点击回落 `<a href>` 整页跳转
+    （官方 SideNavItem 即此写法，被官方宿主掩盖；standalone 下丢 ?mock 引发 Pinia 树
+    空白假象）。排查工具：CDP 可信输入事件（`Input.dispatchMouseEvent`）+ 看点击后
+    `location.href`；合成 MouseEvent 需 `cancelable: true` 否则 preventDefault 无效。
 
 ## 8. 下一步（按优先级）
 
