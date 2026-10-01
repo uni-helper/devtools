@@ -1,0 +1,16 @@
+{
+  "name": "@vue/devtools-kit",
+  "type": "module",
+  "version": "9.0.0-beta.0",
+  "private": true,
+  "description": "Vendored @vue/devtools-kit（协议 + codec + rpc client）。来源：本仓库 devtools/（vuejs/devtools devframe 化重构版，HEAD=4d427df2，MIT）。同步方法：重新拷贝 devtools/packages/kit/src 并核对 exports。",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "devframe": "1.1.0"
+  }
+}
