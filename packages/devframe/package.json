@@ -1,0 +1,30 @@
+{
+  "name": "@uni-helper/devtools-devframe",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Uni-Helper DevTools backend integration and devframe definition for Devframe / Hub ecosystem",
+  "exports": {
+    ".": "./src/index.ts",
+    "./relay": "./src/relay.ts",
+    "./types": "./src/types.ts",
+    "./plugin": "./dist/plugin.mjs",
+    "./agent": "./src/agent/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "pnpm run build:plugin",
+    "build:plugin": "esbuild src/plugin.ts --bundle --platform=node --format=esm --external:vite --outfile=dist/plugin.mjs",
+    "dev": "node scripts/dev.mjs",
+    "test:e2e": "node scripts/e2e-node.mjs"
+  },
+  "dependencies": {
+    "birpc": "^4.2.0",
+    "devframe": "1.1.0"
+  },
+  "devDependencies": {
+    "@devframes/hub": "^1.1.0",
+    "@types/node": "^20.14.2",
+    "esbuild": "^0.20.2",
+    "typescript": "^5.4.5"
+  }
+}

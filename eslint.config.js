@@ -9,6 +9,8 @@ export default antfu(
       'packages/panel/**',
       'packages/panel-legacy/**',
       'packages/devtools-kit/**',
+      // devframe 内的 vendored 兜底面板产物（dist 形态，非手写源码）
+      'packages/devframe/assets/**',
       '**/node_modules/**',
       '**/uniJs.js',
       'playground/**',
