@@ -43,7 +43,7 @@ export const builtinTabs: DevtoolsTabDefinition[] = [
     order: -70,
     description: 'Runtime events emitted by the current host',
     disabled: true,
-    disabledReason: '时间线事件流待探针支持',
+    disabledReason: '小程序沙箱缺少 DOM/Performance/全局钩子，时间线暂不适用',
     path: '/timeline',
   },
   {

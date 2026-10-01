@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DevtoolsTab } from '../../types/tab'
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import TabIcon from './TabIcon.vue'
 
 const props = defineProps<{
@@ -17,6 +17,17 @@ const tooltip = computed(() => ({
   disabled: props.expanded,
 }))
 const tabPath = computed(() => props.tab.path ?? `/${props.tab.id}`)
+
+// uni-devtools：官方原写法 `@click="tab.disabled ? undefined : navigate"` 是三元
+// 内联语句，Vue 编译为 `$event => (tab.disabled ? undefined : navigate)`——只求值
+// 不调用，点击回落到 <a href> 整页跳转（standalone 下 ?mock 等查询参数随跳转丢失，
+// 官方宿主内被路由兜底掩盖）。改为显式方法：禁用不响应，可用则阻止默认 + 路由内跳转。
+const router = useRouter()
+function onTabClick(e: MouseEvent) {
+  if (props.tab.disabled) return
+  e.preventDefault()
+  void router.push(tabPath.value)
+}
 </script>
 
 <template>
@@ -33,7 +44,7 @@ const tabPath = computed(() => props.tab.path ?? `/${props.tab.id}`)
         'side-nav-item-expanded': expanded,
         'side-nav-item-disabled': tab.disabled,
       }"
-      @click="tab.disabled ? undefined : navigate"
+      @click="onTabClick"
     >
       <TabIcon :icon="tab.icon" />
       <span v-if="expanded" class="min-w-0 truncate text-3.5 font-500">
