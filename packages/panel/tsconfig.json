@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "skipLibCheck": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@components/*": ["./src/components/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"]
+}
