@@ -327,8 +327,8 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       }
 
       case 'devtools:capabilities':
-        // openInEditor=false → 官方 UI 自动隐藏该按钮；分页树未实现。
-        return { openInEditor: false, pagedComponentTree: false }
+        // openInEditor：真实模式支持，mock 模式无后端保持 false；分页树未实现。
+        return { openInEditor: !mockMode, pagedComponentTree: false }
 
       case 'runtime:health':
         return { status: 'ready', performance: {
@@ -413,6 +413,22 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
 
       case 'components:addState':
         return { status: 0, error: NOT_SUPPORTED('新增状态键') }
+
+      case 'components:openInEditor': {
+        if (mockMode)
+          return { status: 0, error: NOT_SUPPORTED('mock 模式不支持在编辑器中打开') }
+        await ensureReady()
+        const payload = request.payload as { file?: string }
+        if (!payload?.file)
+          return { status: 0, error: '缺少文件路径' }
+        try {
+          await callUni('open-in-editor', { file: payload.file })
+          return { status: 1 }
+        }
+        catch (error) {
+          return { status: 0, error: error instanceof Error ? error.message : String(error) }
+        }
+      }
 
       case 'values:recompute':
       case 'values:customAction':

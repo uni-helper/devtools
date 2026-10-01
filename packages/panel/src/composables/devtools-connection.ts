@@ -101,8 +101,25 @@ export function createDevtoolsConnection(options: DevtoolsConnectionOptions) {
   }
 
   function getViteRpcClient(): Promise<unknown> {
-    // uni-devtools 面板不经 Vite DevTools 宿主，无 vite:core:* RPC。
-    viteRpcClientPromise ??= Promise.reject(new Error('openInEditor 在 uni-devtools 面板中不可用'))
+    // uni-devtools：将 vite:core:open-in-editor 桥接到 uni RPC (components:openInEditor)
+    viteRpcClientPromise ??= Promise.resolve({
+      call: async (name: string, ...args: unknown[]) => {
+        if (name === 'vite:core:open-in-editor') {
+          const client = getRpcClient()
+          if (!client)
+            throw new Error('Devtools RPC client is not connected')
+          const [file] = args
+          const result = await client.command({
+            type: 'components:openInEditor',
+            payload: { file },
+          })
+          if (result && (result as { status?: number }).status === 0)
+            throw new Error(String((result as { error?: unknown }).error || 'Failed to open in editor'))
+          return result
+        }
+        throw new Error(`Unsupported Vite RPC: ${name}`)
+      },
+    })
     return viteRpcClientPromise
   }
 

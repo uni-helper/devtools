@@ -7,6 +7,7 @@
  *   - `get-component-tree`: () => ComponentTreeResult
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
  *   - `update-component-state`: (args: UpdateComponentStateParams) => UpdateComponentStateResult
+ *   - `open-in-editor`: (args: OpenInEditorParams) => OpenInEditorResult
  */
 
 export interface ComponentTreeNode {
@@ -61,5 +62,13 @@ export interface ComponentTreeResult {
 export type PushComponentTreeParams = ComponentTreeResult
 
 export interface PushComponentTreeResult {
+  ok: boolean
+}
+
+export interface OpenInEditorParams {
+  file: string
+}
+
+export interface OpenInEditorResult {
   ok: boolean
 }

@@ -1,13 +1,16 @@
 import process from 'node:process'
 import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { isAbsolute, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineDevframe, defineRpcFunction } from 'devframe'
+import { launchEditor } from 'devframe/utils/launch-editor'
 import type { DevframeDockDefaults } from 'devframe/types'
 import type { AgentRegistry } from './relay.ts'
 import type {
   ComponentStateResult,
   ComponentTreeResult,
+  OpenInEditorParams,
+  OpenInEditorResult,
   PingResult,
   UpdateComponentStateParams,
   UpdateComponentStateResult,
@@ -62,6 +65,26 @@ function getPackageMeta(): { name: string, version: string } {
       version: '0.0.1',
     }
   }
+}
+
+export function getProjectRoot(): string {
+  if (process.env.UNI_CLI_CONTEXT) {
+    return resolve(process.env.UNI_CLI_CONTEXT)
+  }
+  if (process.env.UNI_INPUT_DIR) {
+    const inputDir = resolve(process.env.UNI_INPUT_DIR)
+    const parent = resolve(inputDir, '..')
+    if (existsSync(resolve(parent, 'package.json')) || resolve(parent, 'src') === inputDir) {
+      return parent
+    }
+    return inputDir
+  }
+  return process.cwd()
+}
+
+export function isInsideProjectRoot(targetPath: string, root = getProjectRoot()): boolean {
+  const rel = relative(root, targetPath)
+  return !rel.startsWith('..') && !isAbsolute(rel)
 }
 
 /**
@@ -187,6 +210,41 @@ export function createUniDevtoolsDevframe(
         setup: () => ({
           handler: async (args: UpdateComponentStateParams): Promise<UpdateComponentStateResult> => {
             return await registry.callAgent<UpdateComponentStateResult>('uni-devtools:agent:updateComponentState', args)
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'open-in-editor',
+        type: 'action',
+        jsonSerializable: true,
+        agent: { description: 'Open a component source file in local editor.' },
+        setup: () => ({
+          handler: async (args: OpenInEditorParams): Promise<OpenInEditorResult> => {
+            if (!args?.file || typeof args.file !== 'string') {
+              throw new Error('File path is required')
+            }
+
+            let rawFile = args.file
+            if (rawFile.startsWith('file://')) {
+              rawFile = fileURLToPath(rawFile)
+            }
+
+            const positionRE = /:(\d+)(:(\d+))?$/
+            const fileName = rawFile.replace(positionRE, '')
+            const match = rawFile.match(positionRE)
+            const suffix = match ? match[0] : ''
+
+            const baseDir = process.env.UNI_INPUT_DIR ? resolve(process.env.UNI_INPUT_DIR) : process.cwd()
+            const resolvedFile = resolve(baseDir, fileName)
+
+            const projectRoot = getProjectRoot()
+            if (!isInsideProjectRoot(resolvedFile, projectRoot)) {
+              throw new Error(`Forbidden: file path "${args.file}" resolves outside of project root (${projectRoot})`)
+            }
+
+            launchEditor(resolvedFile + suffix)
+            return { ok: true }
           },
         }),
       }))
