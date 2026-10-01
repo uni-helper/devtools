@@ -1,0 +1,30 @@
+/*
+ * 面板的全局样式。
+ *
+ * 设计基座的 styles 按依赖顺序 cherry-pick（`@antfu/design` README 建议：不用
+ * 的 overlay 引擎不要打进产物）。`primary-ramp.css` **必须最后导入**——它把
+ * `--devframe-primary` 派生成 `--colors-primary-*` 并覆盖 Wind 自己的 primary
+ * 声明，见 `design/primary-ramp.css` 头部注释。导入顺序由 `main.ts` 保证：
+ * `virtual:uno.css` → 本文件 → primary-ramp。
+ */
+@import '@unocss/reset/tailwind.css';
+@import '@antfu/design/styles/base.css';
+@import '@antfu/design/styles/scrollbar.css';
+@import '@antfu/design/styles/animations.css';
+@import '@antfu/design/styles/vue-afloat.css';
+@import '@antfu/design/styles/splitpanes.css';
+@import '@design/primary-ramp.css';
+
+html,
+body,
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 搜索命中高亮：语义 token，避免 mark 默认黄底在双色模式下都刺眼。 */
+mark {
+  background-color: transparent;
+  color: var(--colors-primary-DEFAULT, currentcolor);
+  font-weight: 600;
+}
