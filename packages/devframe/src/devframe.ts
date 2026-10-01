@@ -9,9 +9,14 @@ import type { AgentRegistry } from './relay.ts'
 import type {
   ComponentStateResult,
   ComponentTreeResult,
+  GetRegisteredRoutesResult,
+  NavigateParams,
+  NavigateResult,
   OpenInEditorParams,
   OpenInEditorResult,
   PingResult,
+  RegisteredRouteRecord,
+  RouterInfoResult,
   UpdateComponentStateParams,
   UpdateComponentStateResult,
 } from './types.ts'
@@ -85,6 +90,80 @@ export function getProjectRoot(): string {
 export function isInsideProjectRoot(targetPath: string, root = getProjectRoot()): boolean {
   const rel = relative(root, targetPath)
   return !rel.startsWith('..') && !isAbsolute(rel)
+}
+
+export function parsePagesJsonRoutes(pagesJsonContent: string): RegisteredRouteRecord[] {
+  try {
+    const stripped = pagesJsonContent
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*/g, '')
+      .replace(/,\s*([}\]])/g, '$1')
+    const data = JSON.parse(stripped)
+    const routes: RegisteredRouteRecord[] = []
+
+    if (Array.isArray(data?.pages)) {
+      for (const page of data.pages) {
+        if (page?.path && typeof page.path === 'string') {
+          const clean = page.path.replace(/^\//, '')
+          routes.push({
+            path: `/${clean}`,
+            name: clean,
+            meta: {
+              ...(page.style || {}),
+              type: page.type,
+              layout: page.layout,
+            },
+          })
+        }
+      }
+    }
+
+    const subPackages = data?.subPackages || data?.subpackages
+    if (Array.isArray(subPackages)) {
+      for (const sub of subPackages) {
+        const root = typeof sub?.root === 'string' ? sub.root.replace(/^\/|\/$/g, '') : ''
+        if (Array.isArray(sub?.pages)) {
+          for (const subPage of sub.pages) {
+            if (subPage?.path && typeof subPage.path === 'string') {
+              const subClean = subPage.path.replace(/^\//, '')
+              const clean = root ? `${root}/${subClean}` : subClean
+              routes.push({
+                path: `/${clean}`,
+                name: clean,
+                meta: {
+                  ...(subPage.style || {}),
+                  subPackage: root || undefined,
+                },
+              })
+            }
+          }
+        }
+      }
+    }
+
+    return routes
+  }
+  catch {
+    return []
+  }
+}
+
+export function getRegisteredRoutesFromFs(): RegisteredRouteRecord[] {
+  const baseDir = process.env.UNI_INPUT_DIR ? resolve(process.env.UNI_INPUT_DIR) : process.cwd()
+  const candidatePaths = [
+    resolve(baseDir, 'pages.json'),
+    resolve(baseDir, 'src/pages.json'),
+  ]
+  for (const candidate of candidatePaths) {
+    if (existsSync(candidate)) {
+      try {
+        const raw = readFileSync(candidate, 'utf-8')
+        return parsePagesJsonRoutes(raw)
+      }
+      catch {}
+    }
+  }
+  return []
 }
 
 /**
@@ -245,6 +324,62 @@ export function createUniDevtoolsDevframe(
 
             launchEditor(resolvedFile + suffix)
             return { ok: true }
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'get-registered-routes',
+        type: 'query',
+        jsonSerializable: true,
+        agent: { description: 'Get all registered page routes parsed from pages.json.' },
+        setup: () => ({
+          handler: async (): Promise<GetRegisteredRoutesResult> => {
+            const routes = getRegisteredRoutesFromFs()
+            return { routes }
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'get-router-info',
+        type: 'query',
+        jsonSerializable: true,
+        agent: { description: 'Get current active mini-program page route and navigation stack from probe.' },
+        setup: () => ({
+          handler: async (): Promise<RouterInfoResult> => {
+            try {
+              return await registry.callAgent<RouterInfoResult>('uni-devtools:agent:getRouterInfo')
+            }
+            catch {
+              return {
+                currentRoute: null,
+                stack: [],
+              }
+            }
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'navigate-to',
+        type: 'action',
+        jsonSerializable: true,
+        agent: { description: 'Navigate to a mini-program page route via agent probe.' },
+        setup: () => ({
+          handler: async (args: NavigateParams): Promise<NavigateResult> => {
+            if (!args?.path || typeof args.path !== 'string') {
+              throw new Error('Path is required')
+            }
+            if (!registry.connected) {
+              return { ok: false, error: 'Uni-app agent probe is not connected' }
+            }
+            try {
+              return await registry.callAgent<NavigateResult>('uni-devtools:agent:navigate', args)
+            }
+            catch (err) {
+              return { ok: false, error: err instanceof Error ? err.message : String(err) }
+            }
           },
         }),
       }))

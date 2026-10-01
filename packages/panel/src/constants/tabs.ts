@@ -24,8 +24,6 @@ export const builtinTabs: DevtoolsTabDefinition[] = [
     icon: 'i-carbon-tree-view-alt',
     order: -80,
     description: 'Page and route records',
-    disabled: true,
-    disabledReason: '页面/路由协议待探针支持',
     path: '/pages',
   },
   {

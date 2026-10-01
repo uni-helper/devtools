@@ -33,11 +33,16 @@ import type {
   ComponentTreePatch,
   DevtoolsRpcEvent,
   EncodedValue,
+  RouterRouteRecordSnapshot,
+  RouterRouteSnapshot,
+  RouterSnapshotMessage,
   StateEntry,
 } from '@vue/devtools-kit'
 import type {
   ComponentStateResult,
   ComponentTreeResult,
+  GetRegisteredRoutesResult,
+  RouterInfoResult,
 } from '@uni-helper/devtools-devframe/types'
 import { encodeValue } from '@vue/devtools-kit'
 import { connectDevframe } from 'devframe/client'
@@ -77,6 +82,28 @@ interface FlatTree {
 
 /** 哨兵引用：连接断开后重置回来，让下一次 treeSnapshot 主动重拉而不是吐陈旧树。 */
 const EMPTY_TREE: FlatTree = { apps: [], nodes: [] }
+
+function mockRouterSnapshot(): RouterSnapshotMessage {
+  return {
+    currentRoute: {
+      path: '/pages/index/index',
+      fullPath: '/pages/index/index',
+      name: 'pages/index/index',
+    },
+    routes: [
+      {
+        path: '/pages/index/index',
+        name: 'pages/index/index',
+        meta: { title: '首页', type: 'home' },
+      },
+      {
+        path: '/pages/settings/settings',
+        name: 'pages/settings/settings',
+        meta: { title: '设置', type: 'page' },
+      },
+    ],
+  }
+}
 
 /** 组件 id → appId。探针 id 形如 `route#uid`，mock fixtures 同格式。 */
 function appIdOf(id: string): string | undefined {
@@ -362,9 +389,98 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         return toStateSnapshot(state, stateVersionByComponent.get(componentId) ?? 0)
       }
 
-      case 'router:snapshot':
-        // 用树快照的页面路由伪造 routes，overview 的页面计数因此有意义。
-        return { routes: flat.apps.map(app => ({ path: `/${app.id}`, name: app.id })) }
+      case 'router:snapshot': {
+        if (mockMode)
+          return mockRouterSnapshot()
+        await ensureReady()
+        let registeredRoutes: RouterRouteRecordSnapshot[] = []
+        try {
+          const res = await callUni<GetRegisteredRoutesResult>('get-registered-routes')
+          if (Array.isArray(res?.routes) && res.routes.length > 0) {
+            registeredRoutes = res.routes.map(r => ({
+              path: r.path,
+              name: r.name,
+              meta: r.meta,
+            }))
+          }
+        }
+        catch {}
+
+        if (registeredRoutes.length === 0) {
+          registeredRoutes = flat.apps.map(app => ({ path: `/${app.id}`, name: app.id }))
+        }
+
+        let routerInfo: RouterInfoResult | undefined
+        try {
+          routerInfo = await callUni<RouterInfoResult>('get-router-info')
+        }
+        catch {}
+
+        let currentRoute: RouterRouteSnapshot | undefined
+        if (routerInfo?.currentRoute) {
+          currentRoute = {
+            path: routerInfo.currentRoute.path,
+            fullPath: routerInfo.currentRoute.fullPath || routerInfo.currentRoute.path,
+            query: routerInfo.currentRoute.query,
+            name: routerInfo.currentRoute.path.replace(/^\//, ''),
+          }
+        }
+        else if (request.appId) {
+          currentRoute = {
+            path: `/${request.appId}`,
+            fullPath: `/${request.appId}`,
+            name: request.appId,
+          }
+        }
+        else if (registeredRoutes[0]) {
+          currentRoute = {
+            path: registeredRoutes[0].path,
+            fullPath: registeredRoutes[0].path,
+            name: registeredRoutes[0].name,
+          }
+        }
+
+        return {
+          appId: request.appId,
+          currentRoute,
+          routes: registeredRoutes,
+        }
+      }
+
+      case 'router:matchedRoutes': {
+        const payload = request.payload as { path?: string }
+        const inputPath = payload?.path || ''
+        let allRoutes: RouterRouteRecordSnapshot[] = []
+        if (mockMode) {
+          allRoutes = mockRouterSnapshot().routes
+        }
+        else {
+          try {
+            const res = await callUni<GetRegisteredRoutesResult>('get-registered-routes')
+            if (Array.isArray(res?.routes) && res.routes.length > 0)
+              allRoutes = res.routes
+          }
+          catch {}
+          if (allRoutes.length === 0)
+            allRoutes = flat.apps.map(app => ({ path: `/${app.id}`, name: app.id }))
+        }
+
+        const matched = allRoutes.filter((r) => {
+          if (!inputPath || inputPath === '/')
+            return true
+          const normInput = inputPath.startsWith('/') ? inputPath : `/${inputPath}`
+          const normPath = r.path.startsWith('/') ? r.path : `/${r.path}`
+          return normPath === normInput
+            || normPath.startsWith(normInput)
+            || (r.name && r.name.toLowerCase().includes(inputPath.toLowerCase()))
+        })
+
+        return {
+          appId: request.appId,
+          path: inputPath,
+          routes: matched,
+        }
+      }
 
       case 'components:inspect':
       case 'components:getRenderCode':
@@ -387,15 +503,25 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         const payload = request.payload as {
           componentId: string, sectionId?: string, path?: string[], value?: unknown, remove?: boolean
         }
-        if (payload.remove)
-          return { status: 0, error: NOT_SUPPORTED('删除状态键') }
         const path = payload.path ?? []
-        if (path.length !== 1)
-          return { status: 0, error: NOT_SUPPORTED(`嵌套路径编辑（${payload.sectionId}.${path.join('.')}）；当前仅支持顶层键`) }
-        if (mockMode)
+        if (path.length === 0)
+          return { status: 0, error: '缺少编辑路径' }
+        // 深路径全量透传探针（section/path/remove 官方语义，探针侧逐段解 ref 下钻）；
+        // mock 数据是平铺顶层键，深路径在 mock 下如实报不支持
+        if (mockMode) {
+          if (path.length !== 1 || payload.remove)
+            return { status: 0, error: NOT_SUPPORTED('mock 平铺数据的嵌套路径/删除') }
           mockUpdateComponentState({ id: payload.componentId, key: path[0]!, value: payload.value })
-        else
-          await callUni('update-component-state', { id: payload.componentId, key: path[0], value: payload.value })
+        }
+        else {
+          await callUni('update-component-state', {
+            id: payload.componentId,
+            section: payload.sectionId,
+            path,
+            value: payload.value,
+            remove: payload.remove,
+          })
+        }
         // 官方刷新语义：带递增 version 的失效事件 → 检查器重拉（防陈旧覆盖）。
         // version 按组件计数；appId 必填（事件入口按 appId+componentId 双重校验）。
         const componentId = payload.componentId
@@ -406,7 +532,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
           appId: appIdOf(componentId),
           componentId,
           version,
-          reason: 'edit',
+          reason: payload.remove ? 'remove' : 'edit',
         })
         return { status: 1 }
       }
@@ -423,6 +549,24 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
           return { status: 0, error: '缺少文件路径' }
         try {
           await callUni('open-in-editor', { file: payload.file })
+          return { status: 1 }
+        }
+        catch (error) {
+          return { status: 0, error: error instanceof Error ? error.message : String(error) }
+        }
+      }
+
+      case 'router:navigate': {
+        if (mockMode)
+          return { status: 1 }
+        await ensureReady()
+        const payload = request.payload as { path?: string }
+        if (!payload?.path)
+          return { status: 0, error: '缺少跳转路径' }
+        try {
+          const res = await callUni<{ ok: boolean, error?: string }>('navigate-to', { path: payload.path })
+          if (res?.ok === false)
+            return { status: 0, error: res.error || '页面跳转失败' }
           return { status: 1 }
         }
         catch (error) {

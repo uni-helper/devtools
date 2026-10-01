@@ -37,6 +37,7 @@ let changeHooksInstalled = false
 
 declare const wx: any
 declare const uni: any
+declare const getCurrentPages: any
 
 /**
  * 带有 debounce 防抖的组件树快照推送触发器（默认 300ms 防抖）
@@ -190,6 +191,76 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
       // 修改生效后触发组件树与状态推送
       schedulePushComponentTree(100)
       return res
+    },
+    'uni-devtools:agent:getRouterInfo': (): {
+      currentRoute: { path: string, fullPath?: string, query?: Record<string, unknown> } | null
+      stack: Array<{ path: string, query?: Record<string, unknown>, options?: Record<string, unknown> }>
+    } => {
+      const getPages = typeof getCurrentPages === 'function'
+        ? getCurrentPages
+        : (typeof globalThis !== 'undefined' && typeof (globalThis as any).getCurrentPages === 'function'
+            ? (globalThis as any).getCurrentPages
+            : undefined)
+
+      const pages = getPages ? getPages() : []
+      const stack = pages.map((page: any) => {
+        const rawRoute = page?.route || page?.__route__ || ''
+        const path = rawRoute ? (rawRoute.startsWith('/') ? rawRoute : `/${rawRoute}`) : '/'
+        const query = page?.options || page?.$page?.options || {}
+        return {
+          path,
+          query,
+          options: query,
+        }
+      })
+
+      const top = stack[stack.length - 1]
+      const currentRoute = top
+        ? {
+            path: top.path,
+            fullPath: top.path,
+            query: top.query,
+          }
+        : null
+
+      return {
+        currentRoute,
+        stack,
+      }
+    },
+    'uni-devtools:agent:navigate': async (params: { path: string }): Promise<{ ok: boolean, error?: string }> => {
+      const url = params?.path
+      if (!url) {
+        return { ok: false, error: 'Path is required' }
+      }
+      const uniObj = typeof uni !== 'undefined' ? uni : (globalThis as any).uni
+      if (!uniObj) {
+        return { ok: false, error: 'uni runtime is not available' }
+      }
+
+      return new Promise((resolve) => {
+        uniObj.navigateTo({
+          url,
+          success: () => {
+            schedulePushComponentTree(200)
+            resolve({ ok: true })
+          },
+          fail: (err: any) => {
+            if (typeof uniObj.switchTab === 'function') {
+              uniObj.switchTab({
+                url,
+                success: () => {
+                  schedulePushComponentTree(200)
+                  resolve({ ok: true })
+                },
+                fail: () => resolve({ ok: false, error: err?.errMsg || String(err) }),
+              })
+              return
+            }
+            resolve({ ok: false, error: err?.errMsg || String(err) })
+          },
+        })
+      })
     },
   }
 

@@ -110,6 +110,15 @@ try {
     'uni-devtools:agent:updateComponentState': (args) => {
       return { ok: true, key: args.key, value: args.value }
     },
+    'uni-devtools:agent:getRouterInfo': () => {
+      return {
+        currentRoute: { path: '/pages/index', fullPath: '/pages/index', query: {} },
+        stack: [{ path: '/pages/index', query: {}, options: {} }],
+      }
+    },
+    'uni-devtools:agent:navigate': () => {
+      return { ok: true }
+    },
   }, '?client=uni-agent')
   console.log('✓ [2/5] 探针已连接并注册（token 鉴权与 wire 编解码通过）')
 
@@ -167,6 +176,23 @@ try {
   }
 
   console.log('✓ [5/5] relay 4 大冻结 RPC 全量定向往返验证通过')
+
+  // 5.3 Verify router RPCs (W5)
+  const routesRes = await panel.$call('uni-helper-devtools:get-registered-routes')
+  if (!routesRes || !Array.isArray(routesRes.routes)) {
+    throw new Error(`get-registered-routes 期望返回 routes 数组，实际: ${JSON.stringify(routesRes)}`)
+  }
+
+  const routerInfoRes = await panel.$call('uni-helper-devtools:get-router-info')
+  if (routerInfoRes?.currentRoute?.path !== '/pages/index') {
+    throw new Error(`get-router-info 期望 currentRoute /pages/index，实际: ${JSON.stringify(routerInfoRes)}`)
+  }
+
+  const navRes = await panel.$call('uni-helper-devtools:navigate-to', { path: '/pages/index' })
+  if (navRes?.ok !== true) {
+    throw new Error(`navigate-to 期望 { ok: true }，实际: ${JSON.stringify(navRes)}`)
+  }
+  console.log('✓ [5.3/5] router 扩展 RPC (get-registered-routes / get-router-info / navigate-to) 定向往返验证通过')
   console.log('\n======================================================')
   console.log('  E2E 验收通过：packages/devframe 全链路端到端正常！')
   console.log('======================================================\n')

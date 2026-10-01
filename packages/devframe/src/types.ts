@@ -8,6 +8,9 @@
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
  *   - `update-component-state`: (args: UpdateComponentStateParams) => UpdateComponentStateResult
  *   - `open-in-editor`: (args: OpenInEditorParams) => OpenInEditorResult
+ *   - `get-registered-routes`: () => GetRegisteredRoutesResult
+ *   - `get-router-info`: () => RouterInfoResult
+ *   - `navigate-to`: (args: NavigateParams) => NavigateResult
  */
 
 export interface ComponentTreeNode {
@@ -71,4 +74,38 @@ export interface OpenInEditorParams {
 
 export interface OpenInEditorResult {
   ok: boolean
+}
+
+export interface RegisteredRouteRecord {
+  path: string
+  name?: string
+  meta?: Record<string, unknown>
+}
+
+export interface GetRegisteredRoutesResult {
+  routes: RegisteredRouteRecord[]
+}
+
+export interface RouteStackItem {
+  path: string
+  query?: Record<string, unknown>
+  options?: Record<string, unknown>
+}
+
+export interface RouterInfoResult {
+  currentRoute: {
+    path: string
+    fullPath?: string
+    query?: Record<string, unknown>
+  } | null
+  stack: RouteStackItem[]
+}
+
+export interface NavigateParams {
+  path: string
+}
+
+export interface NavigateResult {
+  ok: boolean
+  error?: string
 }
