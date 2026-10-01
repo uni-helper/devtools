@@ -6,6 +6,10 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+devframe-docs/
+docs/devframe
+# 官方 vuejs/devtools 下载参考源（勿改勿提交，HANDOFF §9）
+/devtools/
 
 # Runtime data
 pids
