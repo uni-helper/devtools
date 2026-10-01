@@ -1,0 +1,364 @@
+<script setup lang="ts">
+import type { DevframeClientCommand } from '@devframes/hub'
+import type { DocksContext } from '@devframes/hub/client'
+import type { PaletteCrumb, PaletteFlatItem } from '../../state/palette'
+import Fuse from 'fuse.js'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { flattenPaletteCommands, paletteActionKeepsOpen, paletteScopeTrail, paletteTrailScopeId, reconcilePaletteTrail, resolvePaletteSelection } from '../../state/palette'
+import BrandWordmark from '../icons/BrandWordmark.vue'
+import CommandPaletteItem from './CommandPaletteItem.vue'
+
+const props = defineProps<{
+  context: DocksContext
+}>()
+
+const commandsCtx = computed(() => props.context.commands)
+const show = computed({
+  get: () => commandsCtx.value.paletteOpen,
+  set: (v) => { commandsCtx.value.paletteOpen = v },
+})
+
+const search = ref('')
+const selectedIndex = ref(0)
+const searchInput = useTemplateRef<HTMLInputElement>('searchInput')
+const listContainer = useTemplateRef<HTMLElement>('listContainer')
+const visible = ref(false)
+
+// Breadcrumb stack for sub-command drill-down
+const breadcrumb = ref<PaletteCrumb[]>([])
+
+const flattenedItems = computed<PaletteFlatItem[]>(
+  () => flattenPaletteCommands(commandsCtx.value.paletteCommands),
+)
+
+// Current items: either drilled-down sub-items or root items
+const currentFlatItems = computed<PaletteFlatItem[]>(() => {
+  if (breadcrumb.value.length > 0) {
+    const current = breadcrumb.value.at(-1)!
+    return current.items.map(entry => ({ entry, searchTitle: entry.title }))
+  }
+  return flattenedItems.value
+})
+
+// Dynamic sub-items from action() return
+const dynamicItems = ref<DevframeClientCommand[] | undefined>()
+const activeItems = computed<PaletteFlatItem[]>(() => {
+  if (dynamicItems.value) {
+    return dynamicItems.value.map(entry => ({ entry, searchTitle: entry.title }))
+  }
+  return currentFlatItems.value
+})
+
+const fuse = computed(() => new Fuse(activeItems.value, {
+  keys: ['searchTitle', 'entry.description', 'entry.id'],
+  distance: 50,
+  threshold: 0.4,
+}))
+
+const filtered = computed(() => {
+  if (!search.value)
+    return activeItems.value
+  return fuse.value.search(search.value).map(i => i.item)
+})
+
+watch(search, () => {
+  selectedIndex.value = 0
+})
+
+/** Show the rows at `scopeId`'s level, from a fresh search. */
+function showScope(scopeId: string | null) {
+  search.value = ''
+  selectedIndex.value = 0
+  dynamicItems.value = undefined
+  const next = paletteScopeTrail(commandsCtx.value.paletteCommands, scopeId)
+  breadcrumb.value = next
+  if (scopeId != null && !next.some(crumb => crumb.id === scopeId))
+    commandsCtx.value.paletteScopeId = null
+}
+
+watch(show, (v) => {
+  if (v) {
+    showScope(commandsCtx.value.paletteScopeId)
+    // Trigger enter animation
+    requestAnimationFrame(() => {
+      visible.value = true
+    })
+    nextTick(() => searchInput.value?.focus())
+  }
+  else {
+    visible.value = false
+    // Every close path funnels through `show`: Escape, the backdrop, running a
+    // command, and a bare `paletteOpen` toggle, so the scope is dropped here
+    // once rather than in each of them. A later Mod+K then opens at the root
+    // instead of resurrecting the group it was last scoped to.
+    commandsCtx.value.paletteScopeId = null
+  }
+})
+
+// A scope also arrives while the palette is already open, activating a dock
+// group picked from the root list, say. `show` stays `true` throughout, so the
+// drill-down follows the scope itself rather than the open transition.
+watch(() => commandsCtx.value.paletteScopeId, (scopeId) => {
+  if (show.value)
+    showScope(scopeId)
+})
+
+// A command tree can change while the palette is open (dock registration,
+// `when` context, or a client command update). Rebuild each crumb by id so the
+// rendered rows and their actions always come from the live tree.
+watch(() => commandsCtx.value.paletteCommands, (commands) => {
+  if (!show.value || breadcrumb.value.length === 0)
+    return
+  const scopeId = commandsCtx.value.paletteScopeId
+  const scopeWasActive = scopeId != null && breadcrumb.value.some(crumb => crumb.id === scopeId)
+  const next = reconcilePaletteTrail(commands, breadcrumb.value, scopeId)
+  breadcrumb.value = next
+  selectedIndex.value = Math.min(selectedIndex.value, Math.max(filtered.value.length - 1, 0))
+  if (scopeWasActive && scopeId != null && !next.some(crumb => crumb.id === scopeId))
+    commandsCtx.value.paletteScopeId = null
+})
+
+function moveSelected(delta: number) {
+  const len = filtered.value.length
+  if (len === 0)
+    return
+  selectedIndex.value = ((selectedIndex.value + delta) + len) % len
+  scrollToItem()
+}
+
+function scrollToItem() {
+  const item = filtered.value[selectedIndex.value]
+  if (!item)
+    return
+  const root = listContainer.value?.getRootNode() as ShadowRoot | Document | undefined
+  const el = root?.getElementById(`cmd-${item.entry.id}`)
+  el?.scrollIntoView({ block: 'nearest' })
+}
+
+const loadingId = ref<string | null>(null)
+
+async function enterItem(flatItem: PaletteFlatItem) {
+  // The row may have been rendered just before the command tree changed. Look
+  // it up again so a removed entry no-ops and a replacement runs its new action.
+  const entry = activeItems.value.find(item => item.entry.id === flatItem.entry.id)?.entry
+  if (!entry)
+    return
+
+  // Ordinary command parents drill down. Dock groups are actionable parents:
+  // their action opens a preferred member or scopes the palette for a choice.
+  if (resolvePaletteSelection(entry, props.context.docks.entries) === 'drill') {
+    commandsCtx.value.paletteScopeId = entry.id
+    return
+  }
+
+  // Client command with action
+  if (entry.source === 'client' && entry.action) {
+    try {
+      const result = await entry.action()
+      if (Array.isArray(result)) {
+        // Dynamic sub-items
+        dynamicItems.value = result
+        search.value = ''
+        selectedIndex.value = 0
+        return
+      }
+    }
+    catch (err) {
+      console.error(`[@devframes/hub-ui] Command "${entry.id}" failed:`, err)
+    }
+    if (paletteActionKeepsOpen(entry, props.context.docks.entries, commandsCtx.value.paletteOpen, commandsCtx.value.paletteScopeId))
+      return
+    close()
+    return
+  }
+
+  // Server command
+  if (entry.source === 'server') {
+    loadingId.value = entry.id
+    try {
+      await commandsCtx.value.execute(entry.id)
+    }
+    catch (err) {
+      console.error(`[@devframes/hub-ui] Command "${entry.id}" failed:`, err)
+    }
+    finally {
+      loadingId.value = null
+    }
+    close()
+    return
+  }
+
+  // Fallback: close
+  close()
+}
+
+function close() {
+  visible.value = false
+  // Wait for leave animation
+  setTimeout(() => {
+    show.value = false
+    search.value = ''
+    breadcrumb.value = []
+    dynamicItems.value = undefined
+  }, 150)
+}
+
+function goBack() {
+  if (dynamicItems.value) {
+    dynamicItems.value = undefined
+    search.value = ''
+    selectedIndex.value = 0
+    return
+  }
+  if (breadcrumb.value.length > 0) {
+    breadcrumb.value.pop()
+    commandsCtx.value.paletteScopeId = paletteTrailScopeId(breadcrumb.value)
+    search.value = ''
+    selectedIndex.value = 0
+    return
+  }
+  close()
+}
+
+/** Jump to the level the crumb at `index` sits above. */
+function goToCrumb(index: number) {
+  breadcrumb.value.splice(index)
+  commandsCtx.value.paletteScopeId = paletteTrailScopeId(breadcrumb.value)
+  search.value = ''
+  selectedIndex.value = 0
+}
+
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Backspace' && !search.value && (breadcrumb.value.length > 0 || dynamicItems.value)) {
+    e.preventDefault()
+    goBack()
+  }
+}
+
+function onGlobalKeyDown(e: KeyboardEvent) {
+  if (!show.value)
+    return
+
+  switch (e.key) {
+    case 'ArrowDown':
+    case 'ArrowUp':
+      e.preventDefault()
+      moveSelected(e.key === 'ArrowDown' ? 1 : -1)
+      break
+
+    case 'Enter': {
+      const item = filtered.value[selectedIndex.value]
+      if (item) {
+        e.preventDefault()
+        enterItem(item)
+      }
+      break
+    }
+
+    case 'Escape': {
+      e.preventDefault()
+      if (breadcrumb.value.length > 0 || dynamicItems.value)
+        goBack()
+      else
+        close()
+      break
+    }
+  }
+}
+
+function getKeybindings(id: string) {
+  return commandsCtx.value.getKeybindings(id)
+}
+</script>
+
+<template>
+  <div
+    v-if="show"
+    class="devframes-command-palette fixed inset-0 z-command-palette"
+    @keydown="onGlobalKeyDown"
+  >
+    <!-- Backdrop -->
+    <div
+      class="absolute inset-0 bg-white/50 dark:bg-black/30 transition-opacity duration-150 "
+      :class="visible ? 'opacity-100 backdrop-blur-1' : 'opacity-0 backdrop-blur-0'"
+      @click="close"
+    />
+    <!-- Dialog -->
+    <div class="absolute inset-0 flex items-start justify-center relative pt-[20vh] pointer-events-none">
+      <div
+        class="flex flex-col transition-all duration-150"
+        :class="visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-98 -translate-y-2'"
+      >
+        <BrandWordmark class="absolute top--32px left-5px pointer-events-none" />
+        <div
+          class="w-full w-lg bg-glass:80 color-base border border-base rounded-lg shadow-xl pointer-events-auto of-hidden flex flex-col max-h-[60vh]"
+        >
+          <!-- Header -->
+          <header class="border-b border-base flex items-center px-3">
+            <!-- Breadcrumb -->
+            <template v-if="breadcrumb.length > 0">
+              <button
+                v-for="(crumb, i) in breadcrumb"
+                :key="i"
+                class="text-xs op60 hover:op80 mr-1 flex items-center gap-0.5"
+                @click="goToCrumb(i)"
+              >
+                {{ crumb.title }}
+                <span class="op40">&rsaquo;</span>
+              </button>
+            </template>
+            <input
+              ref="searchInput"
+              v-model="search"
+              class="flex-1 bg-transparent py-3 outline-none text-sm color-base"
+              placeholder="Type a command..."
+              @keydown="onKeyDown"
+            >
+          </header>
+
+          <!-- Items -->
+          <div ref="listContainer" class="flex-1 of-y-auto p-1.5">
+            <CommandPaletteItem
+              v-for="(item, idx) of filtered"
+              :key="item.entry.id"
+              :entry="item.entry"
+              :parent-title="item.parentTitle"
+              :show-parent-title="!breadcrumb.length"
+              :selected="selectedIndex === idx"
+              :loading="loadingId === item.entry.id"
+              :keybindings="getKeybindings(item.entry.id)"
+              @select="selectedIndex = idx"
+              @activate="enterItem(item)"
+            />
+
+            <div v-if="!filtered.length" class="py-8 flex flex-col items-center justify-center gap-2 op50 text-sm">
+              <div class="i-ph-magnifying-glass-duotone w-6 h-6" />
+              <div v-if="search">
+                No results for "<strong class="text-primary op100">{{ search }}</strong>"
+              </div>
+              <div v-else>
+                No commands available
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <footer class="border-t border-base flex items-center justify-between gap-4 px-3 py-1.5 text-[10px] op50">
+            <div class="flex items-center gap-1.5">
+              <kbd class="px-1 py-0.5 rounded border border-base bg-base font-mono">&darr;&uarr;</kbd>
+              <span>navigate</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <kbd class="px-1 py-0.5 rounded border border-base bg-base font-mono">esc</kbd>
+              <span>{{ breadcrumb.length > 0 || dynamicItems ? 'back' : 'close' }}</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <kbd class="px-1 py-0.5 rounded border border-base bg-base font-mono">&crarr;</kbd>
+              <span>select</span>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
