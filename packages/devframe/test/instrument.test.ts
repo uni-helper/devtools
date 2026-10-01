@@ -10,7 +10,7 @@ import { Buffer } from 'node:buffer'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'acorn'
 import { ref } from 'vue'
-import { BINDINGS_PROP, injectEntryFileGuard, injectSetupBindings, resolveVirtualEntryFile } from '../src/instrument'
+import { BINDINGS_PROP, injectEntryFileGuard, injectPlainRenderHook, injectSetupBindings, resolveVirtualEntryFile } from '../src/instrument'
 import { collectComponentTree, getRegisteredInstance } from '../src/agent/tree'
 import { getComponentState, updateComponentState } from '../src/agent/state'
 
@@ -63,11 +63,12 @@ describe('injectSetupBindings', () => {
   }
 });`
 
-  it('改写 setup 返回 render 函数的形态，捕获顶层绑定（跳过 __props）', () => {
+  it('改写 setup 返回 render 函数的形态，捕获顶层绑定并包渲染钩子', () => {
     const out = injectSetupBindings(SCRIPT_SETUP_OUTPUT, parseWithAcorn)
-    expect(out).toContain(`Object.assign((_ctx, _cache) => {`)
-    // 绑定对象只含用户声明（编译器形参 __props 不进捕获）
+    // 渲染钩子包装（渲染即调度树推送）+ 绑定对象只含用户声明
+    expect(out).toContain(`Object.assign(__uni_devtools_notify_render((_ctx, _cache) => {`)
     expect(out).toContain(`{ ${BINDINGS_PROP}: { r, name, aa, obj } }`)
+    expect(out).toContain(`import { __uniDevtoolsNotifyRender as __uni_devtools_notify_render } from '@uni-helper/devtools-devframe/agent/render-hook'`)
     // 语法仍可解析（插桩不炸构建）
     expect(() => parseWithAcorn(out!)).not.toThrow()
   })
@@ -80,6 +81,22 @@ describe('injectSetupBindings', () => {
   it('无 setup / 解析失败时安全放行', () => {
     expect(injectSetupBindings('const a = 1', parseWithAcorn)).toBeNull()
     expect(injectSetupBindings('setup(}}invalid', parseWithAcorn)).toBeNull()
+  })
+})
+
+describe('injectPlainRenderHook', () => {
+  it('包装 _export_sfc 的 render 引用并注入导入', () => {
+    const code = `const Component = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render]]);\nwx.createComponent(Component);`
+    const out = injectPlainRenderHook(code)
+    expect(out).toContain(`["render", __uni_devtools_notify_render(_sfc_render)]`)
+    expect(out).toContain(`from '@uni-helper/devtools-devframe/agent/render-hook'`)
+    expect(() => parseWithAcorn(out!)).not.toThrow()
+  })
+
+  it('无 _export_sfc / 已注入 / 无 render 项时不改写', () => {
+    expect(injectPlainRenderHook('const a = 1')).toBeNull()
+    expect(injectPlainRenderHook(`_export_sfc(m, [["render", __uni_devtools_notify_render(r)]])`)).toBeNull()
+    expect(injectPlainRenderHook(`_export_sfc(m, [["__scopeId", "data-v-x"]])`)).toBeNull()
   })
 })
 

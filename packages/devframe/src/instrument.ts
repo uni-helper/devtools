@@ -33,6 +33,26 @@ export const BINDINGS_PROP = '__uni_devtools_bindings__'
 const FILE_MARKER = '__uni_devtools_file__'
 const UNI_COMPONENT_PREFIX = 'uniComponent://'
 const UNI_PAGE_PREFIX = 'uniPage://'
+/** agent 侧渲染钩子（子路径导出，package.json exports 同步） */
+const RENDER_HOOK_IMPORT = '@uni-helper/devtools-devframe/agent/render-hook'
+const RENDER_HOOK_FN = '__uni_devtools_notify_render'
+const RENDER_HOOK_IMPORT_LINE = `import { __uniDevtoolsNotifyRender as ${RENDER_HOOK_FN} } from '${RENDER_HOOK_IMPORT}'`
+
+/**
+ * plain `<script>` 形态（render 在模块层经 _export_sfc 挂载）的渲染钩子包装：
+ * `_export_sfc(main, [["render", _sfc_render]])` → 包装 _sfc_render 引用。
+ * 已带钩子导入标记的模块跳过（setup 形态已注入过 import）。
+ */
+export function injectPlainRenderHook(code: string): string | null {
+  if (!code.includes('_export_sfc') || code.includes(RENDER_HOOK_FN))
+    return null
+  const re = /\[\s*["']render["']\s*,\s*([A-Za-z_$][\w$]*)\s*\]/
+  const match = code.match(re)
+  if (!match)
+    return null
+  const wrapped = code.replace(re, `["render", ${RENDER_HOOK_FN}(${match[1]})]`)
+  return `${RENDER_HOOK_IMPORT_LINE}\n${wrapped}`
+}
 
 /** 虚拟入口 id → 相对 UNI_INPUT_DIR 的源文件路径（解码失败/无 inputDir 时退回绝对路径） */
 export function resolveVirtualEntryFile(id: string): string | undefined {
@@ -219,8 +239,10 @@ export function injectSetupBindings(
   let out = code
   for (const capture of ordered) {
     const arg = out.slice(capture.argStart, capture.argEnd)
-    const replacement = `return Object.assign(${arg}, { ${BINDINGS_PROP}: { ${capture.names.join(', ')} } });`
+    // 渲染钩子包装：渲染即调度树推送（钩子保 length 2，绑定量挂回包装层，
+    // 探针读 internal.render[BINDINGS_PROP] 不受影响）
+    const replacement = `return Object.assign(${RENDER_HOOK_FN}(${arg}), { ${BINDINGS_PROP}: { ${capture.names.join(', ')} } });`
     out = out.slice(0, capture.returnStart) + replacement + out.slice(capture.returnEnd)
   }
-  return out
+  return `${RENDER_HOOK_IMPORT_LINE}\n${out}`
 }

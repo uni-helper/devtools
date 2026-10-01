@@ -9,7 +9,7 @@ import { createInteractiveAuth } from 'devframe/recipes/interactive-auth'
 import { randomToken } from 'devframe/utils/crypto-token'
 import { AGENT_CLIENT_MARKER, AgentRegistry } from './relay.ts'
 import { createUniDevtoolsDevframe, resolveClientAssets } from './devframe.ts'
-import { injectEntryFileGuard, injectSetupBindings, resolveVirtualEntryFile } from './instrument.ts'
+import { injectEntryFileGuard, injectPlainRenderHook, injectSetupBindings, resolveVirtualEntryFile } from './instrument.ts'
 
 const BASE = '/__uni-devtools/'
 const VIRTUAL_AGENT_MODULE = 'virtual:uni-devtools-agent'
@@ -180,10 +180,19 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
         return next ? { code: next, map: null } : null
       }
 
-      // 2) 组件模块：script setup 闭包绑定捕获（形状不符时安全放行）
-      if (/\.(?:vue|js|ts|jsx|tsx)$/.test(bareId) && code.includes('setup')) {
-        const next = injectSetupBindings(code, source => this.parse(source))
-        return next ? { code: next, map: null } : null
+      // 2) 组件模块：script setup 闭包绑定捕获 + 渲染钩子（形状不符时安全放行）
+      if (/\.(?:vue|js|ts|jsx|tsx)$/.test(bareId)) {
+        if (code.includes('setup')) {
+          const next = injectSetupBindings(code, source => this.parse(source))
+          if (next)
+            return { code: next, map: null }
+        }
+        // plain <script>：render 经 _export_sfc 在模块层挂载
+        if (code.includes('_export_sfc')) {
+          const next = injectPlainRenderHook(code)
+          if (next)
+            return { code: next, map: null }
+        }
       }
 
       return null

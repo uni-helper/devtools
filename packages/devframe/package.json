@@ -8,7 +8,8 @@
     "./relay": "./src/relay.ts",
     "./types": "./src/types.ts",
     "./plugin": "./dist/plugin.mjs",
-    "./agent": "./src/agent/index.ts"
+    "./agent": "./src/agent/index.ts",
+    "./agent/render-hook": "./src/agent/render-hook.ts"
   },
   "types": "./src/index.ts",
   "scripts": {
