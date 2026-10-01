@@ -28,8 +28,15 @@ export interface ComponentStateResult {
 
 export interface UpdateStateParams {
   id: string
+  /** 顶层键（legacy 形态；与新 path 二选一，等价 path: [key]） */
   key: string
-  value: unknown
+  value?: unknown
+  /** 官方编辑 payload 的 section（setup | data）；缺省时按 setup → data 自动探测 */
+  section?: 'setup' | 'data'
+  /** 完整赋值链：path[0] = 顶层键，其后为嵌套属性（官方 editState 的 path 字段） */
+  path?: string[]
+  /** 删除键（对象 delete / 数组按索引 splice） */
+  remove?: boolean
 }
 
 export interface UpdateStateResult {
@@ -293,17 +300,71 @@ export function getComponentState(id: string): ComponentStateResult {
 }
 
 /**
+ * 沿绑定链导航到目标父对象（逐段解 ref）。
+ * setupState（proxyRefs）读值天然解包；捕获绑定里的裸 ref 需显式 .value 下钻。
+ */
+function navigateToParent(root: any, segments: string[], id: string): { parent: any, last: string } {
+  let parent = root
+  for (let i = 0; i < segments.length - 1; i++) {
+    let cur = parent[segments[i]!]
+    if (checkIsRef(cur))
+      cur = cur.value
+    if (cur === null || typeof cur !== 'object') {
+      const walked = segments.slice(0, i + 1).join('.')
+      throw new Error(`[updateComponentState] Path "${walked}" is not navigable on component "${id}" (got ${cur === null ? 'null' : typeof cur})`)
+    }
+    parent = cur
+  }
+  return { parent, last: segments[segments.length - 1]! }
+}
+
+/** 终段写入：ref 绑定落 .value；remove 走 delete / 数组 splice；普通对象属性直接赋值 */
+function assignFinal(target: { parent: any, last: string }, value: unknown, remove: boolean | undefined, id: string): void {
+  const { parent, last } = target
+  const current = parent[last]
+
+  if (checkIsRef(current)) {
+    if (remove)
+      throw new Error(`[updateComponentState] Cannot remove ref binding "${last}" on component "${id}"`)
+    current.value = value
+    return
+  }
+
+  if (remove) {
+    if (Array.isArray(parent) && /^\d+$/.test(last)) {
+      parent.splice(Number(last), 1)
+      return
+    }
+    delete parent[last]
+    return
+  }
+
+  if (Array.isArray(parent) && /^\d+$/.test(last)) {
+    parent[Number(last)] = value
+    return
+  }
+  parent[last] = value
+}
+
+/**
  * 修改组件状态
  */
 export function updateComponentState(
   params: UpdateStateParams,
   onUpdated?: () => void,
 ): UpdateStateResult {
-  const { id, key, value } = params || {}
+  const { id, section, remove } = params || {}
+  const path = Array.isArray(params?.path) && params.path.length > 0
+    ? params.path.map(String)
+    : params?.key
+      ? [String(params.key)]
+      : []
+  const value = params?.value
+
   if (!id) {
     throw new Error('[updateComponentState] Missing component id')
   }
-  if (!key) {
+  if (path.length === 0) {
     throw new Error('[updateComponentState] Missing state key')
   }
 
@@ -317,53 +378,92 @@ export function updateComponentState(
     throw new Error(`[updateComponentState] Component with id "${id}" has been unmounted`)
   }
 
+  const key = path[0]!
+
   try {
     const setupState = resolveSetupSource(vm, internal)
-    // 编译期捕获的闭包绑定（非 proxyRefs）：纯值绑定是闭包 const，写捕获
-    // 对象不会反映到视图——如实报错，不假装成功（与面板「如实报不支持」同旨）
+    const data = vm.$data || internal.data
+    // 编译期捕获的闭包绑定（非 proxyRefs）：顶层纯值绑定是闭包 const，重新绑定
+    // 不会反映到视图——如实报错；但其对象属性的深层赋值仍可写（forceUpdate 重渲
+    // 染会读到新值），与面板「如实报不支持」同旨
     const isCapturedBindings = typeof internal?.render === 'function' && internal.render[BINDINGS_PROP] === setupState
+
+    // section 显式给定走官方语义；缺省保持「setup 优先、data 兜底」探测
+    const useSetup = section ? section === 'setup' : !!(setupState && key in setupState)
+    const useData = !useSetup
     let updated = false
 
-    // 1. 优先检查 Composition API (setupState)
-    if (setupState && key in setupState) {
-      const rawSetup = getRaw(setupState)
-      const rawBinding = rawSetup?.[key]
+    // 1. Composition API (setupState / 编译期捕获的闭包绑定)
+    // 键不存在即不进本分支（含 section==='setup' 的显式指定）——如实报 Key not found，
+    // 不往捕获绑定对象上挂无效键假装成功
+    if (useSetup && setupState && key in setupState) {
       const binding = setupState[key]
 
-      // (1) ref 场景：直接赋值给 .value
-      if (checkIsRef(rawBinding)) {
-        rawBinding.value = value
-        updated = true
-      }
-      else if (checkIsRef(binding)) {
-        binding.value = value
-        updated = true
-      }
-      // (2) reactive / 对象场景：Object.assign 保持响应式代理引用
-      else if (typeof binding === 'object' && binding !== null) {
-        if (typeof value === 'object' && value !== null) {
-          Object.assign(binding, value)
+      if (path.length === 1) {
+        const rawSetup = getRaw(setupState)
+        const rawBinding = rawSetup?.[key]
+        // (1) ref 场景：直接赋值给 .value
+        if (checkIsRef(rawBinding)) {
+          if (remove)
+            throw new Error(`[updateComponentState] Cannot remove ref binding "${key}" on component "${id}"`)
+          rawBinding.value = value
           updated = true
         }
+        else if (checkIsRef(binding)) {
+          if (remove)
+            throw new Error(`[updateComponentState] Cannot remove ref binding "${key}" on component "${id}"`)
+          binding.value = value
+          updated = true
+        }
+        // (2) reactive / 对象场景：Object.assign 保持响应式代理引用
+        else if (typeof binding === 'object' && binding !== null) {
+          if (remove) {
+            delete setupState[key]
+            updated = true
+          }
+          else if (typeof value === 'object' && value !== null) {
+            Object.assign(binding, value)
+            updated = true
+          }
+          else {
+            throw new Error(`[updateComponentState] Cannot assign non-object value to reactive/object key "${key}" on component "${id}"`)
+          }
+        }
+        // (3) 纯值/proxyRefs 代理穿透场景
         else {
-          throw new Error(`[updateComponentState] Cannot assign non-object value to reactive/object key "${key}" on component "${id}"`)
+          if (isCapturedBindings) {
+            throw new Error(`[updateComponentState] Cannot edit plain-value binding "${key}" (mp 编译期内联的非响应式 const，仅 ref/reactive 绑定可编辑) on component "${id}"`)
+          }
+          if (remove) {
+            delete setupState[key]
+          }
+          else {
+            setupState[key] = value
+          }
+          updated = true
         }
       }
-      // (3) 纯值/proxyRefs 代理穿透场景
       else {
-        if (isCapturedBindings) {
-          throw new Error(`[updateComponentState] Cannot edit plain-value binding "${key}" (mp 编译期内联的非响应式 const，仅 ref/reactive 绑定可编辑) on component "${id}"`)
-        }
-        setupState[key] = value
+        // 深路径：逐段解 ref 下钻后终段属性赋值（对象属性变更经 forceUpdate
+        // 重渲染反映到 mp 视图；ref/reactive 则走响应式）
+        assignFinal(navigateToParent(setupState, path, id), value, remove, id)
         updated = true
       }
     }
 
-    // 2. 检查 Options API ($data)
-    if (!updated) {
-      const data = vm.$data || internal.data
-      if (data && key in data) {
-        data[key] = value
+    // 2. Options API ($data)
+    if (!updated && useData && data && key in data) {
+      if (path.length === 1) {
+        if (remove) {
+          delete data[key]
+        }
+        else {
+          data[key] = value
+        }
+        updated = true
+      }
+      else {
+        assignFinal(navigateToParent(data, path, id), value, remove, id)
         updated = true
       }
     }
