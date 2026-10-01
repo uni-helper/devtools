@@ -1,0 +1,21 @@
+{
+  "name": "@spike/devframe-poc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./plugin": "./src/plugin.ts",
+    "./agent": "./src/agent/index.ts"
+  },
+  "dependencies": {
+    "birpc": "^4.2.0",
+    "devframe": "1.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.2"
+  },
+  "scripts": {
+    "build:plugin": "esbuild src/plugin.ts --bundle --platform=node --format=esm --external:vite --outfile=dist/plugin.mjs && esbuild src/browser-client.ts --bundle --format=esm --outfile=src/panel/df-client.mjs"
+  }
+}
