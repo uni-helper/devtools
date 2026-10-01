@@ -13,6 +13,7 @@ import { createRpcClient } from 'devframe/rpc/client'
 import { config } from 'virtual:uni-devtools-agent'
 import { type UniSocketChannelHandle, createUniSocketChannel } from './socket'
 import { type PageComponentTree, collectComponentTree, getRegisteredInstance } from './tree'
+import { type PiniaStateResult, type PiniaStoresResult, type UpdatePiniaStateResult, getPiniaState, getPiniaStores, updatePiniaState } from './pinia'
 import {
   type ComponentStateResult,
   type UpdateStateResult,
@@ -192,6 +193,16 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
       schedulePushComponentTree(100)
       return res
     },
+    'uni-devtools:agent:getPiniaStores': (): PiniaStoresResult => {
+      return getPiniaStores()
+    },
+    'uni-devtools:agent:getPiniaState': (args: { id: string } | string): PiniaStateResult => {
+      const id = typeof args === 'string' ? args : args?.id
+      return getPiniaState(id)
+    },
+    'uni-devtools:agent:updatePiniaState': (params: any): UpdatePiniaStateResult => {
+      return updatePiniaState(params)
+    },
     'uni-devtools:agent:getRouterInfo': (): {
       currentRoute: { path: string, fullPath?: string, query?: Record<string, unknown> } | null
       stack: Array<{ path: string, query?: Record<string, unknown>, options?: Record<string, unknown> }>
@@ -307,6 +318,9 @@ export {
   collectComponentTree,
   createUniSocketChannel,
   getComponentState,
+  getPiniaState,
+  getPiniaStores,
   getRegisteredInstance,
   updateComponentState,
+  updatePiniaState,
 }

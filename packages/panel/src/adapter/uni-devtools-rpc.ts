@@ -41,12 +41,14 @@ import type {
 import type {
   ComponentStateResult,
   ComponentTreeResult,
+  GetPiniaStoresResult,
   GetRegisteredRoutesResult,
+  PiniaStateResult,
   RouterInfoResult,
 } from '@uni-helper/devtools-devframe/types'
 import { encodeValue } from '@vue/devtools-kit'
 import { connectDevframe } from 'devframe/client'
-import { mockComponentState, mockComponentTree, mockUpdateComponentState } from './fixtures'
+import { mockComponentState, mockComponentTree, mockPiniaState, mockPiniaStores, mockUpdateComponentState, mockUpdatePiniaState } from './fixtures'
 
 /** 与 node 侧 `ctx.scope(NS)` 一致；改这里必须同步改 node 侧。 */
 const NAMESPACE = 'uni-helper-devtools'
@@ -181,6 +183,22 @@ function toStateSnapshot(result: ComponentStateResult, version: number): Compone
   return { componentId: result.id, version, sections }
 }
 
+/** Pinia store 快照 → 官方 sections（State / Getters 两个分区）。 */
+function toPiniaStateSnapshot(result: PiniaStateResult, version: number): ComponentStateSnapshotMessage {
+  const sections: ComponentStateSnapshotMessage['sections'] = []
+  const stateEntries = Object.entries(result.state ?? {}).map(
+    ([key, value]) => toStateEntry('state', key, value),
+  )
+  if (stateEntries.length > 0)
+    sections.push({ id: 'state', label: 'State', entries: stateEntries })
+  const getterEntries = Object.entries(result.getters ?? {}).map(
+    ([key, value]) => toStateEntry('getters', key, value),
+  )
+  if (getterEntries.length > 0)
+    sections.push({ id: 'getters', label: 'Getters', entries: getterEntries })
+  return { componentId: result.id, version, sections }
+}
+
 /** 与 kit 的 `connectDevtoolsClient()` 同签名的同步工厂（连接在内部异步建立）。 */
 export function connectUniRpcClient(): DevtoolsRpcClient {
   // ---- 实例状态（闭包内；官方连接层会 dispose 旧实例再建新的） ----
@@ -188,6 +206,8 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
   const connectionHandlers = new Set<(status: ConnectionStatus) => void>()
   /** 按组件计数的 state version（官方防陈旧循环以组件为维度比较）。 */
   const stateVersionByComponent = new Map<string, number>()
+  /** Pinia inspector 按 store nodeId 计数的 state version（同上防陈旧语义）。 */
+  const inspectorVersionByNode = new Map<string, number>()
 
   let flat: FlatTree = EMPTY_TREE
   let treeVersion = 0
@@ -367,7 +387,48 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         return { plugins: [] }
 
       case 'inspectors:list':
-        return { inspectors: [] }
+        // Pinia 走官方 custom inspector 协议（官方 tabs.ts 对 id==='pinia' 有
+        // 内建 tab 映射，无需改 tab 常量）
+        return {
+          inspectors: [{
+            id: 'pinia',
+            label: 'Pinia',
+            stateFilterPlaceholder: 'Filter state...',
+            treeFilterPlaceholder: 'Filter stores...',
+            noSelectionText: 'Select a store in the tree to inspect it',
+          }],
+        }
+
+      case 'inspectors:treeSnapshot': {
+        await ensureReady()
+        const { inspectorId, filter } = (request.payload ?? {}) as { inspectorId?: string, filter?: string }
+        if (inspectorId !== 'pinia')
+          return { inspectorId: inspectorId ?? '', rootNodes: [] }
+        const res = mockMode
+          ? mockPiniaStores()
+          : await callUni<GetPiniaStoresResult>('get-pinia-stores')
+        const stores = (res?.stores ?? [])
+          .filter(store => !filter || store.id.toLowerCase().includes(filter.toLowerCase()))
+          .map(store => ({
+            id: `store:${store.id}`,
+            label: store.id,
+            name: store.id,
+            tags: [{ label: 'store' }],
+          }))
+        return { inspectorId, rootNodes: stores }
+      }
+
+      case 'inspectors:stateSnapshot': {
+        await ensureReady()
+        const { inspectorId, nodeId } = (request.payload ?? {}) as { inspectorId?: string, nodeId?: string }
+        if (inspectorId !== 'pinia' || !nodeId?.startsWith('store:'))
+          return undefined
+        const storeId = nodeId.slice('store:'.length)
+        const state = mockMode
+          ? mockPiniaState(storeId)
+          : await callUni<PiniaStateResult>('get-pinia-state', { id: storeId })
+        return toPiniaStateSnapshot(state, inspectorVersionByNode.get(nodeId) ?? 0)
+      }
 
       case 'components:treeSnapshot': {
         await ensureReady()
@@ -539,6 +600,51 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
 
       case 'components:addState':
         return { status: 0, error: NOT_SUPPORTED('新增状态键') }
+
+      case 'inspectors:editState': {
+        await ensureReady()
+        const payload = request.payload as {
+          inspectorId?: string, nodeId?: string, sectionId?: string, path?: string[], value?: unknown, remove?: boolean
+        }
+        if (payload.inspectorId !== 'pinia' || !payload.nodeId?.startsWith('store:'))
+          return { status: 0, error: NOT_SUPPORTED('该 inspector 的状态编辑') }
+        const storeId = payload.nodeId.slice('store:'.length)
+        const path = payload.path ?? []
+        if (path.length === 0)
+          return { status: 0, error: '缺少编辑路径' }
+        if (mockMode) {
+          if (path.length !== 1 || payload.remove)
+            return { status: 0, error: NOT_SUPPORTED('mock 平铺数据的嵌套路径/删除') }
+          mockUpdatePiniaState({ id: storeId, key: path[0]!, value: payload.value })
+        }
+        else {
+          await callUni('update-pinia-state', {
+            id: storeId,
+            key: path[0]!,
+            path,
+            value: payload.value,
+            remove: payload.remove,
+          })
+        }
+        // 官方刷新语义：inspector 以 nodeId 为维度递增 version
+        const nodeId = payload.nodeId
+        const version = (inspectorVersionByNode.get(nodeId) ?? 0) + 1
+        inspectorVersionByNode.set(nodeId, version)
+        emit({
+          type: 'inspectors:invalidateState',
+          inspectorId: 'pinia',
+          // kit 的 InspectorTarget 类型未声明 nodeId，但官方 client 的失效处理
+          // 读 event.nodeId（devtools-client.ts touchInspectorInvalidation）
+          nodeId,
+        } as unknown as DevtoolsRpcEvent)
+        return { status: 1 }
+      }
+
+      case 'inspectors:selectNode':
+      case 'inspectors:callAction':
+      case 'inspectors:callNodeAction':
+        // 拉取式实现：选中/动作无需探针侧状态
+        return { status: 1 }
 
       case 'components:openInEditor': {
         if (mockMode)

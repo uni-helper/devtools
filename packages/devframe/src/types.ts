@@ -8,6 +8,8 @@
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
  *   - `update-component-state`: (args: UpdateComponentStateParams) => UpdateComponentStateResult
  *   - `open-in-editor`: (args: OpenInEditorParams) => OpenInEditorResult
+ *   - `get-registered-routes` / `get-router-info` / `navigate-to`（W5 路由栈，见 agy T-79c804）
+ *   - `get-pinia-stores` / `get-pinia-state` / `update-pinia-state`（W4 Pinia inspector）
  *   - `get-registered-routes`: () => GetRegisteredRoutesResult
  *   - `get-router-info`: () => RouterInfoResult
  *   - `navigate-to`: (args: NavigateParams) => NavigateResult
@@ -108,4 +110,36 @@ export interface NavigateParams {
 export interface NavigateResult {
   ok: boolean
   error?: string
+}
+
+// ---------------------------------------------------------------------------
+// Pinia inspector（W4）：探针枚举 pinia._s，面板经 custom inspector 协议消费
+// ---------------------------------------------------------------------------
+
+export interface PiniaStoreSummary {
+  id: string
+}
+
+export interface GetPiniaStoresResult {
+  stores: PiniaStoreSummary[]
+}
+
+export interface PiniaStateResult {
+  id: string
+  state: Record<string, unknown>
+  getters: Record<string, unknown>
+}
+
+export interface UpdatePiniaStateParams {
+  id: string
+  key: string
+  value?: unknown
+  path?: string[]
+  remove?: boolean
+}
+
+export interface UpdatePiniaStateResult {
+  ok: true
+  id: string
+  key: string
 }

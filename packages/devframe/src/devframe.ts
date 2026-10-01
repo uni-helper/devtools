@@ -9,16 +9,21 @@ import type { AgentRegistry } from './relay.ts'
 import type {
   ComponentStateResult,
   ComponentTreeResult,
+  GetPiniaStoresResult,
   GetRegisteredRoutesResult,
   NavigateParams,
   NavigateResult,
   OpenInEditorParams,
   OpenInEditorResult,
+  PageComponentTree,
   PingResult,
+  PiniaStateResult,
   RegisteredRouteRecord,
   RouterInfoResult,
   UpdateComponentStateParams,
   UpdateComponentStateResult,
+  UpdatePiniaStateParams,
+  UpdatePiniaStateResult,
 } from './types.ts'
 
 export interface CreateUniDevtoolsDevframeOptions {
@@ -202,7 +207,7 @@ export function createUniDevtoolsDevframe(
       const treeSharedState = await uni.rpc.sharedState('component-tree', {
         initialValue: {
           fetchedAt: 0,
-          pages: [],
+          pages: [] as PageComponentTree[],
         },
       })
 
@@ -261,7 +266,9 @@ export function createUniDevtoolsDevframe(
             catch (err) {
               const cached = registry.getCachedTree() || treeSharedState.value()
               if (cached && Array.isArray(cached.pages) && cached.pages.length > 0) {
-                return cached
+                // sharedState 读回的 ImmutableObject（readonly pages）展平为
+                // 可变 ComponentTreeResult（wire 契约为普通数组）
+                return { ...cached, pages: [...cached.pages] }
               }
               throw err
             }
@@ -357,6 +364,47 @@ export function createUniDevtoolsDevframe(
                 stack: [],
               }
             }
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'get-pinia-stores',
+        type: 'query',
+        jsonSerializable: true,
+        agent: { description: 'List Pinia stores registered on the running mini-program app.' },
+        setup: () => ({
+          handler: async (): Promise<GetPiniaStoresResult> => {
+            try {
+              return await registry.callAgent<GetPiniaStoresResult>('uni-devtools:agent:getPiniaStores')
+            }
+            catch {
+              return { stores: [] }
+            }
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'get-pinia-state',
+        type: 'query',
+        jsonSerializable: true,
+        agent: { description: 'Get state and getters snapshot of one Pinia store by id.' },
+        setup: () => ({
+          handler: async (args: { id: string }): Promise<PiniaStateResult> => {
+            return await registry.callAgent<PiniaStateResult>('uni-devtools:agent:getPiniaState', args)
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'update-pinia-state',
+        type: 'action',
+        jsonSerializable: true,
+        agent: { description: 'Edit one Pinia store state key (deep path supported).' },
+        setup: () => ({
+          handler: async (args: UpdatePiniaStateParams): Promise<UpdatePiniaStateResult> => {
+            return await registry.callAgent<UpdatePiniaStateResult>('uni-devtools:agent:updatePiniaState', args)
           },
         }),
       }))

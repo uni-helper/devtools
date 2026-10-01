@@ -1,4 +1,4 @@
-import type { ComponentStateResult, ComponentTreeResult } from '@uni-helper/devtools-devframe/types'
+import type { ComponentStateResult, ComponentTreeResult, GetPiniaStoresResult, PiniaStateResult } from '@uni-helper/devtools-devframe/types'
 
 /**
  * 面板的假数据，只在显式 mock 模式（URL 带 `?mock`）下使用。
@@ -126,4 +126,43 @@ export function mockUpdateComponentState(params: { id: string, key: string, valu
 
 export function mockComponentTree(): ComponentTreeResult {
   return { ...tree, fetchedAt: Date.now() }
+}
+
+// ---------------------------------------------------------------------------
+// Pinia（W4）：mock 两个 store，语义对齐探针（state 顶层键 + getters 只读）
+// ---------------------------------------------------------------------------
+
+const piniaStores = [
+  { id: 'counter' },
+  { id: 'user' },
+]
+
+const piniaStateById: Record<string, { state: Record<string, unknown>, getters: Record<string, unknown> }> = {
+  counter: {
+    state: { count: 0, step: 1, history: [] as unknown[] },
+    getters: { double: 0, isZero: true },
+  },
+  user: {
+    state: { name: 'uni-helper', tags: ['devtools', 'mp'], profile: { city: 'Shanghai' } },
+    getters: { greeting: 'Hello, uni-helper' },
+  },
+}
+
+export function mockPiniaStores(): GetPiniaStoresResult {
+  return { stores: piniaStores.map(store => ({ id: store.id })) }
+}
+
+export function mockPiniaState(id: string): PiniaStateResult {
+  const data = piniaStateById[id]
+  if (!data)
+    return { id, state: {}, getters: {} }
+  // 深拷贝语义同 mockComponentState（真实传输层每次全新对象）
+  return { id, state: JSON.parse(JSON.stringify(data.state)), getters: JSON.parse(JSON.stringify(data.getters)) }
+}
+
+export function mockUpdatePiniaState(params: { id: string, key: string, value: unknown }): { ok: true, id: string, key: string } {
+  const data = piniaStateById[params.id]
+  if (data && params.key in data.state)
+    data.state[params.key] = params.value
+  return { ok: true, id: params.id, key: params.key }
 }
