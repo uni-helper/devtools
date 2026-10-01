@@ -11,6 +11,9 @@ export default antfu(
       'packages/devtools-kit/**',
       // devframe 内的 vendored 兜底面板产物（dist 形态，非手写源码）
       'packages/devframe/assets/**',
+      // vendored 官方 hub-ui 外壳 + devframe POC 留底（结论已抽到 FINDINGS.md）
+      'packages/hub-ui/**',
+      'spike/**',
       '**/node_modules/**',
       '**/uniJs.js',
       'playground/**',
