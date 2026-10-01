@@ -1,0 +1,194 @@
+import { fileURLToPath } from 'node:url'
+import type { Preset } from 'unocss'
+import { presetAnthonyDesign, resolvePrimary } from '@antfu/design/unocss'
+import {
+  defineConfig,
+  presetIcons,
+  presetWind,
+  transformerDirectives,
+  transformerVariantGroup,
+} from 'unocss'
+
+export interface CreateDesignConfigOptions {
+  /**
+   * The base utility preset `@antfu/design` layers on top of. Defaults to
+   * {@link presetWind4} (what every plugin and example uses). Surfaces that
+   * render inside a **web-component shadow root** (the hub-ui dock, the
+   * json-render renderer module) pass `presetWind3()` instead: Wind4 registers
+   * its theme + `--un-*` custom properties via `@property { inherits: false }`
+   * and keeps them in a document `:root {}` block, neither of which reaches a
+   * shadow tree, so its `color-mix(var(--colors-*))` utilities resolve to
+   * nothing there. Wind3 bakes the same `@antfu/design` semantic utilities to
+   * concrete `rgb()` + `.dark` variants, which are self-contained inside a
+   * shadow root.
+   */
+  base?: Preset<any> | Preset<any>[]
+}
+
+/**
+ * Shared devframe UnoCSS base. Every plugin and example composes `@antfu/design`
+ * the same way: its preset (tuned to devframe's sage green) over a Wind base,
+ * Phosphor icons, DM Sans/Mono web fonts, and the directive/variant-group
+ * transformers, so the surfaces look and feel like one product across
+ * frameworks. Each app extends this via `mergeConfigs([designConfig, { … }])`
+ * and contributes only its own extraction globs (and any safelist).
+ *
+ * The shared web fonts (`sans`/`mono`), the named `z-*` layers and the `h-nav`
+ * navbar height live here so every surface shares one font stack, one z-index
+ * scale and one fixed navbar height. The `@antfu/design` preset blocks plain
+ * `z-<number>`, so the layers are named on purpose.
+ */
+export function createDesignConfig(options: CreateDesignConfigOptions = {}) {
+  const base = options.base ?? presetWind()
+  return defineConfig({
+    presets: [
+      presetAnthonyDesign({ primary: '#3a6a45' }),
+      ...(Array.isArray(base) ? base : [base]),
+      presetIcons({ scale: 1.1 }),
+    ],
+    transformers: [transformerDirectives(), transformerVariantGroup()],
+    /**
+     * The shared class-helper builders (`design/design.ts`) assemble their class
+     * chains at runtime, so every app scans that one file (it carries
+     * `@unocss-include`) for extraction regardless of its own framework globs.
+     */
+    content: {
+      filesystem: [fileURLToPath(new URL('./design.ts', import.meta.url))],
+    },
+    /**
+     * Wind leaves bare `border`/`border-b` at currentColor; restore the subtle
+     * shared border color (matching `border-base`) for unqualified borders.
+     */
+    preflights: [{ getCSS: () => '*,::before,::after{border-color:#8882}' }],
+    theme: {
+      // Stable palette for status marks and preview content that intentionally
+      // keeps the default accent when the surrounding panel adopts a theme.
+      colors: { devframe: resolvePrimary('#3a6a45') },
+    },
+    shortcuts: {
+      /** Fixed semantic colors stay independent of the panel's primary accent. */
+      'color-status-positive': 'color-devframe-600 dark:color-devframe-300',
+      'color-preview-accent': 'color-devframe-600 dark:color-devframe-300',
+      'bg-preview-accent': 'bg-devframe',
+      /** Fixed navbar height, shared by every surface's top nav. */
+      'h-nav': 'h-10',
+      /** Named z-index layers, shared across every surface. */
+      'z-nav': 'z-[30]',
+      'z-dropdown': 'z-[40]',
+      'z-tooltip': 'z-[45]',
+      'z-toast': 'z-[50]',
+      'z-modal-backdrop': 'z-[60]',
+      'z-modal-content': 'z-[70]',
+      'z-drawer-backdrop': 'z-[80]',
+      'z-drawer-content': 'z-[90]',
+    },
+  })
+}
+
+/** The default shared base (Wind4), consumed by every plugin and example. */
+export const designConfig = createDesignConfig()
+
+/**
+ * The `@antfu/design` semantic surface/text tokens a shadow-root surface
+ * (hub-ui dock, json-render renderer module) needs guaranteed in its compiled
+ * stylesheet. Each is a shortcut that expands to a base utility plus a
+ * `.dark:` variant; safelisting the shortcut name makes the generator emit
+ * both variants even when the class only reaches the extractor through a
+ * `.dark`-prefixed or dynamically-assembled string it can't see. Wind3 bakes
+ * these to concrete `rgb()`, so they stay self-contained inside the shadow
+ * tree.
+ */
+/**
+ * Rename Wind's internal `--un-*` custom properties to a private prefix in a
+ * stylesheet destined for a **shadow root**.
+ *
+ * `@property` registrations are document-global regardless of where they're
+ * declared, so a host page built with Wind4 registers `--un-bg-opacity` /
+ * `--un-border-opacity` / `--un-text-opacity` (et al.) as
+ * `@property { syntax: '<percentage>'; inherits: false }` for the whole
+ * document, including inside our shadow tree. Our shadow CSS is Wind3, which
+ * sets those same vars **unitless** (`--un-border-opacity: 0.13`), so the
+ * global `<percentage>` registration makes every such declaration invalid and
+ * the dependent `color-mix()` / `rgb(… / var(--un-*))` value collapses (a
+ * visibly wrong border/background/text color).
+ *
+ * The shadow stylesheet sets and reads these vars entirely within itself, so
+ * renaming every `--un-` to a per-surface prefix (`--un-jr-`, `--un-hub-`)
+ * keeps it self-consistent while making it immune to whatever the host page
+ * registered, since the renamed names are distinct properties the host's
+ * `@property --un-*` rules never match. Apply only to shadow-injected CSS
+ * (`hub-ui` dock, `json-render-ui` renderer module); the Vite-served SPAs own
+ * their whole document and need no rename.
+ *
+ * @param css - The compiled shadow-root stylesheet.
+ * @param prefix - The replacement for `--un-` (e.g. `--un-jr-`, `--un-hub-`).
+ */
+export function namespaceShadowCssVars(css: string, prefix: string): string {
+  return css.replaceAll('--un-', prefix)
+}
+
+export const shadowSurfaceSafelist: string[] = [
+  'bg-base',
+  'bg-secondary',
+  'bg-active',
+  'bg-hover',
+  'color-base',
+  'color-muted',
+  'color-faint',
+  'color-active',
+  'border-base',
+]
+
+/**
+ * The primary-ramp stops the shared `design/primary-ramp.css` exposes as
+ * overridable `--colors-primary-<stop>` custom properties (derived from
+ * `--devframe-primary`). Must match that file's declarations exactly.
+ */
+const OVERRIDABLE_PRIMARY_STOPS = ['DEFAULT', '600', '500', '400', '300'] as const
+
+function hexToRgbTriplet(hex: string): string | undefined {
+  const match = /^#([0-9a-f]{6})$/i.exec(hex)
+  if (!match)
+    return undefined
+  const int = Number.parseInt(match[1], 16)
+  return `${(int >> 16) & 255} ${(int >> 8) & 255} ${int & 255}`
+}
+
+/**
+ * Rewire a Wind3-compiled shadow-root stylesheet's baked-in `primary` theme
+ * colors into CSS relative-color syntax reading the live `--colors-primary-*`
+ * variables `primary-ramp.css` derives from `--devframe-primary`.
+ *
+ * Wind3 (unlike Wind4) resolves each theme color to a literal `rgb(r g b /
+ * <alpha>)` at compile time, and the `<alpha>` slot is already dynamic (a slash
+ * literal, or the utility's own `--un-*-opacity` variable), but the base `r g
+ * b` triplet is baked in, so every `primary`-based utility (`text-primary`,
+ * `bg-primary`, `btn-primary`, `ring-primary-500`, …) ignores
+ * `--devframe-primary` entirely; only hand-written rules that already
+ * reference `--colors-primary-*` directly (the dock's glow gradient,
+ * `primary-ramp.css` itself) retint. Swapping the baked triplet for `from
+ * var(--colors-primary-<stop>, <hex>) r g b` keeps that exact alpha
+ * mechanism intact while sourcing the base color from the variable, so a
+ * rebrand's `--devframe-primary` now reaches every baked utility too.
+ *
+ * Call once per generated pass, after `generator.generate(...)`, passing the
+ * resolved `generator.config.theme.colors.primary` ramp.
+ *
+ * @param css - The compiled Wind3 CSS (pre-`--un-*` namespacing).
+ * @param primaryRamp - The generator's resolved `theme.colors.primary` ramp.
+ */
+export function rewireBakedPrimaryColors(css: string, primaryRamp: Record<string, string>): string {
+  let out = css
+  for (const stop of OVERRIDABLE_PRIMARY_STOPS) {
+    const hex = primaryRamp[stop]
+    const rgb = hex && hexToRgbTriplet(hex)
+    if (!rgb)
+      continue
+    const varName = stop === 'DEFAULT' ? '--colors-primary-DEFAULT' : `--colors-primary-${stop}`
+    out = out.replace(
+      new RegExp(String.raw`rgb\(${rgb}(?!\d)`, 'g'),
+      `rgb(from var(${varName}, ${hex}) r g b`,
+    )
+  }
+  return out
+}
