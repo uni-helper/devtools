@@ -8,19 +8,25 @@ import type { DevframeDockDefaults } from 'devframe/types'
 import type { AgentRegistry } from './relay.ts'
 import { isInspectAvailable } from './inspect-serve.ts'
 import type {
+  ClearNetworkRecordsResult,
   ComponentStateResult,
   ComponentTreeResult,
   GetComponentRenderCodeParams,
   GetComponentRenderCodeResult,
   GetInspectStatusResult,
+  GetNetworkRecordsParams,
+  GetNetworkRecordsResult,
   GetPiniaStoresResult,
   GetRegisteredRoutesResult,
   NavigateParams,
   NavigateResult,
+  NetworkSharedState,
   OpenInEditorParams,
   OpenInEditorResult,
   PingResult,
   PiniaStateResult,
+  PushNetworkRecordsParams,
+  PushNetworkRecordsResult,
   RecomputeComponentStateParams,
   RecomputeComponentStateResult,
   RegisteredRouteRecord,
@@ -211,6 +217,12 @@ export function createUniDevtoolsDevframe(
         initialValue: initialTree,
       })
 
+      // W13 Network：探针增量推送的网络记录（面板 Network tab 订阅渲染；
+      // Coding Agent 后续经 get-network-records 拉取同一份数据）
+      const networkSharedState = await uni.rpc.sharedState('network-records', {
+        initialValue: { records: [], latestId: 0, updatedAt: 0 } as NetworkSharedState,
+      })
+
       uni.rpc.register(defineRpcFunction({
         name: 'push-component-tree',
         type: 'action',
@@ -375,6 +387,91 @@ export function createUniDevtoolsDevframe(
           handler: async (): Promise<GetInspectStatusResult> => ({
             available: isInspectAvailable(),
           }),
+        }),
+      }))
+
+      // W13 Network：探针 → node 增量推送（防抖批量，按 id 幂等 merge——
+      // socket 重连后探针重推全环也无害；500 容量与探针 MAX_NETWORK_RING
+      // 字面量两端冻结同步，见 types.ts W13 注释）
+      uni.rpc.register(defineRpcFunction({
+        name: 'push-network-records',
+        type: 'action',
+        jsonSerializable: true,
+        agent: { description: 'Receive network records batch pushed by mini-program agent probe.' },
+        setup: () => ({
+          handler: async (params: PushNetworkRecordsParams): Promise<PushNetworkRecordsResult> => {
+            const incoming = Array.isArray(params?.records) ? params.records : []
+            if (incoming.length > 0) {
+              networkSharedState.mutate((draft) => {
+                const known = new Set(draft.records.map(rec => rec.id))
+                for (const rec of incoming) {
+                  if (rec && typeof rec.id === 'number' && Number.isFinite(rec.id) && !known.has(rec.id)) {
+                    draft.records.push(rec)
+                    known.add(rec.id)
+                  }
+                }
+                // 增量乱序到达仍保持 id 升序（面板增量渲染与 sinceId 语义都依赖）
+                draft.records.sort((a, b) => a.id - b.id)
+                if (draft.records.length > 500) {
+                  draft.records.splice(0, draft.records.length - 500)
+                }
+                const last = draft.records[draft.records.length - 1]
+                if (last && last.id > draft.latestId) {
+                  draft.latestId = last.id
+                }
+                draft.updatedAt = Date.now()
+              })
+            }
+            return { ok: true }
+          },
+        }),
+      }))
+
+      // W13 Network：拉取（面板兜底 + Coding Agent 消费入口）。探针在线走
+      // 探针环形缓冲（真源），离线回落 sharedState 历史
+      uni.rpc.register(defineRpcFunction({
+        name: 'get-network-records',
+        type: 'query',
+        jsonSerializable: true,
+        agent: { description: 'Get captured network records (incremental by sinceId, newest tail window).' },
+        setup: () => ({
+          handler: async (args: GetNetworkRecordsParams): Promise<GetNetworkRecordsResult> => {
+            const sinceId = typeof args?.sinceId === 'number' ? args.sinceId : 0
+            const limit = Math.min(Math.max(typeof args?.limit === 'number' ? args.limit : 200, 1), 500)
+            try {
+              return await registry.callAgent<GetNetworkRecordsResult>('uni-devtools:agent:getNetworkRecords', { sinceId, limit })
+            }
+            catch {
+              const snapshot = networkSharedState.value()
+              const records = snapshot.records
+                .filter(rec => rec.id > sinceId)
+                .slice(-limit)
+              // sharedState 读回的是 immer 冻结对象，浅拷贝成普通对象再出 wire
+              return { records: records.map(rec => ({ ...rec })), latestId: snapshot.latestId }
+            }
+          },
+        }),
+      }))
+
+      // W13 Network：清空（面板按钮）。node 清 sharedState + 尽力透传探针
+      // （探针离线时仅清 node 侧历史，同样算成功）
+      uni.rpc.register(defineRpcFunction({
+        name: 'clear-network-records',
+        type: 'action',
+        jsonSerializable: true,
+        agent: { description: 'Clear captured network records on both node and agent probe.' },
+        setup: () => ({
+          handler: async (): Promise<ClearNetworkRecordsResult> => {
+            networkSharedState.mutate((draft) => {
+              draft.records = []
+              draft.updatedAt = Date.now()
+            })
+            try {
+              await registry.callAgent('uni-devtools:agent:clearNetworkRecords')
+            }
+            catch {}
+            return { ok: true }
+          },
         }),
       }))
 

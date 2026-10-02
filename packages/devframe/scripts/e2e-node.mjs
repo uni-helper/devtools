@@ -104,6 +104,22 @@ try {
   }
 
   // 2. Connect simulated agent probe with client=uni-agent marker
+  // W13 Network：mock 探针环形缓冲（与真实 network.ts 同语义：sinceId 过滤 + 尾窗）
+  let agentNetworkRing = []
+  const netRec = (id, overrides = {}) => ({
+    id,
+    type: 'request',
+    method: 'GET',
+    url: `https://api.example.com/items?page=${id}`,
+    page: 'pages/index',
+    status: 200,
+    startTime: 1759400000000 + id,
+    duration: 100 + id,
+    responseSize: 2048,
+    responseBody: { page: id },
+    ok: true,
+    ...overrides,
+  })
   const agent = await connectClient('agent', {
     'uni-devtools:agent:ping': () => 424242,
     'uni-devtools:agent:getComponentTree': () => FAKE_TREE,
@@ -125,6 +141,19 @@ try {
       }
     },
     'uni-devtools:agent:navigate': () => {
+      return { ok: true }
+    },
+    'uni-devtools:agent:getNetworkRecords': (args) => {
+      const sinceId = args?.sinceId ?? 0
+      const limit = Math.min(args?.limit ?? 200, 500)
+      const records = agentNetworkRing.filter(rec => rec.id > sinceId).slice(-limit)
+      return {
+        records,
+        latestId: agentNetworkRing.length ? agentNetworkRing[agentNetworkRing.length - 1].id : 0,
+      }
+    },
+    'uni-devtools:agent:clearNetworkRecords': () => {
+      agentNetworkRing = []
       return { ok: true }
     },
   }, '?client=uni-agent')
@@ -215,6 +244,42 @@ try {
     throw new Error(`navigate-to 期望 { ok: true }，实际: ${JSON.stringify(navRes)}`)
   }
   console.log('✓ [5.3/5] router 扩展 RPC (get-registered-routes / get-router-info / navigate-to) 定向往返验证通过')
+
+  // 5.4 W13 Network 全链路：探针推送 → node 幂等 merge → 面板拉取/增量 → 清空双向
+  const netBatch = [
+    netRec(1),
+    netRec(2, { type: 'upload', method: 'POST', url: 'https://api.example.com/upload', requestBody: { filePath: 'wxfile://tmp/a.png', name: 'file' } }),
+  ]
+  agentNetworkRing.push(...netBatch)
+  const netPush = await agent.$call('uni-helper-devtools:push-network-records', { records: netBatch })
+  if (netPush?.ok !== true) {
+    throw new Error(`push-network-records 期望 { ok: true }，实际: ${JSON.stringify(netPush)}`)
+  }
+  const netGet = await panel.$call('uni-helper-devtools:get-network-records')
+  if (netGet?.records?.length !== 2 || netGet?.latestId !== 2 || netGet.records[0].url !== netBatch[0].url) {
+    throw new Error(`get-network-records 全量拉取失败: ${JSON.stringify(netGet)}`)
+  }
+  // 幂等：重复推送同批不得产生重复记录
+  await agent.$call('uni-helper-devtools:push-network-records', { records: netBatch })
+  const netGetDup = await panel.$call('uni-helper-devtools:get-network-records')
+  if (netGetDup?.records?.length !== 2) {
+    throw new Error(`push-network-records 幂等 merge 失败，期望 2 条实际 ${netGetDup?.records?.length}`)
+  }
+  // sinceId 增量拉取
+  const netInc = await panel.$call('uni-helper-devtools:get-network-records', { sinceId: 1 })
+  if (netInc?.records?.length !== 1 || netInc.records[0]?.id !== 2) {
+    throw new Error(`get-network-records sinceId 增量拉取失败: ${JSON.stringify(netInc)}`)
+  }
+  // 清空：node sharedState + 探针环形缓冲都要清（透传失败会被下一步抓到）
+  const netClear = await panel.$call('uni-helper-devtools:clear-network-records')
+  if (netClear?.ok !== true) {
+    throw new Error(`clear-network-records 期望 { ok: true }，实际: ${JSON.stringify(netClear)}`)
+  }
+  const netGetCleared = await panel.$call('uni-helper-devtools:get-network-records')
+  if (netGetCleared?.records?.length !== 0 || netGetCleared?.latestId !== 0) {
+    throw new Error(`clear-network-records 后拉取应为空，实际: ${JSON.stringify(netGetCleared)}`)
+  }
+  console.log('✓ [5.4/5] network RPC (push 幂等 merge / get 全量+增量 / clear 双向) 全链路验证通过')
   console.log('\n======================================================')
   console.log('  E2E 验收通过：packages/devframe 全链路端到端正常！')
   console.log('======================================================\n')

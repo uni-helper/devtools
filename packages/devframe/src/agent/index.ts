@@ -11,6 +11,7 @@
 
 import { createRpcClient } from 'devframe/rpc/client'
 import { config } from 'virtual:uni-devtools-agent'
+import type { ClearNetworkRecordsResult, GetNetworkRecordsResult } from '../types.ts'
 import { type UniSocketChannelHandle, createUniSocketChannel } from './socket'
 import { bindPushDeps, cancelScheduledPush, pushComponentTreeNow, resetPushGate, schedulePushComponentTree } from './push.ts'
 import { navigateInMiniProgram } from './navigate.ts'
@@ -24,6 +25,14 @@ import {
   recomputeComponentState,
   updateComponentState,
 } from './state'
+import {
+  cancelScheduledNetworkPush,
+  clearNetworkRecords,
+  getNetworkRecords,
+  installNetworkInterceptors,
+  resetNetworkPushState,
+  scheduleNetworkPush,
+} from './network.ts'
 
 export interface AgentConfig {
   wsUrl: string
@@ -149,6 +158,8 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     wsUrl: fullWsUrl,
     onOpen: () => {
       schedulePushComponentTree(100)
+      resetNetworkPushState()
+      scheduleNetworkPush(100)
     },
   })
 
@@ -162,6 +173,12 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     },
     'uni-devtools:agent:ping': (): number => {
       return Date.now()
+    },
+    'uni-devtools:agent:getNetworkRecords': (params?: any): GetNetworkRecordsResult => {
+      return getNetworkRecords(params)
+    },
+    'uni-devtools:agent:clearNetworkRecords': (): ClearNetworkRecordsResult => {
+      return clearNetworkRecords()
     },
     'uni-devtools:agent:getComponentState': (params: { id: string } | string): ComponentStateResult => {
       const id = typeof params === 'string' ? params : params?.id
@@ -254,9 +271,14 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
   }
 
   activeAgentInstance = instance
+  installNetworkInterceptors({
+    getActiveInstance: () => activeAgentInstance,
+    getUni: () => (typeof uni !== 'undefined' ? uni : (globalThis as any).uni),
+  })
   // 重连/重建实例后首推必须放行：node 侧（尤其重启后的 sidecar）sharedState
   // 可能仍是空初值，内容比对门不能挡住「内容相同但没送达过」的首推
   resetPushGate()
+  resetNetworkPushState()
   setupChangeDetectionHooks()
   return instance
 }
@@ -267,6 +289,7 @@ export function getAgentInstance(): AgentInstance | null {
 
 export function disposeAgent(): void {
   cancelScheduledPush()
+  cancelScheduledNetworkPush()
   if (activeAgentInstance) {
     activeAgentInstance.dispose()
     activeAgentInstance = null
@@ -285,4 +308,9 @@ export {
   recomputeComponentState,
   updateComponentState,
   updatePiniaState,
+  clearNetworkRecords,
+  getNetworkRecords,
+  installNetworkInterceptors,
+  resetNetworkPushState,
+  scheduleNetworkPush,
 }

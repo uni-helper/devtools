@@ -2,7 +2,7 @@
  * Frozen Wire Contracts for Uni-Helper DevTools
  *
  * Scope: `uni-helper-devtools`
- * RPCs (15):
+ * RPCs (18):
  *   - `ping`: () => PingResult
  *   - `get-component-tree`: () => ComponentTreeResult
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
@@ -15,6 +15,9 @@
  *   - `navigate-to`: (args: NavigateParams) => NavigateResult（W5 路由栈）
  *   - `get-pinia-stores` / `get-pinia-state` / `update-pinia-state`（W4 Pinia inspector）
  *   - `get-inspect-status`: () => GetInspectStatusResult（W11 Vite Inspect，node 本地读盘）
+ *   - `get-network-records`: (args: GetNetworkRecordsParams) => GetNetworkRecordsResult（W13 Network）
+ *   - `push-network-records`: (args: PushNetworkRecordsParams) => PushNetworkRecordsResult（W13，探针→node 推送）
+ *   - `clear-network-records`: () => ClearNetworkRecordsResult（W13，面板清空）
  *
  * W10 Reactivity Graph 扩展（无新 RPC，字段搭既有快照的车）：
  *   - `get-component-state` 返回新增 `reactivityGraph?: ReactivityGraphSnapshot`
@@ -219,4 +222,85 @@ export interface UpdatePiniaStateResult {
   ok: true
   id: string
   key: string
+}
+
+// ---------------------------------------------------------------------------
+// Network（W13）：探针包装 uni.request/uploadFile/downloadFile 采集真实请求。
+// 契约同时服务两条消费方：面板 Network tab（sharedState 增量推送）与后续
+// Coding Agent（`get-network-records` 拉取）——字段名按 wire 冻结，两端不得单方改。
+//
+// 拦截层级的证据（勿凭感觉改，见 B-network-1002 工单）：
+// uni mp 运行时在 vendor.js 求值期经 initUni(shims, protocols, wx) 把平台 API
+// 按引用固化（initWx 拷贝 newWx[key] = wx[key]），探针注入晚于该时刻，补丁
+// wx.request 拦不住 uni.request；而 uni 是 Proxy，uni.request = wrapper 落到
+// target 自有属性且 get 优先命中——包装 uni 层是单点无双记的正确位置。
+// ---------------------------------------------------------------------------
+
+export type NetworkRecordType = 'request' | 'upload' | 'download'
+
+export interface NetworkRecord {
+  /** 探针侧进程内单调递增序号（跨重连不重置）；node merge 与面板增量都以它对齐 */
+  id: number
+  type: NetworkRecordType
+  /** GET/POST/...；upload/download 无 method 参数，恒 'POST' */
+  method: string
+  url: string
+  /** 发起时所在页面路由（getCurrentPages 栈顶，取不到省略） */
+  page?: string
+  /** HTTP 状态码；网络层失败（fail 回调）为 0 */
+  status: number
+  /** 预留：HTTP 状态文案。mp 运行时拿不到，探针不填；失败语义看 error 字段 */
+  statusText?: string
+  requestHeaders?: Record<string, string>
+  responseHeaders?: Record<string, string>
+  /** 请求体：request=data 原样；upload={filePath,name,formData}；download 无 */
+  requestBody?: unknown
+  /** 响应体：尝试 JSON.parse，失败保持 string；download 为 tempFilePath */
+  responseBody?: unknown
+  /** 超 MAX_NETWORK_BODY_CHARS 截断（见 agent/network.ts，字面量两端同步） */
+  requestBodyTruncated?: boolean
+  responseBodyTruncated?: boolean
+  /** 估算字节数（string 长度 / JSON.stringify 长度）；download 为文件大小（拿不到省略） */
+  responseSize?: number
+  /** epoch ms（探针侧 Date.now()） */
+  startTime: number
+  /** ms（complete 时结算） */
+  duration?: number
+  /** success 回调触发且 statusCode < 400 */
+  ok: boolean
+  /** fail 回调的 errMsg 原文 */
+  error?: string
+  aborted?: boolean
+}
+
+export interface GetNetworkRecordsParams {
+  /** 只返回 id > sinceId 的记录（增量拉取；缺省返回最近一窗） */
+  sinceId?: number
+  /** 默认 200，上限 500（与探针环形缓冲同容） */
+  limit?: number
+}
+
+export interface GetNetworkRecordsResult {
+  records: NetworkRecord[]
+  /** 探针环形缓冲内最大 id（拉齐水位用；空缓冲为 0） */
+  latestId: number
+}
+
+export interface PushNetworkRecordsParams {
+  records: NetworkRecord[]
+}
+
+export interface PushNetworkRecordsResult {
+  ok: boolean
+}
+
+export interface ClearNetworkRecordsResult {
+  ok: boolean
+}
+
+/** sharedState('network-records') 的值形状（node 侧持有，面板订阅渲染） */
+export interface NetworkSharedState {
+  records: NetworkRecord[]
+  latestId: number
+  updatedAt: number
 }
