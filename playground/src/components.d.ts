@@ -20,6 +20,7 @@ declare module '@vue/runtime-core' {
     DemosKeepAliveTabB: typeof import('./components/demos/KeepAliveTabB.vue')['default']
     DemosKeepAliveTabC: typeof import('./components/demos/KeepAliveTabC.vue')['default']
     DemosModelTwoWayDemo: typeof import('./components/demos/ModelTwoWayDemo.vue')['default']
+    DemosNetworkDemoCard: typeof import('./components/demos/NetworkDemoCard.vue')['default']
     DemosOptionsApiFullDemo: typeof import('./components/demos/OptionsApiFullDemo.vue')['default']
     DemosPropsAdvancedDemo: typeof import('./components/demos/PropsAdvancedDemo.vue')['default']
     DemosPropsBasicDemo: typeof import('./components/demos/PropsBasicDemo.vue')['default']

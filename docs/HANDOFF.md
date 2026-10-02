@@ -42,7 +42,7 @@ packages/
 │   └── （官方源码共 8 处改动，均有 "uni-devtools" 注释标记）
 ├── devtools-kit/     vendored @vue/devtools-kit（协议/codec/rpc；exports 指 src；仅依赖 devframe@1.1.0）
 ├── devframe/         node 侧 + 探针 + 编译期插桩
-│   ├── src/devframe.ts     DevframeDefinition + 15 个 RPC + sharedState('component-tree')
+│   ├── src/devframe.ts     DevframeDefinition + 18 个 RPC + sharedState('component-tree'/'network-records')
 │   ├── src/relay.ts        AgentRegistry 定向调用（探针不可信校验）
 │   ├── src/plugin.ts       Vite 插件（sidecar + 虚拟模块注入探针 + instrument post transform）
 │   ├── src/instrument.ts   ★ 编译期插桩（__file 注入 / 闭包绑定捕获 / render 钩子包装）
@@ -57,8 +57,8 @@ packages/
 │   │   ├── inspect-serve.ts   Vite Inspect 静态托管（h3 serveStatic + 状态探测）
 │   │   ├── push.ts     推送调度（防抖 + 内容比对门）
 │   │   └── serialize.ts    共享序列化/ref 判定
-│   ├── test/               vitest 101 例（instrument/pinia/router/open-in-editor/render-hook/state/reactivity-graph/render-code/inspect-serve）
-│   ├── scripts/e2e-node.mjs 机器验收（5+2 项全链路）
+│   ├── test/               vitest 125 例（instrument/pinia/router/open-in-editor/render-hook/state/reactivity-graph/render-code/inspect-serve/network）
+│   ├── scripts/e2e-node.mjs 机器验收（含 5.4 network 全链路）
 │   └── scripts/dev.mjs     本地起 sidecar（打印带 token 面板 URL）
 ├── panel-legacy/     旧 @antfu/design 面板留底（不再维护；df/client.ts 有历史借鉴价值）
 ├── hub-ui/           vendored 官方 hub-ui 外壳（参考）
