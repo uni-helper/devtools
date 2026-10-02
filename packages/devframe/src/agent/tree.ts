@@ -1,7 +1,7 @@
 /**
  * 最小组件树采集模块
- * 沿 page.$vm 沿 $.subTree/.component 递归采集组件树
- * 约束：纯 JSON 可序列化、无循环引用、禁止使用 window/document/location
+ * 沿 page.$vm → $.subTree/.component 递归采集组件树
+ * 约束：纯 JSON 可序列化、无循环引用（浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
 
 export interface ComponentTreeNode {
@@ -80,7 +80,8 @@ function fileBasename(file: string | undefined): string | undefined {
  * 组件显示名兜底链：name → __name → displayName → fileName →
  * 文件名 basename（编译期 __file 注入，plain `<script>` SFC / layout 的
  * 唯一来源）→ vnode 标签 → Anonymous。
- * 与 state.ts 的取名逻辑保持一致。
+ * 编译期写入端见 instrument.ts 的 injectEntryFileGuard（`__file` 兜底命名
+ * 与本函数一致是冻结契约）。
  */
 export function getComponentDisplayName(typeObj: any, vnodeTag?: string): string | undefined {
   return typeObj?.name
@@ -91,14 +92,11 @@ export function getComponentDisplayName(typeObj: any, vnodeTag?: string): string
     || vnodeTag
 }
 
-/**
- * 从 VNode 树中查找子组件实例
- */
 function collectComponentsFromVNode(vnode: any, out: any[], visited: Set<any>, depth = 0): void {
   if (!vnode || depth > 20)
     return
 
-  // 若当前 VNode 挂载了 component 实例，则收集该组件实例并终止本分支下探
+  // 组件 vnode 只收集实例、不下探其子树——子组件的子树由其自身递归覆盖
   if (vnode.component) {
     const compInstance = vnode.component.proxy || vnode.component
     if (compInstance && !visited.has(compInstance)) {
@@ -107,7 +105,6 @@ function collectComponentsFromVNode(vnode: any, out: any[], visited: Set<any>, d
     return
   }
 
-  // 若为普通元素、Fragment 或插槽容器，继续遍历其子 VNode
   if (Array.isArray(vnode.children)) {
     for (const child of vnode.children) {
       if (child && typeof child === 'object') {
@@ -124,13 +121,10 @@ function collectComponentsFromVNode(vnode: any, out: any[], visited: Set<any>, d
   }
 }
 
-/**
- * 查找组件内部的直接子组件实例
- */
 function findChildVMs(vm: any, internal: any, visited: Set<any>): any[] {
   const children: any[] = []
 
-  // 1. 优先从 Vue proxy 层获取 $children（uni-app 小程序关键路径）
+  // $children：uni-app mp 的关键路径（Vue proxy 层直接给子实例）
   const rawChildren = vm?.$children || internal?.$children
   if (Array.isArray(rawChildren) && rawChildren.length > 0) {
     for (const child of rawChildren) {
@@ -141,7 +135,6 @@ function findChildVMs(vm: any, internal: any, visited: Set<any>): any[] {
     return children
   }
 
-  // 2. 沿 Vue 3 的 subTree 递归寻访
   const subTree = internal?.subTree || (internal?.$ && internal.$.subTree) || vm?.subTree
   if (subTree) {
     collectComponentsFromVNode(subTree, children, visited)
@@ -168,7 +161,6 @@ export function extractComponentNode(
     return null
   }
 
-  // 防循环引用
   if (visited.has(vm)) {
     return null
   }
@@ -202,7 +194,6 @@ export function extractComponentNode(
       node.file = String(filePath)
     }
 
-    // 查找并递归子组件
     const childVMs = findChildVMs(vm, internal, visited)
     if (childVMs.length > 0) {
       const childNodes: ComponentTreeNode[] = []
@@ -249,7 +240,6 @@ export function collectComponentTree(customPages?: any[]): PageComponentTree[] {
     return []
   }
 
-  // 清理已卸载的陈旧实例
   for (const [id, comp] of instanceRegistry.entries()) {
     const internal = comp.$ || comp
     if (internal?.isUnmounted) {

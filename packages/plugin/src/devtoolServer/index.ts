@@ -17,7 +17,6 @@ import createAppRouter from './rpc/index'
 
 const eventEmitter = new EventEmitter()
 
-/** 创建DevTools开发服务器 */
 export function createDevtoolServe(
   serverOptions: {
     port: number

@@ -48,35 +48,6 @@ export function toRawType(value: unknown): string {
 }
 
 export function formatStateType(value: unknown): StateType {
-  // Vue
-  // if (isComputed(value)) {
-  //   const state = formatStateType((value as ComputedRef).value)
-  //   return {
-  //     ...state,
-  //     ...(state.recursive
-  //       ? { rawDisplay: formatWithExtraType(state.rawDisplay, 'Computed') }
-  //       : { value: formatWithExtraType(state.value, 'Computed') }),
-  //   }
-  // }
-  // else if (isRef(value)) {
-  //   const state = formatStateType(toRaw(value.value))
-  //   return {
-  //     ...state,
-  //     ...(state.recursive
-  //       ? { rawDisplay: formatWithExtraType(state.rawDisplay, 'Ref') }
-  //       : { value: formatWithExtraType(state.value, 'Ref') }),
-  //   }
-  // }
-  // else if (isReactive(value)) {
-  //   const state = formatStateType(toRaw(value))
-  //   return {
-  //     ...state,
-  //     ...(state.recursive
-  //       ? { rawDisplay: formatWithExtraType(state.rawDisplay, 'Reactive') }
-  //       : { value: formatWithExtraType(state.value, 'Reactive') }),
-  //   }
-  // }
-
   if (isArray(value)) {
     return {
       rawType: 'object',

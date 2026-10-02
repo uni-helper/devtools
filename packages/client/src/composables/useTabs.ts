@@ -69,13 +69,6 @@ export function useTabs() {
           path: '/documents',
           title: 'Documents',
         },
-        // {
-        //   icon: 'i-tabler:terminal',
-        //   name: 'console',
-        //   order: 100,
-        //   path: '/console',
-        //   title: 'Console',
-        // },
         {
           icon: 'i-carbon-network-4',
           name: 'graph',

@@ -1,41 +1,18 @@
 /**
  * 组件状态读写模块 (State Inspection & Mutation)
  * 支持 Options API ($data / computed) 与 Composition API (setup / setupOther / computed)
- * 约束：纯 JSON 安全序列化、禁止使用 window/document/location 浏览器专属 API
+ * 约束：纯 JSON 安全序列化（浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
 
+import { BINDINGS_PROP } from '../shared/contracts.ts'
+import type { ComponentStateEntry, ComponentStateResult } from '../types.ts'
 import { checkIsRef, ensureJsonSafe, getRaw, getSetupBindingInfo, readComputedSource } from './serialize.ts'
 import { buildReactivityGraph } from './reactivity-graph.ts'
 import { getComponentDisplayName, getRegisteredInstance } from './tree.ts'
 
-/**
- * 编译期插桩挂载闭包绑定的属性名（plugin 侧 instrument.ts 写入端）。
- * 与 socket.ts 的 STRUCTURED_CLONE_PREFIX 同理：不从 plugin 模块导入
- *（node:path 会炸 mp 构建），字面量契约两端冻结同步（HANDOFF §4）。
- */
-const BINDINGS_PROP = '__uni_devtools_bindings__'
+// 结果形态即 wire 契约（types.ts 单点定义，探针侧不再复制镜像）
 
-export interface ComponentStateEntry {
-  value?: unknown // JSON 安全值（function 绑定可省略）
-  stateType?: 'ref' | 'computed' | 'reactive'
-  readonly?: boolean
-  raw?: string // computed getter 源码（tooltip），截断 ~500 字符
-  fn?: boolean // function 绑定标记（Setup (other) 段）
-  fnName?: string
-  fnSource?: string
-  editable?: boolean // 仅 options computed 用（有 setter 才可编辑）
-}
-
-export interface ComponentStateResult {
-  id: string
-  name: string
-  props?: Record<string, unknown>
-  data?: Record<string, unknown>
-  setup?: Record<string, ComponentStateEntry>
-  setupOther?: Record<string, ComponentStateEntry>
-  computed?: Record<string, ComponentStateEntry> // Options API computed（经 proxy 求值）
-  attrs?: Record<string, unknown>
-}
+export type { ComponentStateEntry, ComponentStateResult }
 
 export interface UpdateStateParams {
   id: string
@@ -57,7 +34,8 @@ export interface UpdateStateResult {
 }
 
 /**
- * 触发组件视图层更新（调用 Vue 的 $forceUpdate 或 internal.update，驱动 mpInstance.setData）
+ * 触发组件视图层更新——响应式变更不会自动驱动 mp 渲染管道，需显式走到
+ * $forceUpdate / internal.update（底层即 mpInstance.setData）
  */
 export function triggerComponentUpdate(vm: any, internal: any): void {
   try {
@@ -147,9 +125,6 @@ function mergeOptionGroup(to: Record<string, any>, from: any): void {
   }
 }
 
-/**
- * 读取组件状态
- */
 export function getComponentState(id: string): ComponentStateResult {
   if (!id) {
     throw new Error('[getComponentState] Missing component id')
@@ -166,7 +141,6 @@ export function getComponentState(id: string): ComponentStateResult {
     const name = String(getComponentDisplayName(typeObj) || 'Anonymous')
     const mergedOptions = resolveMergedOptions(internal)
 
-    // 1. Props
     const props: Record<string, unknown> = {}
     const rawProps = internal.props
     if (rawProps && typeof rawProps === 'object') {
@@ -182,7 +156,7 @@ export function getComponentState(id: string): ComponentStateResult {
       }
     }
 
-    // 2. Computed (Options API)
+    // Options API computed（经 proxy 求值，区别于 setup 段的 computed ref）
     const computed: Record<string, ComponentStateEntry> = {}
     const computedOptions = mergedOptions?.computed || typeObj?.computed
     if (computedOptions && typeof computedOptions === 'object') {
@@ -213,7 +187,7 @@ export function getComponentState(id: string): ComponentStateResult {
       }
     }
 
-    // 3. Data (Options API, 排除出现在 props 或 computed 定义里的同名键)
+    // $data 中排除与 props / computed 同名的键，避免跨段重复展示
     const data: Record<string, unknown> = {}
     const rawData = vm.$data || internal.data
     if (rawData && typeof rawData === 'object') {
@@ -237,7 +211,7 @@ export function getComponentState(id: string): ComponentStateResult {
       }
     }
 
-    // 4. Setup (Composition API) & Setup (other)
+    // Setup (Composition API) 分两个视图段：setup / setupOther
     const setup: Record<string, ComponentStateEntry> = {}
     const setupOther: Record<string, ComponentStateEntry> = {}
     const rawSetup = resolveSetupSource(vm, internal)
@@ -335,7 +309,6 @@ export function getComponentState(id: string): ComponentStateResult {
       }
     }
 
-    // 5. Attrs
     const attrs: Record<string, unknown> = {}
     const rawAttrs = internal.attrs
     if (rawAttrs && typeof rawAttrs === 'object') {
@@ -351,9 +324,9 @@ export function getComponentState(id: string): ComponentStateResult {
       }
     }
 
-    // 6. Reactivity Graph：与 Setup 面板共用同一 setup 源（真 setupState 或 mp
-    //    编译期捕获的闭包绑定），图数据搭 state 快照便车下发；无响应式绑定
-    //    时省略字段（面板侧缺省即空图，与官方 kit 行为一致）
+    // Reactivity Graph：与 Setup 面板共用同一 setup 源（真 setupState 或 mp
+    // 编译期捕获的闭包绑定），图数据搭 state 快照便车下发；无响应式绑定
+    // 时省略字段（面板侧缺省即空图，与官方 kit 行为一致）
     const reactivityGraph = buildReactivityGraph(rawSetup)
 
     const result: ComponentStateResult = {
@@ -401,7 +374,6 @@ function navigateToParent(root: any, segments: string[], id: string): { parent: 
   return { parent, last: segments[segments.length - 1]! }
 }
 
-/** 终段写入：ref 绑定落 .value；remove 走 delete / 数组 splice；普通对象属性直接赋值 */
 function assignFinal(target: { parent: any, last: string }, value: unknown, remove: boolean | undefined, id: string): void {
   const { parent, last } = target
   const current = parent[last]
@@ -429,9 +401,6 @@ function assignFinal(target: { parent: any, last: string }, value: unknown, remo
   parent[last] = value
 }
 
-/**
- * 修改组件状态
- */
 export function updateComponentState(
   params: UpdateStateParams,
   onUpdated?: () => void,
@@ -490,7 +459,6 @@ export function updateComponentState(
       const useSetup = section ? section === 'setup' : !!(setupState && key in setupState)
       const useData = section ? section === 'data' : (!useSetup && !!(data && key in data))
 
-      // 1. Composition API (setupState / 编译期捕获的闭包绑定)
       if (useSetup && setupState && key in setupState) {
         const isCapturedBindings = typeof internal?.render === 'function' && internal.render[BINDINGS_PROP] === setupState
         const binding = setupState[key]
@@ -498,7 +466,6 @@ export function updateComponentState(
         if (path.length === 1) {
           const rawSetup = getRaw(setupState)
           const rawBinding = rawSetup?.[key]
-          // (1) ref 场景：直接赋值给 .value
           if (checkIsRef(rawBinding)) {
             if (remove)
               throw new Error(`[updateComponentState] Cannot remove ref binding "${key}" on component "${id}"`)
@@ -511,7 +478,7 @@ export function updateComponentState(
             binding.value = value
             updated = true
           }
-          // (2) reactive / 对象场景：Object.assign 保持响应式代理引用
+          // Object.assign 保持响应式代理引用，整体替换会丢响应式
           else if (typeof binding === 'object' && binding !== null) {
             if (remove) {
               delete setupState[key]
@@ -525,7 +492,7 @@ export function updateComponentState(
               throw new Error(`[updateComponentState] Cannot assign non-object value to reactive/object key "${key}" on component "${id}"`)
             }
           }
-          // (3) 纯值/proxyRefs 代理穿透场景
+          // (3) 纯值 / proxyRefs 代理穿透场景
           else {
             if (isCapturedBindings) {
               throw new Error(`[updateComponentState] Cannot edit plain-value binding "${key}" (mp 编译期内联的非响应式 const，仅 ref/reactive 绑定可编辑) on component "${id}"`)
@@ -540,13 +507,12 @@ export function updateComponentState(
           }
         }
         else {
-          // 深路径：逐段解 ref 下钻后终段属性赋值
           assignFinal(navigateToParent(setupState, path, id), value, remove, id)
           updated = true
         }
       }
 
-      // 2. Options API ($data)
+      // Options API ($data)
       if (!updated && useData && data && key in data) {
         if (path.length === 1) {
           if (remove) {
@@ -568,10 +534,9 @@ export function updateComponentState(
       throw new Error(`[updateComponentState] Key "${key}" not found on component "${id}"`)
     }
 
-    // 3. 关键修复：显式触发 Vue 3 重新计算并执行小程序渲染管道 (mpInstance.setData)
+    // 响应式赋值不会自动驱动 mp 渲染，需显式触发（见 triggerComponentUpdate）
     triggerComponentUpdate(vm, internal)
 
-    // 4. 回调通知
     if (onUpdated) {
       onUpdated()
     }
@@ -587,9 +552,7 @@ export function updateComponentState(
 const COMPUTED_DIRTY_FLAG = 16
 const COMPUTED_EVALUATED_FLAG = 128
 
-/**
- * 触发 computed ref 重算（镜像 kit triggerComputedRef）
- */
+/** 触发 computed ref 重算（镜像 kit triggerComputedRef） */
 export function triggerComputedRef(computedRef: any): void {
   if (!computedRef || typeof computedRef !== 'object')
     return
@@ -628,9 +591,6 @@ export function triggerComputedRef(computedRef: any): void {
   }
 }
 
-/**
- * 重算组件状态中的 computed 值（仅支持 setup 段）
- */
 export function recomputeComponentState(
   id: string,
   section: string,

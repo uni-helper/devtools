@@ -1,6 +1,6 @@
 /**
  * UniSocketChannel: 适配 uni.connectSocket 为 birpc ChannelOptions
- * 约束：禁止使用 window / document / location（多端预留）
+ * （浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
 
 import { structuredCloneParse } from 'devframe/utils/structured-clone'
@@ -110,7 +110,6 @@ export function createUniSocketChannel(
       return
     }
 
-    // 绑定事件（优先使用 SocketTask 实例方法，兜底使用全局事件）
     if (socketTask && typeof socketTask.onOpen === 'function') {
       socketTask.onOpen(() => {
         handleOpen()
@@ -167,7 +166,6 @@ export function createUniSocketChannel(
       reconnectTimer = null
     }
 
-    // 刷新等待队列
     while (sendQueue.length > 0) {
       const pendingData = sendQueue.shift()
       if (pendingData !== undefined) {
@@ -215,7 +213,6 @@ export function createUniSocketChannel(
       if (onReconnect) {
         onReconnect(reconnectAttempt)
       }
-      // 指数退避，封顶 5000ms
       const backoff = Math.min(initialBackoffMs * 1.5 ** (reconnectAttempt - 1), maxBackoffMs)
       reconnectTimer = setTimeout(() => {
         reconnectTimer = null

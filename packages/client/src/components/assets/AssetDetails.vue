@@ -43,11 +43,6 @@ const codeSnippets = computed(() => {
     return items
   }
 
-  // items.push({
-  //   lang: 'html',
-  //   code: `<a download href="${asset.value.publicPath}">\n  Download ${asset.value.path.split('/').slice(-1)[0]}\n</a>`,
-  //   name: 'Download link',
-  // })
   return items
 })
 

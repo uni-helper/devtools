@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// const { isFirstVisit } = useFrameState()
 import { VueBadge, VueButton } from '@vue/devtools-ui'
 import Logo from '/icon.png'
 

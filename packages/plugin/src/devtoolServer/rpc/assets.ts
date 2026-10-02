@@ -26,7 +26,6 @@ function guessType(path: string): AssetType {
 }
 
 function guessMimeType(path) {
-  // 如果无法确定类型，默认为'application/octet-stream'
   return mime.getType(path) || 'application/octet-stream'
 }
 

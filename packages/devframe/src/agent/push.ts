@@ -20,9 +20,7 @@ export function bindPushDeps(next: PushDeps): void {
   deps = next
 }
 
-/**
- * 带有 debounce 防抖的组件树快照推送触发器（默认 300ms 防抖）
- */
+/** 带防抖的组件树快照推送触发器 */
 export function schedulePushComponentTree(delay = 300): void {
   if (pushTimer) {
     clearTimeout(pushTimer)

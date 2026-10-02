@@ -17,7 +17,6 @@ export function getPagesPath(pagesPath?: string) {
   throw new Error('找不到pages.json文件,请配置路径')
 }
 
-/** 获取pages.json文件数据 */
 export function getPagesInfo(pagesPath?: string) {
   const path = getPagesPath(pagesPath)
   const pagesJson = JSON5.parse<PagesJson>(fs.readFileSync(path, 'utf-8'))

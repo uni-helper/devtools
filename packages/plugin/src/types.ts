@@ -1,9 +1,5 @@
 import type { VitePluginVueDevToolsOptions } from 'vite-plugin-vue-devtools'
 
-export interface Options {
-  // define your plugin options here
-}
-
 export interface Pages {
   path: string
   tabBar: boolean
@@ -42,7 +38,7 @@ export interface Options {
   launchEditor?: 'appcode' | 'atom' | 'atom-beta' | 'brackets' | 'clion' | 'code' | 'code-insiders' | 'codium' | 'emacs' | 'idea' | 'notepad++' | 'pycharm' | 'phpstorm' | 'rubymine' | 'sublime' | 'vim' | 'visualstudio' | 'webstorm' | 'rider' | string
 
   /**
-   * vue-devtools Opthins
+   * vue-devtools 插件选项
    */
   vueDevtoolsOptions: VitePluginVueDevToolsOptions
   /**

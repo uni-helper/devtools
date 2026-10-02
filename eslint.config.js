@@ -31,4 +31,11 @@ export default antfu(
       },
     },
   },
+  {
+    // 探针运行在小程序沙箱，window/document/location 会炸 mp 构建（原先散落在各模块头注释里）
+    files: ['packages/devframe/src/agent/**', 'packages/devframe/src/shared/**'],
+    rules: {
+      'no-restricted-globals': ['error', 'window', 'document', 'location'],
+    },
+  },
 )

@@ -15,7 +15,6 @@ function extractDomain(url: string) {
 function extractRepoPath(url: string) {
   try {
     const parsedUrl = new URL(url)
-    // 获取路径部分，并去掉开头的斜杠
     const path = parsedUrl.pathname.slice(1)
     return path
   }

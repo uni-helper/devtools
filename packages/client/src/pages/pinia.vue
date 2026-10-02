@@ -9,7 +9,6 @@ import ComponentTree from '~/components/tree/TreeViewer.vue'
 const state = ref<Record<string, CustomInspectorState[]>>({})
 const tree = ref<CustomInspectorNode[]>([])
 const selectId = ref('')
-// const emptyState = computed(() => true)
 
 const piniaRootLabel = [
   {
@@ -34,7 +33,6 @@ trpc.onPiniaState.subscribe(undefined, {
   },
 })
 
-// 搜索store
 const filterStoreKey = ref('')
 const filterTree = computed(() => {
   if (!filterStoreKey.value)

@@ -9,11 +9,10 @@
  *   - `update-component-state`: (args: UpdateComponentStateParams) => UpdateComponentStateResult
  *   - `recompute-component-state`: (args: RecomputeComponentStateParams) => RecomputeComponentStateResult
  *   - `open-in-editor`: (args: OpenInEditorParams) => OpenInEditorResult
- *   - `get-registered-routes` / `get-router-info` / `navigate-to`（W5 路由栈，见 agy T-79c804）
+ *   - `get-registered-routes`: () => GetRegisteredRoutesResult（W5 路由栈）
+ *   - `get-router-info`: () => RouterInfoResult（W5 路由栈）
+ *   - `navigate-to`: (args: NavigateParams) => NavigateResult（W5 路由栈）
  *   - `get-pinia-stores` / `get-pinia-state` / `update-pinia-state`（W4 Pinia inspector）
- *   - `get-registered-routes`: () => GetRegisteredRoutesResult
- *   - `get-router-info`: () => RouterInfoResult
- *   - `navigate-to`: (args: NavigateParams) => NavigateResult
  *   - `get-inspect-status`: () => GetInspectStatusResult（W11 Vite Inspect，node 本地读盘）
  *
  * W10 Reactivity Graph 扩展（无新 RPC，字段搭既有快照的车）：
@@ -102,8 +101,7 @@ export interface ComponentTreeResult {
 
 // ---------------------------------------------------------------------------
 // Reactivity Graph（W10）：镜像 vendored kit `protocol/messages.ts` 的同名类型。
-// 探针不 import devtools-kit（依赖纯净性），字面量契约两端冻结同步——
-// 与 BINDINGS_PROP 同一约定（HANDOFF §4）
+// 对端在 vendored kit 内无法反向导入本仓，字面量契约两端冻结同步（HANDOFF §4）
 // ---------------------------------------------------------------------------
 
 export type ReactivityGraphNodeType =

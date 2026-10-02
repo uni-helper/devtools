@@ -8,7 +8,8 @@
  * 不依赖 agent 初始化早于 store 创建）。代价：拿不到 $subscribe 推送（v1 拉取式，
  * 面板选中 store 时实时读）。
  *
- * 约束：纯 JSON 可序列化输出、禁浏览器 API（复用 state.ts 的序列化与 ref 判定）。
+ * 约束：纯 JSON 可序列化输出（浏览器全局禁用由 eslint no-restricted-globals 执法，
+ * 序列化与 ref 判定复用 state.ts 的助手）。
  */
 
 import { checkIsRef, toSafeJsonValue } from './serialize.ts'
@@ -93,7 +94,6 @@ function collectGetterKeys(store: any, stateKeys: Set<string>): string[] {
   return out
 }
 
-/** 读取单个 store 的 state + getters 快照 */
 export function getPiniaState(id: string): PiniaStateResult {
   if (!id)
     throw new Error('[getPiniaState] Missing store id')
@@ -171,7 +171,6 @@ export function updatePiniaState(params: UpdatePiniaStateParams): UpdatePiniaSta
   if (!(key in target))
     throw new Error(`[updatePiniaState] Key "${key}" not found on store "${id}"`)
 
-  // 逐段下钻到目标父对象（解 ref；$state 为响应式代理，属性赋值保持响应式）
   let parent = target
   for (let i = 0; i < path.length - 1; i++) {
     let cur = parent[path[i]!]

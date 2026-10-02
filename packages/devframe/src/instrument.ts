@@ -20,15 +20,17 @@
  *    绑定对象持有闭包变量的引用（ref/reactive 为同一引用，读值天然是活值）；
  *    每次 setup 调用生成新 render 函数 → 每个实例各自一份绑定，互不串扰
  *
- * 冻结契约（改这里必须同步改，见 HANDOFF §4）：
- * - 属性名 `__uni_devtools_bindings__` 与探针 `agent/state.ts` 的读取端一致
+ * 冻结契约（见 HANDOFF §4）：
+ * - 属性名 `__uni_devtools_bindings__` 单点定义于 shared/contracts.ts，写读两端同一导入
  * - `__file` 的兜底命名与 `agent/tree.ts` 的 getComponentDisplayName 一致
  */
 import { Buffer } from 'node:buffer'
 import path from 'node:path'
 import process from 'node:process'
 
-export const BINDINGS_PROP = '__uni_devtools_bindings__'
+import { BINDINGS_PROP } from './shared/contracts.ts'
+
+export { BINDINGS_PROP }
 
 const FILE_MARKER = '__uni_devtools_file__'
 const UNI_COMPONENT_PREFIX = 'uniComponent://'

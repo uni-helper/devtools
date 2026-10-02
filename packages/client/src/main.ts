@@ -18,7 +18,6 @@ const router = createRouter({
 app.use(router)
 app.mount('#app')
 
-// disable right click
 document.addEventListener('contextmenu', (event) => {
   event.preventDefault()
 })

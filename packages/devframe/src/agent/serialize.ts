@@ -1,6 +1,6 @@
 /**
  * 探针共用序列化与响应式判定助手（state.ts / pinia.ts 共享）。
- * 约束：纯 JSON 安全、禁浏览器 API。
+ * 约束：纯 JSON 安全（浏览器全局禁用由 eslint no-restricted-globals 执法）。
  */
 
 import { isRef, toRaw } from 'vue'

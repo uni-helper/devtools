@@ -18,18 +18,15 @@ trpc.onComponentTree.subscribe(undefined, {
 })
 
 function handleDateById(id: number | string) {
-  // 确保 ID 是数字类型
   const numericId = typeof id === 'string' ? Number.parseInt(id, 10) : id
   console.log('[Client] Selected component ID:', numericId, '(original:', id, ')')
   selectedComponentId.value = numericId
 
-  // 先清空之前的数据
   componentData.value = {}
 
   trpc.onComponentData.subscribe(numericId, {
     onData: (value) => {
       console.log('[Client] Component data received for ID', numericId, ':', value)
-      // 解析序列化的数据
       const parsed: Record<string, any> = {}
       for (const [key, stringValue] of Object.entries(value)) {
         try {
@@ -37,10 +34,9 @@ function handleDateById(id: number | string) {
           const parsedArray = parse(stringValue as string)
           let parsedValue = Array.isArray(parsedArray) ? parsedArray[0] : parsedArray
 
-          // 如果是 ref/reactive 等响应式对象，提取其实际值
+          // 官方 kit 的 _custom 包装：ref/reactive 以 _custom.type/stateTypeName 标记，实际值在 _custom.value
           if (parsedValue && typeof parsedValue === 'object' && parsedValue._custom) {
             if (parsedValue._custom.type === 'ref' || parsedValue._custom.stateTypeName === 'Ref') {
-              // ref 对象，使用其 value
               parsedValue = parsedValue._custom.value
             }
           }
@@ -64,7 +60,6 @@ function handleDateById(id: number | string) {
 const filterComponentName = ref('')
 const searchTerm = computed(() => filterComponentName.value.trim().toLowerCase())
 
-// 使用计算属性来自动更新搜索结果，提高效率
 const filteredTree = computed(() => {
   if (!searchTerm.value) {
     return data
@@ -94,7 +89,6 @@ function searchNode(node: ComponentTreeNode, searchTerm: string): ComponentTreeN
   return null
 }
 
-// 使用watchDebounced来处理输入，减少不必要的计算和更新
 watchDebounced(
   searchTerm,
   () => {
@@ -105,12 +99,10 @@ watchDebounced(
 
 const filterStateKey = ref('')
 
-// 计算是否有数据
 const hasData = computed(() => {
   return selectedComponentId.value !== null && Object.keys(componentData.value).length > 0
 })
 
-// 将组件数据转换为 RootStateViewer 需要的格式
 const displayState = computed(() => {
   if (!filterStateKey.value) {
     return componentData.value

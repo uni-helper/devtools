@@ -17,7 +17,6 @@ import type {
   NavigateResult,
   OpenInEditorParams,
   OpenInEditorResult,
-  PageComponentTree,
   PingResult,
   PiniaStateResult,
   RecomputeComponentStateParams,
@@ -50,12 +49,10 @@ export function resolveClientAssets(explicitAssets?: string): string {
     return process.env.UNI_DEVTOOLS_PANEL_DIR
 
   const here = fileURLToPath(new URL('.', import.meta.url))
-  // 1. Primary path: real panel build output in packages/panel/dist
   const realPanelDist = resolve(here, '../../panel/dist')
   if (existsSync(realPanelDist))
     return realPanelDist
 
-  // 2. Stand-in fallback: packages/devframe/assets/panel
   const fallbackAssets = resolve(here, '../assets/panel')
   if (existsSync(fallbackAssets))
     return fallbackAssets
@@ -203,16 +200,13 @@ export function createUniDevtoolsDevframe(
     },
 
     async setup(ctx) {
-      // Auto-bind group if not bound yet
       registry.bind(() => (ctx.rpc as any)?._rpcGroup)
 
       const uni = ctx.scope('uni-helper-devtools')
 
+      const initialTree: ComponentTreeResult = { fetchedAt: 0, pages: [] }
       const treeSharedState = await uni.rpc.sharedState('component-tree', {
-        initialValue: {
-          fetchedAt: 0,
-          pages: [] as PageComponentTree[],
-        },
+        initialValue: initialTree,
       })
 
       uni.rpc.register(defineRpcFunction({

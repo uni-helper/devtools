@@ -20,7 +20,6 @@ export function openInEditor(
     launchEditor,
     // callback if failed to launch (optional)
     (fileName: string, errorMsg: string) => {
-      // log error if any
       console.error(`Failed to open ${fileName} in editor: ${errorMsg}`)
     },
   )

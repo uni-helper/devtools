@@ -6,7 +6,7 @@
  * - 虚拟模块：import { config } from 'virtual:uni-devtools-agent'
  * - 导出函数名：'uni-devtools:agent:getComponentTree', 'uni-devtools:agent:ping'
  * - 变更推送：主动采集树快照并调用 'uni-helper-devtools:push-component-tree'
- * - 约束：禁止使用 window / document / location
+ * （浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
 
 import { createRpcClient } from 'devframe/rpc/client'
@@ -58,15 +58,12 @@ function getCurrentPagesSafe(): any[] {
   }
 }
 
-/**
- * 安装生命周期与路由变更监听器，自动发现组件树变化
- */
 function setupChangeDetectionHooks(): void {
   if (changeHooksInstalled)
     return
   changeHooksInstalled = true
 
-  // 1. 小程序原生页面路由事件（微信/小程序全局路由变更）
+  // 小程序原生页面路由事件（wx 全局，仅微信系可用）
   if (typeof wx !== 'undefined' && typeof wx.onAppRoute === 'function') {
     try {
       wx.onAppRoute(() => {
@@ -76,7 +73,7 @@ function setupChangeDetectionHooks(): void {
     catch {}
   }
 
-  // 2. uni 路由跳转拦截（涵盖 navigateTo / redirectTo / switchTab / navigateBack / reLaunch）
+  // uni 路由跳转拦截（涵盖 navigateTo / redirectTo / switchTab / navigateBack / reLaunch）
   const uniObj = typeof uni !== 'undefined' ? uni : (globalThis as any).uni
   if (uniObj && typeof uniObj.addInterceptor === 'function') {
     const routeMethods = ['navigateTo', 'redirectTo', 'reLaunch', 'switchTab', 'navigateBack']
@@ -92,7 +89,7 @@ function setupChangeDetectionHooks(): void {
     }
   }
 
-  // 3. Vue DevTools 全局钩子接入（组件 mount/update 时触发）
+  // Vue DevTools 全局钩子接入（组件 mount/update 时触发）
   try {
     const globalObj = globalThis as any
     const existingHook = globalObj.__VUE_DEVTOOLS_GLOBAL_HOOK__
@@ -104,7 +101,7 @@ function setupChangeDetectionHooks(): void {
   }
   catch {}
 
-  // 4. 快照比对兜底：uni 的 mp 构建里 __VUE_DEVTOOLS_GLOBAL_HOOK__ 通常不存在，
+  // 快照比对兜底：uni 的 mp 构建里 __VUE_DEVTOOLS_GLOBAL_HOOK__ 通常不存在，
   // 「小程序里改 data」没有任何事件可听——而这恰恰是用户最高频的场景。轻量轮询
   // 只做一次序列化比对，内容没变就不推送；有 hook 事件时大部分变更已被上面的
   // 防抖推送消费，这里多为空转。采集深度受 tree.ts 的 maxDepth 约束，dev 探针
@@ -123,7 +120,7 @@ function setupChangeDetectionHooks(): void {
 }
 
 export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
-  // 防重复初始化单例保护（应对 HMR 或多页面重复注入）
+  // 单例防重复初始化（应对 HMR 或多页面重复注入）
   if (activeAgentInstance) {
     return activeAgentInstance
   }
@@ -137,7 +134,6 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     throw new Error('[uni-devtools-agent] wsUrl is missing from configuration')
   }
 
-  // 拼接带有预共享 Devframe 鉴权 token 与探针标记的 WebSocket 地址
   const separator = effectiveConfig.wsUrl.includes('?') ? '&' : '?'
   let fullWsUrl = effectiveConfig.token
     ? `${effectiveConfig.wsUrl}${separator}devframe_auth_token=${encodeURIComponent(effectiveConfig.token)}`
@@ -151,7 +147,6 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
   const socketHandle = createUniSocketChannel({
     wsUrl: fullWsUrl,
     onOpen: () => {
-      // 连接就绪后立即触发初次快照推送
       schedulePushComponentTree(100)
     },
   })
@@ -175,7 +170,6 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
       const res = typeof params === 'object' && params !== null && 'id' in params
         ? updateComponentState(params)
         : updateComponentState({ id: params, key: maybeKey!, value: maybeVal })
-      // 修改生效后触发组件树与状态推送
       schedulePushComponentTree(100)
       return res
     },

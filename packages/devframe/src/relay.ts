@@ -35,25 +35,16 @@ export class AgentRegistry {
     return this.cachedTree
   }
 
-  /**
-   * Bind the underlying RPC group or a resolver returning the group.
-   */
   bind(group: BirpcGroupResolver | undefined): void {
     this.groupSource = group
   }
 
-  /**
-   * Get the current active BirpcGroup instance if bound.
-   */
   getGroup(): BirpcGroup<any, any, false> | undefined {
     if (typeof this.groupSource === 'function')
       return this.groupSource()
     return this.groupSource
   }
 
-  /**
-   * Hook for connection lifecycle (e.g. onPeerConnect).
-   */
   connect = (connection: DevframeRpcConnection, _session?: DevframeNodeRpcSession): void => {
     const url = connection.request?.url ?? ''
     if (!url.includes(AGENT_CLIENT_MARKER))
@@ -66,16 +57,10 @@ export class AgentRegistry {
       this.agents.set(connection.id, client)
   }
 
-  /**
-   * Hook for disconnection lifecycle (e.g. onPeerDisconnect).
-   */
   disconnect = (connection: DevframeRpcConnection, _meta?: DevframeNodeRpcSessionMeta): void => {
     this.agents.delete(connection.id)
   }
 
-  /**
-   * Returns whether at least one agent is currently registered.
-   */
   get connected(): boolean {
     return this.agents.size > 0
   }
@@ -112,7 +97,8 @@ export class AgentRegistry {
   }
 
   /**
-   * Ping all connected RPC clients to discover agents and update the internal registry.
+   * Ping all connected RPC clients to discover agent peers
+   * (self-healing fallback when the registry went stale, e.g. after a sidecar restart).
    */
   async refreshByPing(): Promise<void> {
     this.agents.clear()

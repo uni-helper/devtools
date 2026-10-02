@@ -22,7 +22,6 @@ export async function injectDevtoolInfo(code: string, id: string) {
 
     const exportNodeEndLoc = ExportDefaultDeclarationNode?.end
     const hasExtra = ExportDefaultDeclarationNode?.extra
-    // inject component file data
 
     if (script) {
       if (exportNodeEndLoc) {
@@ -38,7 +37,6 @@ export async function injectDevtoolInfo(code: string, id: string) {
       ms.append(inspectScript)
     }
 
-    // inject watch
     const bindings = content.bindings
     if (bindings) {
       const validSoures = ['vue', '@dcloudio/uni-app']
@@ -86,9 +84,7 @@ export async function injectDevtoolInfo(code: string, id: string) {
             if (SetupNode) {
               const SetupBlockNode = SetupNode.body
               const SetupReturnNodeStart = SetupBlockNode.body.find(node => node.type === 'ReturnStatement')?.start
-              // append import on script
               ms.appendRight(scriptStartLoc, importWatchCode)
-              // append setupProxy function
               ms.appendRight(SetupReturnNodeStart!, setupProxyCode)
             }
             // option api

@@ -52,15 +52,12 @@ export default function UniDevToolsPlugin(options?: Partial<Options>): Plugin[] 
       })
     },
     transform(src, id) {
-      /** 在main.js文件里注册Devtools组件 */
       const filterMainFile = createFilter(['src/main.(ts|js)', 'main.(ts|js)'])
       if (filterMainFile(id))
         return injectImportDevtools(src, id)
 
-      /** 注入devtools组件信息 */
       const vueFilter = createFilter(['**/*.vue'])
       if (vueFilter(id)) {
-        /** 在页面组件里注入 setCurrentPage */
         const pagesInclude = pages.map(page => `**/${page.path}.vue`)
         const filterPages = createFilter(pagesInclude)
         if (filterPages(id)) {

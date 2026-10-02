@@ -2,13 +2,9 @@ import { parse } from 'node:path'
 import { globSync } from 'fast-glob'
 
 export function extractPathByStack(filePath: string) {
-  // 解析URL
   const url = new URL(filePath)
-  // 获取pathname部分
   const pathname = url.pathname
-  // 找到"/appservice"后面的内容
   const relevantPath = pathname.split('/appservice')[1]
-  // 使用path模块去除文件后缀
   const parsePath = parse(relevantPath)
   const pathWithoutExtension = `${parsePath.dir}/${parsePath.name}`
   return pathWithoutExtension

@@ -11,10 +11,8 @@ import type {
   ReactivityGraphSnapshot,
   ReactivityRelationship,
 } from '../types.ts'
+import { BINDINGS_PROP } from '../shared/contracts.ts'
 import { getRaw, getSetupBindingInfo } from './serialize.ts'
-
-/** 编译期插桩 render 闭包绑定的属性名标记（与 state.ts BINDINGS_PROP 冻结同步） */
-const BINDINGS_PROP = '__uni_devtools_bindings__'
 
 /** 模块级对象 ID 映射，保证同一对象跨快照 id 稳定 */
 const objectIdMap = new WeakMap<object, string>()
@@ -42,9 +40,6 @@ interface ReactivitySource {
   subs: ReactivityDependency[]
 }
 
-/**
- * 从组件 setup 绑定构造响应式依赖图
- */
 export function buildReactivityGraph(
   setupSource: Record<string, unknown> | undefined | null,
 ): ReactivityGraphSnapshot {
@@ -303,7 +298,7 @@ function getReactivityStateType(
 function getReactivityType(reference: object): ReactivityGraphNodeType {
   const constructorName = getConstructorName(reference)
 
-  // 1. 官方 3.6 构造器名
+  // 官方 devtools-kit 3.6 构造器名
   if (constructorName === 'SetupRenderEffect')
     return 'render'
   if (constructorName === 'RenderWatcherEffect' || constructorName === 'WatcherEffect')
@@ -313,20 +308,16 @@ function getReactivityType(reference: object): ReactivityGraphNodeType {
   if (constructorName === 'Dep')
     return 'reactive'
 
-  // 2. Vue 3.5 补充启发（按序）：
-  // - Watcher -> watch
+  // Vue 3.5 补充启发（按序尝试）
   if (constructorName === 'Watcher')
     return 'watch'
-  // - typeof obj.cb === 'function' -> watch
   const cb = readUnknownProperty(reference, 'cb')
   if (typeof cb === 'function')
     return 'watch'
-  // - typeof obj.fn === 'function' && obj.fn.__uni_devtools_bindings__ !== undefined -> render
   const fn = readUnknownProperty(reference, 'fn')
   if (typeof fn === 'function' && hasBindingsProp(fn))
     return 'render'
 
-  // 3. 回落 getSetupBindingInfo，再回落 unknown
   const info = getSetupBindingInfo(reference)
   return getReactivityStateType(info) ?? 'unknown'
 }
