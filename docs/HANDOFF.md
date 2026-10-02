@@ -27,6 +27,7 @@
 | Reactivity Graph（setup 绑定↔render/watch 依赖图，d3-force 力导向）                                                             | ✅ 真机待验 | Graph 标签（W10，§7 B-graph-1002）                 |
 | Vite Inspect（转换管线检查器，iframe 内嵌 vite-plugin-inspect UI）                                                               | ✅ 真机待验 | Vite Inspect 标签（W11，§7 B-inspect-1002）        |
 | Show render code（组件 render 函数源码，解插桩包装层 + 官方缩进归一）                                                            | ✅ 真机待验 | Components 页组件操作（W12，§7 B-rendercode-1002） |
+| Network（uni.request/uploadFile/downloadFile 全捕获：列表/详情/过滤/清空，实时推送）                                             | ✅ 真机待验 | Network 标签（W13，§7 B-network-1002）             |
 | plugins / 组件 DOM 定位（inspectDom/highlight）                                                                                  | ❌ 未做     | tab 禁用                                           |
 
 ## 3. 仓库地图（只列关键）
@@ -52,6 +53,7 @@ packages/
 │   │   ├── pinia.ts    Pinia 采集（免注入，app 实例枚举 _s）
 │   │   ├── render-hook.ts  渲染钩子运行时半边（参数全转发；暴露原始 render 标记）
 │   │   ├── render-code.ts  Show render code 采集（解包装 + 官方缩进归一）
+│   │   ├── network.ts   网络请求采集（W13：uni 层三 API 包装 + 环形缓冲 + 防抖增量推送）
 │   │   ├── inspect-serve.ts   Vite Inspect 静态托管（h3 serveStatic + 状态探测）
 │   │   ├── push.ts     推送调度（防抖 + 内容比对门）
 │   │   └── serialize.ts    共享序列化/ref 判定
@@ -79,10 +81,13 @@ devtools/             官方仓库下载（参考源，勿改，已 gitignore）
 
 【运行期-小程序侧】agent（注入 main.ts）
   tree/state/pinia 采集 ── push.ts（防抖+比对门）──► WS ──► node relay
+  network 采集（W13）：包装 uni.request/uploadFile/downloadFile → 环形缓冲 500
+   ── 防抖 500ms 增量推送（id 水位幂等）──► push-network-records → sharedState
   wx.onAppRoute + uni.addInterceptor + 2s 快照比对兜底
 
 【node 侧】devframe Definition（sidecar，createDevServer 自建 HTTP+WS）
-  15 个 RPC + sharedState('component-tree') ← 定向调用探针（AgentRegistry）
+  18 个 RPC + sharedState('component-tree') / sharedState('network-records')
+  ← 定向调用探针（AgentRegistry）
 
 【面板侧】官方 client（不改）→ useDevtoolsClient → 适配器（uni-devtools-rpc.ts）
   page=app / 嵌套树→扁平快照 / {data,setup}→sections / inspectors 协议(Pinia)
@@ -96,7 +101,7 @@ plain `<script>` SFC / layout 产物无 `__name`/`__file`——文件名也是�
 
 ## 5. 冻结契约（不许单方改；多处同步）
 
-**RPC（scope `uni-helper-devtools`，共 15 个，形状见 `packages/devframe/src/types.ts`）**
+**RPC（scope `uni-helper-devtools`，共 18 个，形状见 `packages/devframe/src/types.ts`）**
 
 - 基础 6：`ping` / `get-component-tree` / `get-component-state` / `update-component-state` / `push-component-tree` / `recompute-component-state`
 - W2：`open-in-editor`（launch-editor + getProjectRoot 三级推断 + 越界拦截）
@@ -104,6 +109,9 @@ plain `<script>` SFC / layout 产物无 `__name`/`__file`——文件名也是�
 - W11：`get-inspect-status`（node 本地读盘，不经探针；Vite Inspect tab 门控）
 - W12：`get-component-render-code`（探针 render.toString() 解插桩包装层；官方 components:getRenderCode 桥）
 - W4：`get-pinia-stores` / `get-pinia-state` / `update-pinia-state`
+- W13：`get-network-records`（`{sinceId?, limit?}` 增量拉取，探针在线走环形缓冲真源、
+  离线回落 sharedState；**Coding Agent 消费入口**）/ `push-network-records`（探针→node，
+  按 id 幂等 merge）/ `clear-network-records`（node 清 sharedState + 透传探针）
 
 **状态契约（ComponentStateResult）**：对齐官方分组 props / data / setup / setupOther / computed / attrs；setup 绑定经 getSetupBindingInfo 判定输出 (Computed)/(Ref)/(Reactive) 徽标与 raw 源码 tooltip；函数/组件样对象归入 setupOther；recompute-component-state 仅支持 setup 段 computed ref 触发重算。
 
@@ -160,6 +168,23 @@ hub iframe 跨源不可用）。tab 门控：node 本地 RPC `get-inspect-status
 早于首次 buildEnd，tab 要等面板刷新才出现**。端到端已验证：playground dev:mp-weixin
 构建零错误 + 报告 7s 落盘（root=playground）。
 
+**Network（W13）**：`NetworkRecord` 形状见 `packages/devframe/src/types.ts`（真源），
+面板侧镜像 `packages/panel/src/types/network.ts`（字面量两端冻结同步，同 reactivityGraph
+做法）。**拦截层级有据**：uni mp 运行时在 vendor 求值期经 `initUni(shims, protocols, wx)`
+固化平台 API 引用（`initWx` 拷贝 `newWx[key] = wx[key]`），探针注入晚于该时刻——补丁
+`wx.request` 拦不住 `uni.request`；`uni` 是 Proxy，`uni.xxx = wrapper` 落 target 自有
+属性且 get 优先命中——**只包 uni 层 request/uploadFile/downloadFile**，单点无双记；
+直接 `wx.request` 调用与 WebSocket（connectSocket）不采集（边界如实呈现）。包装语义
+冻结：回调式浅拷贝 options 注入包装回调、Promise 式**绝不注入回调**（uni promisify 靠
+回调缺席返回 Promise）+ 挂 then 记录 + 返回值原样透传；记录逻辑全程 try/catch。**常量
+字面量两端同步**（`agent/network.ts` ↔ node `devframe.ts` ↔ 面板适配器）：环形 500 条、
+body 截断 65536 字符、推送防抖 500ms（防抖保最早截止期防饿死）。**id 语义**：进程内
+单调递增且基数取模块加载时刻 `Date.now()`（mp 重编译重载探针后 id 空间与 node 旧记录
+隔离，防幂等 merge 吞新记录）；`clear` 不重置计数器。**面板消费**：不走 kit 协议（无
+network domain、事件会被校验静默丢弃），适配器在 client 上挂 `uniNetwork` 扩展面
+（getRecords/clear/subscribe），订阅 `sharedState('network-records')` + 首拉补齐 +
+id 归并缓存。mock：fixtures `mockNetworkRecords()`。
+
 **其他**：组件 id = `route#uid`（appId 恒为 `id.split('#')[0]`；改了同步 fixtures 与适配器）；
 面板产物路径 `resolveClientAssets()`（env `UNI_DEVTOOLS_PANEL_DIR` → panel/dist → assets/panel 兜底）。
 
@@ -169,8 +194,8 @@ hub iframe 跨源不可用）。tab 门控：node 本地 RPC `get-inspect-status
 pnpm --filter @uni-helper/devtools-panel build     # 面板构建（产物被 sidecar 托管）
 pnpm --filter @uni-helper/devtools-panel dev       # 面板 dev（配 ?mock 无需后端）
 pnpm --filter @uni-helper/devtools-devframe build  # 重建 dist/plugin.mjs（改了 src 必须）
-npx vitest run packages/devframe/test/             # 单测（38 例）
-node packages/devframe/scripts/e2e-node.mjs        # 机器验收（5+2 项）
+npx vitest run packages/devframe/test/             # 单测（125 例，12 套件）
+node packages/devframe/scripts/e2e-node.mjs        # 机器验收（含 5.4 network 全链路）
 node packages/devframe/scripts/dev.mjs             # 本地 sidecar（打印带 token 面板 URL）
 cd playground && pnpm dev:mp-weixin                # 真机链路（微信 IDE 需开服务端口+不校验域名）
 ```
@@ -241,6 +266,18 @@ Components 页「Show render code」打通——A（agy T-b78a08，新 pane）�
 验证：vitest 11 套件 101/101、eslint 0 错、plugin.mjs 重建 node --check 过、
 panel typecheck 0 新增错误 + build ✓。mp 上展示的是**编译后** render 源码（官方
 同为运行时函数 toString，语义一致）。
+
+**B-network-1002（Network 批次，2026-10-02 深夜，claude 主持人 + agy）**：Network tab
+端到端——A（agy T-41a640）探针采集器 `agent/network.ts`（uni 层三 API 包装、回调/
+Promise 双语义透传、64K 截断、500 环形、防抖增量推送 + 水位幂等，24 单测；拦截层级
+证据见 §5）；B（主持人）契约冻结 + node 3 RPC + sharedState 幂等 merge + e2e 5.4；
+C（agy T-111070）面板 Network tab（适配器 uniNetwork 扩展面 + network.vue 列表/详情/
+过滤/清空 + 6 条 mock）。两次 verify scope=violated 均系 §8-21 归因噪音（主持人并发
+改动被算进 worker），核实无越界。主持人 CR 加固两处：id 基数 Date.now()（防重编译后
+撞车）、防抖保最早截止期（防饿死）。playground 场景 6 NetworkDemoCard（回调式 GET /
+Promise 式 POST / 必失败兜底）。验证：vitest 12 套件 125/125、e2e 含 5.4 全绿、
+typecheck 0 新增、build ✓、CDP mock 冒烟 8/8（tab→渲染→过滤→详情→清空→无跳转）。
+commit `272beb5`（探针+node）+ `c58ceb0`（panel+playground）。
 
 ## 8. 血泪教训（必读，全是修过的真 bug）
 
@@ -334,6 +371,20 @@ panel typecheck 0 新增错误 + build ✓。mp 上展示的是**编译后** ren
     build 时把它要的资源（`dist/client`）拷进我们 dist。三坑都只在**真实构建链路**里
     爆发，`node --check`/import 冒烟测不全——改 plugin 产物必须跑一次 playground
     `dev:mp-weixin`。
+26. **mp 运行时 API 引用在 vendor 求值期固化（W13）**：`initWx()` 拷贝
+    `newWx[key] = wx[key]`、`initUni(shims, protocols, wx)` 按引用固化 API——探针
+    （注入 main.ts）晚于该时刻，**事后补丁底层全局（wx.request）拦不住 uni 层调用**；
+    而 `uni` 是 Proxy，`uni.xxx = wrapper` 落 target 自有属性且 get 优先命中。
+    monkey-patch 拦截要打在 Proxy 落点上，拦截层级以产物 grep 取证为准（本次从
+    playground vendor.js 实测定案，勿凭感觉改）。
+27. **trailing 防抖在高频恒定事件下会饿死（W13）**：「每次触发都重置计时器」在
+    事件间隔恒小于防抖窗口时（轮询页面 300ms 一请求 vs 500ms 窗口）永不触发——
+    network 推送改为「已有待发批次则保持最早截止期」（首笔后固定窗口到期即发，
+    窗口内后续自然并入同批）。任何 debounce 调度都要过一遍「恒定高频源」用例。
+28. **增量幂等 merge 的 id 在进程重启后撞车（W13）**：mp 每次重编译整段重载探针
+    上下文，计数器从 1 重新起算会撞 node 侧旧记录 id、被幂等 merge 当重复吞掉
+    （真机必现级）。修法：计数器基数取模块加载时刻 `Date.now()`，两轮 id 空间天然
+    隔离；单测经 `__resetNetworkForTest` 回到确定性小 id，两不误。
 
 ## 9. 下一步（按优先级）
 
@@ -347,16 +398,23 @@ panel typecheck 0 新增错误 + build ✓。mp 上展示的是**编译后** ren
    挂上 vite-plugin-inspect；首个 buildEnd 产出报告后面板刷新一次才见 tab（capabilities
    连接初始化拉取）；仅 standalone 直连模式生效）/ **Show render code**（W12：选中
    组件 → 组件操作里 Show render code → 弹编译后 render 源码面板；mp 上为 uni 编译器
-   产物而非模板源码，属预期）
+   产物而非模板源码，属预期）/ **Network 标签**（W13：playground 首页场景 6 三按钮
+   ——GET/POST/必失败各点一遍，面板应实时出现记录、点行看详情（headers/body）、
+   过滤、清空；**改了 dist/plugin.mjs 必须重启 dev:mp-weixin watch**（§8-11/18，
+   另注意是否有残留旧 watch 进程）；直接 wx.request 与 WebSocket 不采集属预期）
 2. Pinia 实时推送：目前拉取式（选中才读），可加探针 $subscribe → invalidateState 事件
 3. W6 Timeline 后续（若要做）：见 T-2d81ad reply 的 3~4 人日方案
    （官方页解耦 / 编译期插桩采集 / 环形缓冲批量推送）
-4. 已知小缺口：Pinia treeSnapshot 每次过滤击键都打一次探针 RPC（可加短缓存）；
+4. **Network → Coding Agent 迭代**（用户既定方向）：拉取面已预留——agent 直接走
+   devframe RPC `get-network-records`（`{sinceId}` 增量 + `latestId` 水位对齐，
+   JSON 安全）；后续可加：请求搜索/按 url 过滤参数、WebSocket（connectSocket）采集、
+   直接 wx.request 层补采（证据见 §8-26，需处理与 uni 层的双记去重）。
+5. 已知小缺口：Pinia treeSnapshot 每次过滤击键都打一次探针 RPC（可加短缓存）；
    探针离线时 Pinia/Pages 面板为空态（无离线缓存）；
    `devtools-connection.ts` 的 `components:openInEditor` 不在 kit 命令类型联合里
    （panel typecheck 2 个存量错误，W2 遗留——在 kit `requests.ts` 联合补条目或改走
    `commandCustom` 可解）
-5. 分支整理：`refactor/devfra` 30+ commits 未推送，可择机 push / 开 PR 到 main
+6. 分支整理：`refactor/devfra` 30+ commits 未推送，可择机 push / 开 PR 到 main
 
 ## 10. git 状态
 
