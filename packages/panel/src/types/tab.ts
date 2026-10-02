@@ -5,6 +5,7 @@ export type BuiltinDevtoolsTabId =
   | 'timeline'
   | 'plugins'
   | 'graph'
+  | 'inspect' // uni-devtools: vite inspect iframe tab
   | 'settings'
 
 export type KnownInspectorDevtoolsTabId = 'router' | 'pinia'

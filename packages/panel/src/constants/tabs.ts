@@ -47,6 +47,14 @@ export const builtinTabs: DevtoolsTabDefinition[] = [
     path: '/timeline',
   },
   {
+    id: 'inspect',
+    title: 'Vite Inspect',
+    icon: 'i-carbon-ibm-watson-discovery',
+    order: -60,
+    description: 'Vite transform pipeline inspector (vite-plugin-inspect)',
+    path: '/inspect',
+  },
+  {
     id: 'plugins',
     title: 'Plugins',
     icon: 'i-carbon-plug',

@@ -24,7 +24,7 @@ export interface CategorizedDevtoolsTab extends DevtoolsTab {
 export type CategorizedDevtoolsTabs = [DevtoolsTabCategory, CategorizedDevtoolsTab[]][]
 
 export function useDevtoolsTabCatalog() {
-  const { inspectors, plugins, reactivityGraphEnabled } = useDevtoolsClient()
+  const { inspectors, plugins, reactivityGraphEnabled, inspectEnabled } = useDevtoolsClient()
   const { settings } = useDevtoolsSettings()
   const routerInspector = computed(() => findRouterInspector(inspectors.value, plugins.value))
 
@@ -39,6 +39,7 @@ export function useDevtoolsTabCatalog() {
       ...builtinTabs.flatMap((tab) =>
         resolveBuiltinTab(tab, {
           reactivityGraphEnabled: reactivityGraphEnabled.value,
+          inspectEnabled: inspectEnabled.value,
         }),
       ),
       ...visibleInspectors.map((inspector, index) =>
@@ -85,9 +86,11 @@ function resolveBuiltinTab(
   tab: DevtoolsTab,
   features: {
     reactivityGraphEnabled: boolean
+    inspectEnabled: boolean
   },
 ): DevtoolsTab[] {
   if (tab.id === 'graph' && !features.reactivityGraphEnabled) return []
+  if (tab.id === 'inspect' && !features.inspectEnabled) return []
   return [tab]
 }
 

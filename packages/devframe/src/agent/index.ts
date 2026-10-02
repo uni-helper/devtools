@@ -14,7 +14,7 @@ import { config } from 'virtual:uni-devtools-agent'
 import { type UniSocketChannelHandle, createUniSocketChannel } from './socket'
 import { bindPushDeps, cancelScheduledPush, pushComponentTreeNow, resetPushGate, schedulePushComponentTree } from './push.ts'
 import { navigateInMiniProgram } from './navigate.ts'
-import { type PageComponentTree, collectComponentTree, getRegisteredInstance } from './tree'
+import { type PageComponentTree, collectComponentTree, getRegisteredInstance, getVueRuntimeVersion } from './tree'
 import { type PiniaStateResult, type PiniaStoresResult, type UpdatePiniaStateResult, getPiniaState, getPiniaStores, updatePiniaState } from './pinia'
 import {
   type ComponentStateResult,
@@ -158,8 +158,11 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
 
   // 探针暴露给 node 侧调用的客户端函数表（wire 层精确字符串契约）
   const clientFunctions = {
-    'uni-devtools:agent:getComponentTree': (): PageComponentTree[] => {
-      return collectComponentTree()
+    'uni-devtools:agent:getComponentTree': (): { pages: PageComponentTree[], vueVersion?: string } => {
+      return {
+        pages: collectComponentTree(),
+        vueVersion: getVueRuntimeVersion(),
+      }
     },
     'uni-devtools:agent:ping': (): number => {
       return Date.now()

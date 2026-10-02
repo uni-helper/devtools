@@ -63,6 +63,7 @@ const reactivityGraphEnabled = computed(() =>
 )
 const totalComponents = computed(() => apps.value.reduce((sum, app) => sum + app.componentCount, 0))
 const openInEditorAvailable = computed(() => capabilities.value.openInEditor)
+const inspectEnabled = computed(() => capabilities.value.inspect === true)
 
 const connection = createDevtoolsConnection({
   refresh: refreshData,
@@ -193,6 +194,7 @@ export function useDevtoolsClient() {
     plugins,
     pageCount,
     reactivityGraphEnabled,
+    inspectEnabled,
     routerSnapshot,
     runtimeVersion,
     selectedApp,

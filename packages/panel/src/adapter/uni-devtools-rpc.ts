@@ -508,9 +508,20 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         return { apps: flat.apps }
       }
 
-      case 'devtools:capabilities':
+      case 'devtools:capabilities': {
         // openInEditor：真实模式支持，mock 模式无后端保持 false；分页树未实现。
-        return { openInEditor: !mockMode, pagedComponentTree: false }
+        // inspect：真实模式调 node 侧 get-inspect-status；mock 模式为 false（mock 无后端，tab 隐藏是预期行为）。
+        let inspect = false
+        if (!mockMode) {
+          await ensureReady()
+          inspect = !!(await callUni<{ available: boolean }>('get-inspect-status').catch(() => ({ available: false })))?.available
+        }
+        return {
+          openInEditor: !mockMode,
+          pagedComponentTree: false,
+          inspect,
+        }
+      }
 
       case 'runtime:health':
         return { status: 'ready', performance: {

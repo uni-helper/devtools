@@ -3,8 +3,8 @@
 > **给接手者**：本文档让你在零上下文的新会话里接手本项目，读完即可继续开发。
 > 配套阅读（按优先级）：`docs/HUB_UI_SPECIFICATION.md`（设计契约）→
 > `docs/DEVFRAME_MIGRATION_PLAN.md`（架构方案）→ `spike/devframe-poc/FINDINGS.md`（POC 踩坑）。
-> 分支 `refactor/devfra`，两个批次（B-panel-0930 面板移植 / B-features-1002 功能批次）
-> 全部工作已提交并过 CR。
+> 分支 `refactor/devfra`，三个批次（B-panel-0930 面板移植 / B-features-1002 功能批次 /
+> B-graph-1002 Reactivity Graph）全部工作已提交并过 CR。
 
 ## 1. 项目一句话
 
@@ -15,16 +15,18 @@
 
 ## 2. 功能矩阵（当前能力）
 
-| 功能                                                                                                                             | 状态        | 入口                       |
-| -------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------------------------- |
-| 组件树（多页=多 app、文件名命名、实时推送 ~0.3s）                                                                                | ✅          | Components 标签            |
-| 状态查看（官方分组 props/data/setup/setup-other/computed/attrs + (Computed)/(Ref)/(Reactive) 徽标 + computed tooltip/recompute） | ✅          | 同上，右侧 State 面板      |
-| 状态编辑（顶层 + **深路径**、数组索引、删除）                                                                                    | ✅          | 值行铅笔按钮               |
-| Pinia 检查器（官方树形：🍍 root 聚合视图+平级 stores、无页面列、编辑+失效刷新）                                                  | ✅          | Pinia 标签（官方内建映射） |
-| 路由页面栈（pages.json 注册路由 + 当前栈 + 匹配 + 导航）                                                                         | ✅          | Pages 标签                 |
-| openInEditor（launch-editor + 项目根越界守卫）                                                                                   | ✅          | 树行文件名 / 状态行动作    |
-| Timeline                                                                                                                         | ⏸ 有据降级 | tab 禁用（结论见 §7 W6）   |
-| graph / plugins / 组件 DOM 定位（inspectDom/highlight）                                                                          | ❌ 未做     | tab 禁用                   |
+| 功能                                                                                                                             | 状态        | 入口                                        |
+| -------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------- |
+| 组件树（多页=多 app、文件名命名、实时推送 ~0.3s）                                                                                | ✅          | Components 标签                             |
+| 状态查看（官方分组 props/data/setup/setup-other/computed/attrs + (Computed)/(Ref)/(Reactive) 徽标 + computed tooltip/recompute） | ✅          | 同上，右侧 State 面板                       |
+| 状态编辑（顶层 + **深路径**、数组索引、删除）                                                                                    | ✅          | 值行铅笔按钮                                |
+| Pinia 检查器（官方树形：🍍 root 聚合视图+平级 stores、无页面列、编辑+失效刷新）                                                  | ✅          | Pinia 标签（官方内建映射）                  |
+| 路由页面栈（pages.json 注册路由 + 当前栈 + 匹配 + 导航）                                                                         | ✅          | Pages 标签                                  |
+| openInEditor（launch-editor + 项目根越界守卫）                                                                                   | ✅          | 树行文件名 / 状态行动作                     |
+| Timeline                                                                                                                         | ⏸ 有据降级 | tab 禁用（结论见 §7 W6）                    |
+| Reactivity Graph（setup 绑定↔render/watch 依赖图，d3-force 力导向）                                                             | ✅ 真机待验 | Graph 标签（W10，§7 B-graph-1002）          |
+| Vite Inspect（转换管线检查器，iframe 内嵌 vite-plugin-inspect UI）                                                               | ✅ 真机待验 | Vite Inspect 标签（W11，§7 B-inspect-1002） |
+| plugins / 组件 DOM 定位（inspectDom/highlight）                                                                                  | ❌ 未做     | tab 禁用                                    |
 
 ## 3. 仓库地图（只列关键）
 
@@ -38,18 +40,20 @@ packages/
 │   └── （官方源码共 8 处改动，均有 "uni-devtools" 注释标记）
 ├── devtools-kit/     vendored @vue/devtools-kit（协议/codec/rpc；exports 指 src；仅依赖 devframe@1.1.0）
 ├── devframe/         node 侧 + 探针 + 编译期插桩
-│   ├── src/devframe.ts     DevframeDefinition + 12 个 RPC + sharedState('component-tree')
+│   ├── src/devframe.ts     DevframeDefinition + 14 个 RPC + sharedState('component-tree')
 │   ├── src/relay.ts        AgentRegistry 定向调用（探针不可信校验）
 │   ├── src/plugin.ts       Vite 插件（sidecar + 虚拟模块注入探针 + instrument post transform）
 │   ├── src/instrument.ts   ★ 编译期插桩（__file 注入 / 闭包绑定捕获 / render 钩子包装）
 │   ├── src/agent/          探针（小程序沙箱；禁浏览器 API）
-│   │   ├── tree.ts     树采集 + 实例注册表 + 命名链
+│   │   ├── tree.ts     树采集 + 实例注册表 + 命名链 + Vue 版本上报
 │   │   ├── state.ts    组件状态读写（深路径语义）
+│   │   ├── reactivity-graph.ts  响应式依赖图采集（W10，Vue 3.5+ 链表遍历）
 │   │   ├── pinia.ts    Pinia 采集（免注入，app 实例枚举 _s）
 │   │   ├── render-hook.ts  渲染钩子运行时半边（参数全转发）
+│   │   ├── inspect-serve.ts   Vite Inspect 静态托管（h3 serveStatic + 状态探测）
 │   │   ├── push.ts     推送调度（防抖 + 内容比对门）
 │   │   └── serialize.ts    共享序列化/ref 判定
-│   ├── test/               vitest 38 例（instrument/pinia/router/open-in-editor/render-hook）
+│   ├── test/               vitest 82 例（instrument/pinia/router/open-in-editor/render-hook/state/reactivity-graph）
 │   ├── scripts/e2e-node.mjs 机器验收（5+2 项全链路）
 │   └── scripts/dev.mjs     本地起 sidecar（打印带 token 面板 URL）
 ├── panel-legacy/     旧 @antfu/design 面板留底（不再维护；df/client.ts 有历史借鉴价值）
@@ -81,6 +85,7 @@ devtools/             官方仓库下载（参考源，勿改，已 gitignore）
 【面板侧】官方 client（不改）→ useDevtoolsClient → 适配器（uni-devtools-rpc.ts）
   page=app / 嵌套树→扁平快照 / {data,setup}→sections / inspectors 协议(Pinia)
   / router 协议(Pages) / editState 深路径透传 / openInEditor 桥接
+  / reactivityGraph 搭 stateSnapshot 便车 + apps 带 version 开 Graph tab 门禁
 ```
 
 mp 专属事实（改协议前必读）：uni 编译器把 script setup 绑定**内联进 render 闭包**，
@@ -89,14 +94,26 @@ plain `<script>` SFC / layout 产物无 `__name`/`__file`——文件名也是�
 
 ## 5. 冻结契约（不许单方改；多处同步）
 
-**RPC（scope `uni-helper-devtools`，共 13 个，形状见 `packages/devframe/src/types.ts`）**
+**RPC（scope `uni-helper-devtools`，共 14 个，形状见 `packages/devframe/src/types.ts`）**
 
 - 基础 6：`ping` / `get-component-tree` / `get-component-state` / `update-component-state` / `push-component-tree` / `recompute-component-state`
 - W2：`open-in-editor`（launch-editor + getProjectRoot 三级推断 + 越界拦截）
 - W5：`get-registered-routes`（pages.json 解析，容注释/尾逗号/subPackages）/ `get-router-info`（getCurrentPages 栈）/ `navigate-to`
+- W11：`get-inspect-status`（node 本地读盘，不经探针；Vite Inspect tab 门控）
 - W4：`get-pinia-stores` / `get-pinia-state` / `update-pinia-state`
 
 **状态契约（ComponentStateResult）**：对齐官方分组 props / data / setup / setupOther / computed / attrs；setup 绑定经 getSetupBindingInfo 判定输出 (Computed)/(Ref)/(Reactive) 徽标与 raw 源码 tooltip；函数/组件样对象归入 setupOther；recompute-component-state 仅支持 setup 段 computed ref 触发重算。
+
+**Reactivity Graph（W10）**：`get-component-state` 返回可选 `reactivityGraph`
+（{nodes, relationships}，形状镜像 kit `protocol/messages.ts`，探针侧
+`agent/reactivity-graph.ts` **不 import devtools-kit**，字面量契约两端冻结同步——同
+`__uni_devtools_bindings__` 约定，其 BINDINGS_PROP 副本在 `agent/reactivity-graph.ts`）；
+`get-component-tree` 返回可选 `vueVersion`（探针读 `appContext.app.version`，面板
+AppSnapshot.version 消费）。**门禁分歧**：vendored kit `protocol/features.ts` 的
+`REACTIVITY_GRAPH_MIN_VUE_VERSION` 从官方 3.6.0 放宽到 **3.5.0**（比较数组是函数内
+硬编码字面量，两处同步改）——3.5 已有 deps/subs 双向链表，探针类型判定带 3.5 容错
+启发（`Watcher`/`cb` 函数→watch，`fn.__uni_devtools_bindings__`→render），判定不出仅
+退化为 unknown 节点；3.4- 无链表产出空图、门禁自然关闭。
 
 **编译期插桩（`instrument.ts` 写入端 ↔ 探针读取端，字面量冻结同步）**
 
@@ -119,6 +136,24 @@ getters 标 `editable: false`。
 聚合的 State（整对象可编辑）/Getters；聚合编辑 path 形如 `[storeId, key, ...]`（面板已去
 sectionId），适配器翻译回 `update-pinia-state`；pinia inspector 隐藏 AppList 页面列
 （官方 CustomInspectorPanel 改点 8）。
+
+**Vite Inspect（W11）**：devframe 插件管线挂 `vite-plugin-inspect@^0.8.8`
+（`build: true`，`outputDir` = `os.tmpdir()/.uni-devtools/.inspect`，**沿用旧插件
+DIR_TMP_INSPECT 约定**；mp dev 无 dev server，中间件模式不可用，build 模式每个
+watch rebuild 在 buildEnd 全量重写报告 + 自带 client UI）。**打包方式**：esbuild
+`--alias` 指到 `packages/plugin/node_modules/vite-plugin-inspect/dist/index.mjs`
+（ESM 构建文件；避免给 devframe 加运行时依赖触发 §8-24 漂移）+ banner 垫片
+（§8-25）+ build 时拷 `dist/client`（inspect UI 资源源）。sidecar 经预配置 h3 app
+（`createDevServer({ app })`，先于 auth 执行——静态报告无 token 门禁，dev 工具可
+接受）用 devframe 官方 `mountStaticHandler` 把该目录静态托管在
+**`/__uni-devtools/inspect/`**（`INSPECT_MOUNT_PATH`，inspect-serve.ts，字面量冻结）。
+面板 Inspect tab = iframe 内嵌（官方 v7 同款方案；**仅 standalone 直连模式生效**，
+hub iframe 跨源不可用）。tab 门控：node 本地 RPC `get-inspect-status` → `{ available }`
+（outputDir/index.html 存在；不经探针——构建管线数据）→ 适配器
+`devtools:capabilities` 填 `inspect`（kit `DevtoolsCapabilitiesMessage` +1 可选字段，
+分歧已注释）→ `inspectEnabled` 过滤 tab。capabilities 在连接初始化拉取——**首屏若
+早于首次 buildEnd，tab 要等面板刷新才出现**。端到端已验证：playground dev:mp-weixin
+构建零错误 + 报告 7s 落盘（root=playground）。
 
 **其他**：组件 id = `route#uid`（appId 恒为 `id.split('#')[0]`；改了同步 fixtures 与适配器）；
 面板产物路径 `resolveClientAssets()`（env `UNI_DEVTOOLS_PANEL_DIR` → panel/dist → assets/panel 兜底）。
@@ -169,6 +204,27 @@ playground 接线 + 双向数据 + 两轮 agy CR（13 项全修）+ P9 直连修
 注入（编辑静默无效）；P1-1 渲染钩子推送风暴；P2 修饰键语义/getters 可编辑性/mock 抛错对齐。
 CR 验证：vitest 38/38 + e2e 5+2 + tsc 0 + 双 build + 产物语法全检 + CDP mock 编辑闭环冒烟
 （铅笔→输入 42→回车→count:42 刷新、编辑器收起、零异常）。
+
+**B-graph-1002（Reactivity Graph 批次，2026-10-02 午，claude 主持人 + agy）**：Graph tab
+端到端打通——A（agy T-170310）探针采集器 `agent/reactivity-graph.ts`（官方 325 行算法
+逐行移植 + 3.5 容错启发 + 全防御 try/catch，17 单测含真实 `proxyRefs` 双读；CLI 回执
+status=failed 系外会话提交 4eae7f3 的 scope 归因噪音，人工 CR 通过采纳）；B-E（主持人）
+契约扩展 / vueVersion 上报链 / 适配器透传 + mock 冒烟数据 / 门禁放宽 3.5.0 / state.ts
+§6 挂接（与 Setup 面板共用 resolveSetupSource，空图省略字段）+ 2 集成用例。验证：
+vitest 9 套件 82/82、eslint 0 错、panel typecheck 仅剩 2 个 HEAD 存量错误
+（devtools-connection.ts openInEditor 不在 kit 命令联合，W2 遗留待单独修）。
+渲染侧零改动（官方 graph.vue/4 组件/3 utils 已 vendored 且与官方一致）。
+
+**B-inspect-1002（Vite Inspect 批次，2026-10-02 午后，claude 主持人 + agy）**：补回旧
+插件（packages/plugin loadInspectPlugin + sirv）有过、官方 v7 有过的 Vite Inspect——
+A（agy T-591d61）panel 侧 8 文件：kit capabilities +`inspect?`、tab 常量/类型联合/路由/
+门控 composable、adapter capabilities 查询、`pages/inspect.vue`（全幅 iframe + 刷新/
+外开控件），build ✓ typecheck 0 新增；B-D（主持人）devframe 插件挂
+vite-plugin-inspect@0.8.8（build:true）+ `inspect-serve.ts`（h3 serveStatic 静态托管，
+双挂载修 use() 精确匹配陷阱，5 例单测）+ `get-inspect-status` RPC + harness 同步接线。
+验证：vitest 10 套件 87/87、eslint 0 错、plugin.mjs 907KB node --check 过、**sidecar
+冒烟全通**（/inspect/ 返回真实 inspect UI——真 tmpdir 恰有 10-1 老插件数据、
+list.json/metrics/assets 全 200、traversal 404、面板根不受扰）。
 
 ## 8. 血泪教训（必读，全是修过的真 bug）
 
@@ -229,18 +285,59 @@ CR 验证：vitest 38/38 + e2e 5+2 + tsc 0 + 双 build + 产物语法全检 + CD
     `tree.test.ts`）。排查教训：**改了 dist/plugin.mjs 必须重启 dev:mp-weixin watch**
     ——运行中的 vite 持旧插件内存态，重建 dist 不会热更，产物「看起来新其实旧」
 19. **Vitest 断言对象时 pretty-format 会触发可枚举 getter**：在测试桩里手造含 getter 的 ref（如 `get value()`）时，若该属性为自身可枚举属性，vitest 断言失败输出 diff 或匹配 `objectContaining` 时会调用 pretty-format 遍历属性求值，引发意外的二次求值使得调用计数断言失败（如 callCount 1 变 2）。手造 ref 应遵循 Vue 运行时原型设计，使用 `Object.defineProperty(obj, 'value', { get, enumerable: false })` 定义 getter。
+20. **kit 版本门禁是双写陷阱**（W10）：`protocol/features.ts` 的 `REACTIVITY_GRAPH_MIN_VUE_VERSION`
+    常量与 `supportsReactivityGraphVueVersion` 函数内**硬编码比较数组** `[3, 5, 0]` 各一份
+    （官方源码如此）——只改常量无效，必须两处同步（已加注释钉住）。
+21. **多会话共享工作树并行 = 提交与归因双向污染**（W10）：另一会话提交 4eae7f3 时把主持人
+    未提交的 adapter 改动一并卷入（代码无损但提交归属混合）；反向地，主持人并行编辑也让
+    smx verify 把新脏文件判成 worker 越界、reply 被自动降级 failed。结论：跨会话并行时
+    ① 提交前 `git status` 逐文件核对归属，能分批就 `git add <paths>` 精选；② worker 回执
+    的 CLI 状态只是线索，采纳与否以主持人 CR + 批次清单记录为准。
+22. **h3 v2 `use(path, h)` 是精确匹配，不是前缀挂载**（W11 冒烟实锤）：只挂
+    `use('/x', h)` 时子路径全部穿透到 devframe 的 SPA 兜底——症状极具迷惑性：**目录路径
+    200（SPA 改写）、带扩展名文件 404、无扩展名路径 200**。正确写法是官方示例的
+    `use('/x/**', withBase('/x', h))`，基路径再单独一挂覆盖 `/x` → index 解析。
+23. **macOS `os.tmpdir()` 是 `/var/folders/...` 不是 `/tmp`**（W11 排查弯路）：手写测试
+    stub 时想当然用 `/tmp`，服务端读的是真 tmpdir——「文件明明在却 404 / 内容凭空出现」
+    先核对 `node -e 'console.log(os.tmpdir())'`。另：真 tmpdir 里可能留着**旧插件时代的
+    同路径数据**（10-1 的 inspect 报告），冒烟时看见「没跑过的数据」先查历史来源。
+24. **pnpm install 漂移地雷（存量，W11 首踩）**：`@uni-helper/unocss-preset-uni` /
+    `unocss-applet` 的 `@unocss/*` peer 是浮动 range（`>=0.58`）——**任何** importer
+    变更（哪怕只加一个无关新依赖）触发 lockfile 更新时，pnpm 都会把它们重解析到最新
+    66.x，而 `@unocss/preset-mini@66` 移除了 `normalizePreflights`，mp 构建即炸
+    （`pnpm.overrides` 的 `parent>child` 选择器**对 peer 无效**，实测）。钉法：把
+    `@unocss/preset-mini/preset-uno/vite@0.60.4` 显式声明进 **playground 的
+    devDependencies**（pnpm peer 解析优先取 importer 自己声明的版本）。66.x 的其他
+    消费者（preset-wind3）不受影响。
+25. **esbuild 把三方插件打进 ESM dist 的三连坑（W11）**：① CJS 依赖（fs-extra 等）的
+    动态 `require('fs')` 在 ESM 输出里炸「Dynamic require」——banner 注入
+    `createRequire` + `__filename`/`__dirname` 垫片（`import.meta.url` 派生）解决；
+    ② `--alias:pkg=path/到/目录` 会按 main 字段吃到 CJS 构建，`import default` 变
+    `.default is not a function`——alias 必须指到 **ESM 构建文件**；③ 被打包模块用
+    `import.meta.url` 定位自带资源（inspect 的 DIR_CLIENT）时锚点位移到我们的 dist——
+    build 时把它要的资源（`dist/client`）拷进我们 dist。三坑都只在**真实构建链路**里
+    爆发，`node --check`/import 冒烟测不全——改 plugin 产物必须跑一次 playground
+    `dev:mp-weixin`。
 
 ## 9. 下一步（按优先级）
 
 1. **用户真机复验**（唯一未闭环项）：微信 IDE 重编译 + 刷新面板，核对——
    匿名组件显示文件名 / script setup 右侧 Setup 实时值 / 深路径编辑（嵌套对象、数组项）/
    Pinia 标签（选 store → State/Getters → 编辑 count）/ Pages 标签（路由列表+当前栈+导航）/
-   openInEditor 按钮 / 改数据 ~0.3s 到面板
+   openInEditor 按钮 / 改数据 ~0.3s 到面板 / **Graph 标签**（W10：选中含 ref/computed 的
+   组件看力导向图；注意 mp 运行时内置 Vue 版本——≥3.5 出图（3.5 上 render/watch 节点靠
+   容错启发分类，可能显示为 effect/unknown），<3.5 无链表结构产出空图且 tab 隐藏，属预期降级）/
+   **Vite Inspect 标签**（W11：改插件后**必须重启 dev:mp-weixin watch**（§8-11/18）才会
+   挂上 vite-plugin-inspect；首个 buildEnd 产出报告后面板刷新一次才见 tab（capabilities
+   连接初始化拉取）；仅 standalone 直连模式生效）
 2. Pinia 实时推送：目前拉取式（选中才读），可加探针 $subscribe → invalidateState 事件
 3. W6 Timeline 后续（若要做）：见 T-2d81ad reply 的 3~4 人日方案
    （官方页解耦 / 编译期插桩采集 / 环形缓冲批量推送）
 4. 已知小缺口：Pinia treeSnapshot 每次过滤击键都打一次探针 RPC（可加短缓存）；
-   探针离线时 Pinia/Pages 面板为空态（无离线缓存）
+   探针离线时 Pinia/Pages 面板为空态（无离线缓存）；
+   `devtools-connection.ts` 的 `components:openInEditor` 不在 kit 命令类型联合里
+   （panel typecheck 2 个存量错误，W2 遗留——在 kit `requests.ts` 联合补条目或改走
+   `commandCustom` 可解）
 5. 分支整理：`refactor/devfra` 30+ commits 未推送，可择机 push / 开 PR 到 main
 
 ## 10. git 状态

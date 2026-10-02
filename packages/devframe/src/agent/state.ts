@@ -5,6 +5,7 @@
  */
 
 import { checkIsRef, ensureJsonSafe, getRaw, getSetupBindingInfo, readComputedSource } from './serialize.ts'
+import { buildReactivityGraph } from './reactivity-graph.ts'
 import { getComponentDisplayName, getRegisteredInstance } from './tree.ts'
 
 /**
@@ -350,6 +351,11 @@ export function getComponentState(id: string): ComponentStateResult {
       }
     }
 
+    // 6. Reactivity Graph：与 Setup 面板共用同一 setup 源（真 setupState 或 mp
+    //    编译期捕获的闭包绑定），图数据搭 state 快照便车下发；无响应式绑定
+    //    时省略字段（面板侧缺省即空图，与官方 kit 行为一致）
+    const reactivityGraph = buildReactivityGraph(rawSetup)
+
     const result: ComponentStateResult = {
       id: String(id),
       name,
@@ -366,6 +372,8 @@ export function getComponentState(id: string): ComponentStateResult {
       result.computed = computed
     if (Object.keys(attrs).length > 0)
       result.attrs = attrs
+    if (reactivityGraph.nodes.length > 0)
+      result.reactivityGraph = reactivityGraph
 
     return result
   }

@@ -11,6 +11,8 @@ import type { ComponentStateResult, ComponentTreeResult, GetPiniaStoresResult, P
 
 const tree: ComponentTreeResult = {
   fetchedAt: 0,
+  // Graph tab 门禁依赖版本上报（对齐探针真实链路：vue 3.5.13 放宽后的门禁可见）
+  vueVersion: '3.5.13',
   pages: [
     {
       route: 'pages/index/index',
@@ -95,6 +97,19 @@ const stateById: Record<string, ComponentStateResult> = {
     },
     setupOther: {
       onReset: { fn: true, fnName: 'onReset', fnSource: 'const onReset = () => { count.value = 0 }' },
+    },
+    // Graph tab 冒烟数据：count → render / count → doubleCount → render
+    reactivityGraph: {
+      nodes: [
+        { id: 'reactivity-1', type: 'ref', label: 'count', data: { key: 'count', value: '3' } },
+        { id: 'reactivity-2', type: 'computed', label: 'doubleCount', data: { key: 'doubleCount', value: '6' } },
+        { id: 'reactivity-3', type: 'render', label: 'CounterCard render', data: { instanceName: 'CounterCard' } },
+      ],
+      relationships: [
+        { id: 'reactivity-1->reactivity-3', from: 'reactivity-1', to: 'reactivity-3' },
+        { id: 'reactivity-1->reactivity-2', from: 'reactivity-1', to: 'reactivity-2' },
+        { id: 'reactivity-2->reactivity-3', from: 'reactivity-2', to: 'reactivity-3' },
+      ],
     },
   },
   'pages/index/index#1': {

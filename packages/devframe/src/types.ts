@@ -2,7 +2,7 @@
  * Frozen Wire Contracts for Uni-Helper DevTools
  *
  * Scope: `uni-helper-devtools`
- * RPCs (13):
+ * RPCs (14):
  *   - `ping`: () => PingResult
  *   - `get-component-tree`: () => ComponentTreeResult
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
@@ -14,6 +14,11 @@
  *   - `get-registered-routes`: () => GetRegisteredRoutesResult
  *   - `get-router-info`: () => RouterInfoResult
  *   - `navigate-to`: (args: NavigateParams) => NavigateResult
+ *   - `get-inspect-status`: () => GetInspectStatusResult（W11 Vite Inspect，node 本地读盘）
+ *
+ * W10 Reactivity Graph 扩展（无新 RPC，字段搭既有快照的车）：
+ *   - `get-component-state` 返回新增 `reactivityGraph?: ReactivityGraphSnapshot`
+ *   - `get-component-tree` 返回新增 `vueVersion?: string`
  */
 
 export interface ComponentTreeNode {
@@ -49,6 +54,8 @@ export interface ComponentStateResult {
   setupOther?: Record<string, ComponentStateEntry>
   computed?: Record<string, ComponentStateEntry> // Options API computed（经 proxy 求值）
   attrs?: Record<string, unknown>
+  /** 响应式依赖图（随 state 快照搭车下发，官方 kit ComponentStateSnapshotMessage.reactivityGraph 桥） */
+  reactivityGraph?: ReactivityGraphSnapshot
 }
 
 export interface UpdateComponentStateParams {
@@ -81,9 +88,49 @@ export interface PingResult {
   agentConnected: boolean
 }
 
+export interface GetInspectStatusResult {
+  /** vite-plugin-inspect 报告是否已产出（首次 buildEnd 前 false，面板隐藏 Inspect tab） */
+  available: boolean
+}
+
 export interface ComponentTreeResult {
   fetchedAt: number
   pages: PageComponentTree[]
+  /** 探针侧 Vue 运行时版本（app.version）；面板用它开 Reactivity Graph tab 门禁 */
+  vueVersion?: string
+}
+
+// ---------------------------------------------------------------------------
+// Reactivity Graph（W10）：镜像 vendored kit `protocol/messages.ts` 的同名类型。
+// 探针不 import devtools-kit（依赖纯净性），字面量契约两端冻结同步——
+// 与 BINDINGS_PROP 同一约定（HANDOFF §4）
+// ---------------------------------------------------------------------------
+
+export type ReactivityGraphNodeType =
+  | 'ref'
+  | 'computed'
+  | 'reactive'
+  | 'watch'
+  | 'render'
+  | 'effect'
+  | 'unknown'
+
+export interface ReactivityGraphNode {
+  id: string
+  type: ReactivityGraphNodeType
+  label: string
+  data: Record<string, unknown>
+}
+
+export interface ReactivityRelationship {
+  id: string
+  from: string
+  to: string
+}
+
+export interface ReactivityGraphSnapshot {
+  nodes: ReactivityGraphNode[]
+  relationships: ReactivityRelationship[]
 }
 
 export type PushComponentTreeParams = ComponentTreeResult

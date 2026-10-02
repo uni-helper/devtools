@@ -6,9 +6,11 @@ import { defineDevframe, defineRpcFunction } from 'devframe'
 import { launchEditor } from 'devframe/utils/launch-editor'
 import type { DevframeDockDefaults } from 'devframe/types'
 import type { AgentRegistry } from './relay.ts'
+import { isInspectAvailable } from './inspect-serve.ts'
 import type {
   ComponentStateResult,
   ComponentTreeResult,
+  GetInspectStatusResult,
   GetPiniaStoresResult,
   GetRegisteredRoutesResult,
   NavigateParams,
@@ -257,10 +259,13 @@ export function createUniDevtoolsDevframe(
               const result: ComponentTreeResult = {
                 fetchedAt: Date.now(),
                 pages: tree?.pages ?? tree ?? [],
+                ...(typeof tree?.vueVersion === 'string' ? { vueVersion: tree.vueVersion } : {}),
               }
               treeSharedState.mutate((draft) => {
                 draft.fetchedAt = result.fetchedAt
                 draft.pages = result.pages
+                if (result.vueVersion)
+                  draft.vueVersion = result.vueVersion
               })
               registry.setCachedTree(result)
               return result
@@ -346,6 +351,20 @@ export function createUniDevtoolsDevframe(
             launchEditor(resolvedFile + suffix)
             return { ok: true }
           },
+        }),
+      }))
+
+      // Vite Inspect（W11）：node 本地读盘判断报告是否产出（不经探针——
+      // 这是构建管线数据，不是运行时数据），面板据此门控 Inspect tab
+      uni.rpc.register(defineRpcFunction({
+        name: 'get-inspect-status',
+        type: 'query',
+        jsonSerializable: true,
+        agent: { description: 'Whether vite-plugin-inspect reports have been generated.' },
+        setup: () => ({
+          handler: async (): Promise<GetInspectStatusResult> => ({
+            available: isInspectAvailable(),
+          }),
         }),
       }))
 

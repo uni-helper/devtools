@@ -416,4 +416,55 @@ describe('state: 组件状态面板全能力对齐官方', () => {
       expect(state.setup!.message.value).toBe('hello closure')
     })
   })
+
+  describe('6. Reactivity Graph 集成（随 get-component-state 搭车下发）', () => {
+    it('mp 插桩闭包绑定：ref → render 边随 state 快照产出', () => {
+      const renderFn: any = () => {}
+      const renderEffect = { fn: renderFn, instance: { type: { name: 'GraphComp' } } }
+      const countRef = { __v_isRef: true, value: 7, subs: { sub: renderEffect, nextSub: null } }
+      // render 闭包绑定与 renderEffect.fn 是同一函数：3.5 启发靠 fn 上的标记识别 render
+      renderFn[BINDINGS_PROP] = { count: countRef }
+
+      const vm = {
+        $: {
+          uid: 'graph-mp',
+          type: { name: 'GraphComp' },
+          setupState: {},
+          render: renderFn,
+        },
+      }
+      extractComponentNode(vm, 0, 10, new Set(), '')
+
+      const state = getComponentState('graph-mp')
+      expect(state.reactivityGraph).toBeDefined()
+
+      const graph = state.reactivityGraph!
+      expect(graph.nodes).toHaveLength(2)
+      const refNode = graph.nodes.find(n => n.type === 'ref')
+      const renderNode = graph.nodes.find(n => n.type === 'render')
+      expect(refNode?.label).toBe('count')
+      expect(renderNode?.label).toBe('GraphComp render')
+      expect(graph.relationships).toHaveLength(1)
+      expect(graph.relationships[0]).toEqual({
+        id: `${refNode!.id}->${renderNode!.id}`,
+        from: refNode!.id,
+        to: renderNode!.id,
+      })
+    })
+
+    it('无响应式绑定时省略 reactivityGraph 字段', () => {
+      const vm = {
+        $: {
+          uid: 'graph-empty',
+          type: { name: 'EmptyComp' },
+          setupState: { plain: 'value' },
+        },
+      }
+      extractComponentNode(vm, 0, 10, new Set(), '')
+
+      const state = getComponentState('graph-empty')
+      expect(state.setup!.plain.value).toBe('value')
+      expect(state.reactivityGraph).toBeUndefined()
+    })
+  })
 })

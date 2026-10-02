@@ -5,6 +5,7 @@ import { DEVFRAMES_HUB_BASE, initHub } from '@devframes/hub/initiate'
 import { createDevServer } from 'devframe/adapters/dev'
 import { createInteractiveAuth } from 'devframe/recipes/interactive-auth'
 import { createUniDevtoolsDevframe } from './devframe.ts'
+import { createInspectApp } from './inspect-serve.ts'
 import { AgentRegistry } from './relay.ts'
 
 export interface HarnessOptions {
@@ -38,6 +39,7 @@ export async function startDevServerHarness(options: HarnessOptions = {}) {
     host,
     port,
     basePath,
+    app: createInspectApp(),
     mcp: false,
     openBrowser: false,
     // Mini-program connectSocket does not set Origin header; disable loopback origin check

@@ -107,6 +107,7 @@ export default defineConfig({
     'i-carbon-edit',
     'i-carbon-filter',
     'i-carbon-flow-data',
+    'i-carbon-ibm-watson-discovery',
     'i-carbon-idea',
     'i-carbon-information',
     'i-carbon-launch',

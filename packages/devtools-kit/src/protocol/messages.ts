@@ -23,6 +23,8 @@ export interface AppsSnapshotMessage {
 export interface DevtoolsCapabilitiesMessage {
   openInEditor: boolean
   pagedComponentTree?: boolean
+  // uni-devtools: vite inspect iframe 门控
+  inspect?: boolean
 }
 
 export interface ComponentTreePageMessage {

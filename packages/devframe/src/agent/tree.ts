@@ -42,6 +42,31 @@ export function clearInstanceRegistry(): void {
   instanceRegistry.clear()
 }
 
+let cachedVueVersion: string | undefined
+
+/**
+ * Vue 运行时版本（app.version）。面板 Graph tab 的门禁消费它
+ * （kit supportsReactivityGraphVueVersion）；同一运行时恒定，读到即缓存。
+ */
+export function getVueRuntimeVersion(): string | undefined {
+  if (cachedVueVersion)
+    return cachedVueVersion
+  for (const vm of instanceRegistry.values()) {
+    try {
+      const internal = vm.$ || vm
+      const version = internal?.appContext?.app?.version
+      if (typeof version === 'string' && version) {
+        cachedVueVersion = version
+        return version
+      }
+    }
+    catch {
+      // 单实例读取失败换下一个
+    }
+  }
+  return undefined
+}
+
 /** 文件路径 → 显示名（取 basename 去扩展名，如 `layouts/default.vue` → `default`） */
 function fileBasename(file: string | undefined): string | undefined {
   if (!file)

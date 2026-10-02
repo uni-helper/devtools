@@ -4,11 +4,13 @@ import process from 'node:process'
 /* eslint-disable no-console */
 import os from 'node:os'
 import type { Plugin, ResolvedConfig } from 'vite'
+import Inspect from 'vite-plugin-inspect'
 import { createDevServer } from 'devframe/adapters/dev'
 import { createInteractiveAuth } from 'devframe/recipes/interactive-auth'
 import { randomToken } from 'devframe/utils/crypto-token'
 import { AGENT_CLIENT_MARKER, AgentRegistry } from './relay.ts'
 import { createUniDevtoolsDevframe, resolveClientAssets } from './devframe.ts'
+import { INSPECT_OUTPUT_DIR, createInspectApp } from './inspect-serve.ts'
 import { injectEntryFileGuard, injectPlainRenderHook, injectSetupBindings, resolveVirtualEntryFile } from './instrument.ts'
 
 const BASE = '/__uni-devtools/'
@@ -73,6 +75,11 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
     const host = options.host ?? resolveHost()
     const port = options.port ?? (process.env.UNI_DEVTOOLS_PORT ? Number(process.env.UNI_DEVTOOLS_PORT) : undefined)
 
+    // Vite Inspect 静态托管：把 vite-plugin-inspect 的 build 产物目录（自包含
+    // client UI + reports）挂到 sidecar 的 inspect 路径下供面板 iframe（官方
+    // v7 Inspect tab 同款方案）。注意：经预配置 app 挂载的中间件先于 devframe
+    // 自身 handler（含 auth）执行——静态报告无 token 门禁，dev 工具可接受；
+    // 目录不可枚举（仅能按文件名取）
     // auth 的函数形态（(ctx) => handler）在类型上未声明，但 dev 适配器与
     // instance-shell 的 resolveAuth 运行时均支持，用 as any 绕过类型
     state.ready = createDevServer(def, {
@@ -80,6 +87,7 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
       port,
       basePath: BASE,
       distDir: panelDir,
+      app: createInspectApp(),
       mcp: false,
       openBrowser: false,
       // 小程序 connectSocket 不发 Origin 头，默认 loopback-only 检查会拒绝升级；
@@ -199,7 +207,14 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
     },
   }
 
-  return [corePlugin, instrumentPlugin]
+  return [
+    corePlugin,
+    instrumentPlugin,
+    // Vite Inspect：build 模式（mp dev = vite build --watch 没有 dev server，
+    // 中间件模式不可用）——每个 watch rebuild 在 buildEnd 全量重写报告 +
+    // 自带 client UI 到 INSPECT_OUTPUT_DIR，sidecar 静态托管给面板 iframe
+    ...(isDev ? [Inspect({ build: true, outputDir: INSPECT_OUTPUT_DIR }) as Plugin] : []),
+  ]
 }
 
 export const UniDevtoolsDevframe = UniDevtoolsPlugin
