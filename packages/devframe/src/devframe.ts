@@ -18,6 +18,8 @@ import type {
   PageComponentTree,
   PingResult,
   PiniaStateResult,
+  RecomputeComponentStateParams,
+  RecomputeComponentStateResult,
   RegisteredRouteRecord,
   RouterInfoResult,
   UpdateComponentStateParams,
@@ -284,6 +286,18 @@ export function createUniDevtoolsDevframe(
         setup: () => ({
           handler: async (args: { id: string }): Promise<ComponentStateResult> => {
             return await registry.callAgent<ComponentStateResult>('uni-devtools:agent:getComponentState', args)
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'recompute-component-state',
+        type: 'query',
+        jsonSerializable: true,
+        agent: { description: 'Trigger recomputation of a computed ref in component setup state.' },
+        setup: () => ({
+          handler: async (args: RecomputeComponentStateParams): Promise<RecomputeComponentStateResult> => {
+            return await registry.callAgent<RecomputeComponentStateResult>('uni-devtools:agent:recomputeComponentState', args)
           },
         }),
       }))

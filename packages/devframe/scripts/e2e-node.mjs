@@ -92,10 +92,15 @@ try {
   const FAKE_STATE = {
     id: 'node-2',
     name: 'FakeChild',
+    props: { label: 'demo' },
     data: { count: 0 },
     setup: {
-      title: { type: 'ref', value: 'Hello' },
+      title: { value: 'Hello', stateType: 'ref' },
     },
+    computed: {
+      doubled: { value: 0, stateType: 'computed', editable: false },
+    },
+    attrs: { 'data-x': '1' },
   }
 
   // 2. Connect simulated agent probe with client=uni-agent marker
@@ -109,6 +114,9 @@ try {
     },
     'uni-devtools:agent:updateComponentState': (args) => {
       return { ok: true, key: args.key, value: args.value }
+    },
+    'uni-devtools:agent:recomputeComponentState': () => {
+      return { ok: true }
     },
     'uni-devtools:agent:getRouterInfo': () => {
       return {
@@ -162,8 +170,22 @@ try {
 
   // Also verify state RPCs
   const stateRes = await panel.$call('uni-helper-devtools:get-component-state', { id: 'node-2' })
-  if (stateRes?.name !== 'FakeChild' || stateRes?.setup?.title?.value !== 'Hello') {
+  if (
+    stateRes?.name !== 'FakeChild'
+    || stateRes?.setup?.title?.value !== 'Hello'
+    || stateRes?.props?.label !== 'demo'
+    || stateRes?.setup?.title?.stateType !== 'ref'
+  ) {
     throw new Error(`get-component-state 状态读取失败: ${JSON.stringify(stateRes)}`)
+  }
+
+  const recomputeRes = await panel.$call('uni-helper-devtools:recompute-component-state', {
+    id: 'node-2',
+    section: 'setup',
+    path: ['title'],
+  })
+  if (!recomputeRes || recomputeRes.ok !== true) {
+    throw new Error(`recompute-component-state 调用失败: ${JSON.stringify(recomputeRes)}`)
   }
 
   const updateRes = await panel.$call('uni-helper-devtools:update-component-state', {
@@ -175,7 +197,7 @@ try {
     throw new Error(`update-component-state 状态写入失败: ${JSON.stringify(updateRes)}`)
   }
 
-  console.log('✓ [5/5] relay 4 大冻结 RPC 全量定向往返验证通过')
+  console.log('✓ [5/5] relay 4 大冻结 RPC + recompute 全量定向往返验证通过')
 
   // 5.3 Verify router RPCs (W5)
   const routesRes = await panel.$call('uni-helper-devtools:get-registered-routes')

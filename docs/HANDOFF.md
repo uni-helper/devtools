@@ -15,16 +15,16 @@
 
 ## 2. 功能矩阵（当前能力）
 
-| 功能                                                        | 状态        | 入口                       |
-| ----------------------------------------------------------- | ----------- | -------------------------- |
-| 组件树（多页=多 app、文件名命名、实时推送 ~0.3s）           | ✅          | Components 标签            |
-| 状态查看（Options data / script setup 闭包绑定 / 深层展开） | ✅          | 同上，右侧 State 面板      |
-| 状态编辑（顶层 + **深路径**、数组索引、删除）               | ✅          | 值行铅笔按钮               |
-| Pinia 检查器（stores 树、State/Getters、编辑+失效刷新）     | ✅          | Pinia 标签（官方内建映射） |
-| 路由页面栈（pages.json 注册路由 + 当前栈 + 匹配 + 导航）    | ✅          | Pages 标签                 |
-| openInEditor（launch-editor + 项目根越界守卫）              | ✅          | 树行文件名 / 状态行动作    |
-| Timeline                                                    | ⏸ 有据降级 | tab 禁用（结论见 §7 W6）   |
-| graph / plugins / 组件 DOM 定位（inspectDom/highlight）     | ❌ 未做     | tab 禁用                   |
+| 功能                                                                                                                             | 状态        | 入口                       |
+| -------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------------------------- |
+| 组件树（多页=多 app、文件名命名、实时推送 ~0.3s）                                                                                | ✅          | Components 标签            |
+| 状态查看（官方分组 props/data/setup/setup-other/computed/attrs + (Computed)/(Ref)/(Reactive) 徽标 + computed tooltip/recompute） | ✅          | 同上，右侧 State 面板      |
+| 状态编辑（顶层 + **深路径**、数组索引、删除）                                                                                    | ✅          | 值行铅笔按钮               |
+| Pinia 检查器（stores 树、State/Getters、编辑+失效刷新）                                                                          | ✅          | Pinia 标签（官方内建映射） |
+| 路由页面栈（pages.json 注册路由 + 当前栈 + 匹配 + 导航）                                                                         | ✅          | Pages 标签                 |
+| openInEditor（launch-editor + 项目根越界守卫）                                                                                   | ✅          | 树行文件名 / 状态行动作    |
+| Timeline                                                                                                                         | ⏸ 有据降级 | tab 禁用（结论见 §7 W6）   |
+| graph / plugins / 组件 DOM 定位（inspectDom/highlight）                                                                          | ❌ 未做     | tab 禁用                   |
 
 ## 3. 仓库地图（只列关键）
 
@@ -89,12 +89,14 @@ plain `<script>` SFC / layout 产物无 `__name`/`__file`——文件名也是�
 
 ## 5. 冻结契约（不许单方改；多处同步）
 
-**RPC（scope `uni-helper-devtools`，共 12 个，形状见 `packages/devframe/src/types.ts`）**
+**RPC（scope `uni-helper-devtools`，共 13 个，形状见 `packages/devframe/src/types.ts`）**
 
-- 基础 5：`ping` / `get-component-tree` / `get-component-state` / `update-component-state` / `push-component-tree`
+- 基础 6：`ping` / `get-component-tree` / `get-component-state` / `update-component-state` / `push-component-tree` / `recompute-component-state`
 - W2：`open-in-editor`（launch-editor + getProjectRoot 三级推断 + 越界拦截）
 - W5：`get-registered-routes`（pages.json 解析，容注释/尾逗号/subPackages）/ `get-router-info`（getCurrentPages 栈）/ `navigate-to`
 - W4：`get-pinia-stores` / `get-pinia-state` / `update-pinia-state`
+
+**状态契约（ComponentStateResult）**：对齐官方分组 props / data / setup / setupOther / computed / attrs；setup 绑定经 getSetupBindingInfo 判定输出 (Computed)/(Ref)/(Reactive) 徽标与 raw 源码 tooltip；函数/组件样对象归入 setupOther；recompute-component-state 仅支持 setup 段 computed ref 触发重算。
 
 **编译期插桩（`instrument.ts` 写入端 ↔ 探针读取端，字面量冻结同步）**
 
@@ -219,6 +221,7 @@ CR 验证：vitest 38/38 + e2e 5+2 + tsc 0 + 双 build + 产物语法全检 + CD
     出现序号（`pages/index@2`，首个保持裸 route，单实例契约/fixtures 不变；4 例单测
     `tree.test.ts`）。排查教训：**改了 dist/plugin.mjs 必须重启 dev:mp-weixin watch**
     ——运行中的 vite 持旧插件内存态，重建 dist 不会热更，产物「看起来新其实旧」
+19. **Vitest 断言对象时 pretty-format 会触发可枚举 getter**：在测试桩里手造含 getter 的 ref（如 `get value()`）时，若该属性为自身可枚举属性，vitest 断言失败输出 diff 或匹配 `objectContaining` 时会调用 pretty-format 遍历属性求值，引发意外的二次求值使得调用计数断言失败（如 callCount 1 变 2）。手造 ref 应遵循 Vue 运行时原型设计，使用 `Object.defineProperty(obj, 'value', { get, enumerable: false })` 定义 getter。
 
 ## 9. 下一步（按优先级）
 

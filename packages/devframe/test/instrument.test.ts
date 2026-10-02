@@ -130,9 +130,9 @@ describe('探针读取编译期捕获的绑定（mp script-setup 形态）', () 
     expect(getRegisteredInstance(id)).toBeTruthy()
     const state = getComponentState(id)
     expect(state.name).toBe('Anonymous') // 'components/Anonymous.vue'.vue → Anonymous
-    expect(state.setup.r).toEqual({ type: 'ref', value: 1 })
-    expect(state.setup.obj).toEqual({ type: 'object', value: { nested: true } })
-    expect(state.data).toEqual({})
+    expect(state.setup.r).toEqual({ stateType: 'ref', value: 1 })
+    expect(state.setup.obj).toEqual({ value: { nested: true } })
+    expect(state.data).toBeUndefined()
   })
 
   it('updateComponentState 编辑 ref 绑定落到原 ref', () => {

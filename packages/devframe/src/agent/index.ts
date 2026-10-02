@@ -20,6 +20,7 @@ import {
   type ComponentStateResult,
   type UpdateStateResult,
   getComponentState,
+  recomputeComponentState,
   updateComponentState,
 } from './state'
 
@@ -175,6 +176,9 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
       schedulePushComponentTree(100)
       return res
     },
+    'uni-devtools:agent:recomputeComponentState': (params: { id: string, section: string, path: string[] }): { ok: boolean } => {
+      return recomputeComponentState(params.id, params.section, params.path)
+    },
     'uni-devtools:agent:getPiniaStores': (): PiniaStoresResult => {
       return getPiniaStores()
     },
@@ -276,6 +280,7 @@ export {
   getPiniaState,
   getPiniaStores,
   getRegisteredInstance,
+  recomputeComponentState,
   updateComponentState,
   updatePiniaState,
 }

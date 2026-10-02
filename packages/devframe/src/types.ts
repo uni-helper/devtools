@@ -2,11 +2,12 @@
  * Frozen Wire Contracts for Uni-Helper DevTools
  *
  * Scope: `uni-helper-devtools`
- * RPCs:
+ * RPCs (13):
  *   - `ping`: () => PingResult
  *   - `get-component-tree`: () => ComponentTreeResult
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
  *   - `update-component-state`: (args: UpdateComponentStateParams) => UpdateComponentStateResult
+ *   - `recompute-component-state`: (args: RecomputeComponentStateParams) => RecomputeComponentStateResult
  *   - `open-in-editor`: (args: OpenInEditorParams) => OpenInEditorResult
  *   - `get-registered-routes` / `get-router-info` / `navigate-to`（W5 路由栈，见 agy T-79c804）
  *   - `get-pinia-stores` / `get-pinia-state` / `update-pinia-state`（W4 Pinia inspector）
@@ -28,30 +29,51 @@ export interface PageComponentTree {
   components: ComponentTreeNode | null
 }
 
-export type ComponentStateFieldType = 'ref' | 'object' | 'value'
-
-export interface ComponentStateField {
-  type: ComponentStateFieldType
-  value: unknown
+export interface ComponentStateEntry {
+  value?: unknown // JSON 安全值（function 绑定可省略）
+  stateType?: 'ref' | 'computed' | 'reactive'
+  readonly?: boolean
+  raw?: string // computed getter 源码（tooltip），截断 ~500 字符
+  fn?: boolean // function 绑定标记（Setup (other) 段）
+  fnName?: string
+  fnSource?: string
+  editable?: boolean // 仅 options computed 用（有 setter 才可编辑）
 }
 
 export interface ComponentStateResult {
   id: string
   name: string
-  data: Record<string, unknown>
-  setup: Record<string, ComponentStateField>
+  props?: Record<string, unknown>
+  data?: Record<string, unknown>
+  setup?: Record<string, ComponentStateEntry>
+  setupOther?: Record<string, ComponentStateEntry>
+  computed?: Record<string, ComponentStateEntry> // Options API computed（经 proxy 求值）
+  attrs?: Record<string, unknown>
 }
 
 export interface UpdateComponentStateParams {
   id: string
-  key: string
-  value: unknown
+  key?: string
+  value?: unknown
+  section?: 'props' | 'setup' | 'data' | 'computed'
+  path?: string[]
+  remove?: boolean
 }
 
 export interface UpdateComponentStateResult {
   ok: true
   key: string
   value: unknown
+}
+
+export interface RecomputeComponentStateParams {
+  id: string
+  section: string
+  path: string[]
+}
+
+export interface RecomputeComponentStateResult {
+  ok: boolean
 }
 
 export interface PingResult {

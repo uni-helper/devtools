@@ -62,27 +62,39 @@ const stateById: Record<string, ComponentStateResult> = {
   'pages/index/index#4': {
     id: 'pages/index/index#4',
     name: 'CounterCard',
-    data: {
+    props: {
       title: '点击计数',
+      step: 1,
+    },
+    attrs: {
+      'data-testid': 'counter-card',
+      'aria-label': 'counter',
+    },
+    data: {
       initialCount: 0,
     },
     setup: {
-      count: { type: 'ref', value: 3 },
-      isRunning: { type: 'value', value: true },
+      count: { stateType: 'ref', value: 3 },
+      isRunning: { value: true },
       config: {
-        type: 'object',
         value: { step: 2, max: 99, labels: ['少', '中', '多'], nested: { deep: { flag: false } } },
       },
       items: {
-        type: 'ref',
+        stateType: 'ref',
         value: [
           { id: 1, label: '第一项', done: true },
           { id: 2, label: '第二项', done: false },
         ],
       },
-      ratio: { type: 'value', value: 0.42 },
-      empty: { type: 'value', value: null },
-      updatedAt: { type: 'value', value: '2026-09-30T12:00:00.000Z' },
+      ratio: { value: 0.42 },
+      empty: { value: null },
+      updatedAt: { value: '2026-09-30T12:00:00.000Z' },
+    },
+    computed: {
+      doubleCount: { stateType: 'computed', value: 6, raw: '() => count.value * 2' },
+    },
+    setupOther: {
+      onReset: { fn: true, fnName: 'onReset', fnSource: 'const onReset = () => { count.value = 0 }' },
     },
   },
   'pages/index/index#1': {
@@ -90,9 +102,9 @@ const stateById: Record<string, ComponentStateResult> = {
     name: 'IndexPage',
     data: {},
     setup: {
-      pageTitle: { type: 'value', value: '首页' },
-      loading: { type: 'ref', value: false },
-      list: { type: 'ref', value: [] },
+      pageTitle: { value: '首页' },
+      loading: { stateType: 'ref', value: false },
+      list: { stateType: 'ref', value: [] },
     },
   },
 }
@@ -116,10 +128,14 @@ export function mockComponentState(id: string): ComponentStateResult {
 export function mockUpdateComponentState(params: { id: string, key: string, value: unknown }): { ok: true, key: string, value: unknown } {
   const state = stateById[params.id]
   if (state) {
-    if (params.key in state.data)
+    if (state.props && params.key in state.props)
+      state.props[params.key] = params.value
+    else if (state.data && params.key in state.data)
       state.data[params.key] = params.value
-    else if (params.key in state.setup)
+    else if (state.setup && params.key in state.setup)
       state.setup[params.key]!.value = params.value
+    else if (state.computed && params.key in state.computed)
+      state.computed[params.key]!.value = params.value
   }
   return { ok: true, key: params.key, value: params.value }
 }

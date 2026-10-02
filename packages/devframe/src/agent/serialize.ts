@@ -37,6 +37,65 @@ export function checkIsRef(val: any): boolean {
   return false
 }
 
+export interface SetupBindingInfo {
+  ref: boolean
+  computed: boolean
+  reactive: boolean
+  readonly: boolean
+}
+
+/**
+ * 严格镜像 kit getSetupStateType：只用 __v_isRef === true 判 ref，
+ * 并结合 effect / fn / _dirty 判 computed；__v_isReactive 判 reactive；__v_isReadonly 判 readonly
+ */
+export function getSetupBindingInfo(val: unknown): SetupBindingInfo {
+  if (val == null || typeof val !== 'object') {
+    return {
+      ref: false,
+      computed: false,
+      reactive: false,
+      readonly: false,
+    }
+  }
+
+  const record = val as Record<string, unknown>
+  const ref = record.__v_isRef === true
+  const computed = ref && (
+    record.effect != null
+    || typeof record.fn === 'function'
+    || typeof record._dirty === 'boolean'
+  )
+  const reactive = record.__v_isReactive === true
+  const readonly = record.__v_isReadonly === true
+
+  return {
+    ref,
+    computed,
+    reactive,
+    readonly,
+  }
+}
+
+/**
+ * 读取 computed getter 源码，镜像 kit readComputedSource（截断 500 字符）
+ */
+export function readComputedSource(val: unknown): string | undefined {
+  if (val == null || typeof val !== 'object')
+    return undefined
+
+  const record = val as Record<string, unknown>
+  const effect = record.effect as Record<string, unknown> | undefined
+  const source = effect
+    ? (effect.raw ?? effect.fn)
+    : record.fn
+
+  if (typeof source === 'function') {
+    const str = source.toString()
+    return str.length > 500 ? str.slice(0, 500) : str
+  }
+  return undefined
+}
+
 /**
  * 递归清洗非纯 JSON 可序列化数据，消除循环引用与特殊对象
  */

@@ -39,6 +39,7 @@ import type {
   StateEntry,
 } from '@vue/devtools-kit'
 import type {
+  ComponentStateEntry,
   ComponentStateResult,
   ComponentTreeResult,
   GetPiniaStoresResult,
@@ -156,30 +157,100 @@ function sameAppSet(a: AppSnapshot[], b: AppSnapshot[]): boolean {
   return b.every(app => ids.has(app.id))
 }
 
-function toStateEntry(sectionId: string, key: string, value: unknown, stateType?: string): StateEntry {
+// 形状由调用方显式给出：setup/setupOther/computed 段传探针 entry，
+// props/data/attrs（与 Pinia state/getters）传裸值时包一层 { value }——
+// 不做启发式探测，用户数据里恰好叫 editable/raw/fn 的键不能被误读成元信息。
+function toStateEntry(
+  sectionId: string,
+  key: string,
+  entry: ComponentStateEntry,
+): StateEntry {
+  let encodedVal: EncodedValue
+  if (entry.fn) {
+    encodedVal = {
+      kind: 'function',
+      name: entry.fnName,
+      sourcePreview: entry.fnSource,
+    }
+  }
+  else {
+    encodedVal = encodeValue(entry.value, { maxDepth: 8, maxEntries: 100 }) as EncodedValue
+  }
+
+  let editable: boolean
+  if (typeof entry.editable === 'boolean') {
+    editable = entry.editable
+  }
+  else if (sectionId === 'props' || sectionId === 'data' || sectionId === 'state') {
+    editable = true
+  }
+  else if (sectionId === 'setup') {
+    editable = !entry.readonly && entry.stateType !== 'computed'
+  }
+  else {
+    editable = false
+  }
+
+  const meta: Record<string, unknown> = {}
+  if (entry.stateType) {
+    meta.stateType = entry.stateType
+    meta.stateTypeName = entry.stateType[0].toUpperCase() + entry.stateType.slice(1)
+  }
+  if (entry.readonly === true) {
+    meta.readonly = true
+  }
+  if (entry.raw) {
+    meta.raw = entry.raw
+  }
+
   return {
     key,
     path: [sectionId, key],
-    // 高 maxDepth 让探针已物化的 JSON（depth 6）几乎全量可展开；不给 handle，
-    // 更深处呈现为截断预览——探针没有 values:expand 通道，不假装可展开。
-    value: encodeValue(value, { maxDepth: 8, maxEntries: 100 }) as EncodedValue,
-    editable: true,
-    ...(stateType ? { meta: { stateType } } : {}),
+    value: encodedVal,
+    editable,
+    ...(Object.keys(meta).length > 0 ? { meta } : {}),
   }
 }
 
 function toStateSnapshot(result: ComponentStateResult, version: number): ComponentStateSnapshotMessage {
   const sections: ComponentStateSnapshotMessage['sections'] = []
-  const setupEntries = Object.entries(result.setup ?? {}).map(
-    ([key, field]) => toStateEntry('setup', key, field.value, field.type),
+
+  const propsEntries = Object.entries(result.props ?? {}).map(
+    ([key, value]) => toStateEntry('props', key, { value }),
   )
-  if (setupEntries.length > 0)
-    sections.push({ id: 'setup', label: 'Setup', entries: setupEntries })
+  if (propsEntries.length > 0)
+    sections.push({ id: 'props', label: 'Props', entries: propsEntries })
+
   const dataEntries = Object.entries(result.data ?? {}).map(
-    ([key, value]) => toStateEntry('data', key, value),
+    ([key, value]) => toStateEntry('data', key, { value }),
   )
   if (dataEntries.length > 0)
     sections.push({ id: 'data', label: 'Data', entries: dataEntries })
+
+  const setupEntries = Object.entries(result.setup ?? {}).map(
+    ([key, entry]) => toStateEntry('setup', key, entry),
+  )
+  if (setupEntries.length > 0)
+    sections.push({ id: 'setup', label: 'Setup', entries: setupEntries })
+
+  const setupOtherEntries = Object.entries(result.setupOther ?? {}).map(
+    ([key, entry]) => toStateEntry('setup-other', key, entry),
+  )
+  if (setupOtherEntries.length > 0)
+    sections.push({ id: 'setup-other', label: 'Setup (other)', entries: setupOtherEntries })
+
+  const computedEntries = Object.entries(result.computed ?? {}).map(
+    ([key, entry]) => toStateEntry('computed', key, entry),
+  )
+  if (computedEntries.length > 0)
+    sections.push({ id: 'computed', label: 'Computed', entries: computedEntries })
+
+  const attrsEntries = Object.entries(result.attrs ?? {}).map(
+    ([key, value]) => toStateEntry('attrs', key, { value }),
+  )
+  if (attrsEntries.length > 0)
+    sections.push({ id: 'attrs', label: 'Attrs', entries: attrsEntries })
+
   return { componentId: result.id, version, sections }
 }
 
@@ -196,14 +267,14 @@ function toPiniaStateSnapshot(result: PiniaStateResult, version: number): Compon
   })
   const sections: ComponentStateSnapshotMessage['sections'] = []
   const stateEntries = Object.entries(result.state ?? {}).map(
-    ([key, value]) => withInspectorMeta(toStateEntry('state', key, value)),
+    ([key, value]) => withInspectorMeta(toStateEntry('state', key, { value })),
   )
   if (stateEntries.length > 0)
     sections.push({ id: 'state', label: 'State', entries: stateEntries })
   // getters 是 computed 求值属性：探针侧编辑必然 Key not found，如实标记不可编辑
   const getterEntries = Object.entries(result.getters ?? {}).map(
     ([key, value]) => {
-      const entry = withInspectorMeta(toStateEntry('getters', key, value))
+      const entry = withInspectorMeta(toStateEntry('getters', key, { value }))
       entry.editable = false
       return entry
     },
@@ -701,9 +772,40 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         }
       }
 
-      case 'values:recompute':
+      case 'values:recompute': {
+        await ensureReady()
+        const payload = request.payload as {
+          componentId: string, sectionId: string, path: string[]
+        }
+        if (!payload?.componentId)
+          return { status: 0, error: '缺少 componentId' }
+        try {
+          if (!mockMode) {
+            await callUni('recompute-component-state', {
+              id: payload.componentId,
+              section: payload.sectionId,
+              path: payload.path,
+            })
+          }
+          const componentId = payload.componentId
+          const version = (stateVersionByComponent.get(componentId) ?? 0) + 1
+          stateVersionByComponent.set(componentId, version)
+          emit({
+            type: 'components:stateInvalidated',
+            appId: appIdOf(componentId),
+            componentId,
+            version,
+            reason: 'edit',
+          })
+          return { status: 1 }
+        }
+        catch (error) {
+          return { status: 0, error: error instanceof Error ? error.message : String(error) }
+        }
+      }
+
       case 'values:customAction':
-        return { status: 0, error: NOT_SUPPORTED('computed 重算 / 自定义值动作') }
+        return { status: 0, error: NOT_SUPPORTED('自定义值动作') }
 
       default:
         // highlight / scrollTo / inspectDom / expandTreeNode / timeline:* / inspectors:* 等
