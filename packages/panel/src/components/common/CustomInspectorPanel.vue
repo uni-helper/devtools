@@ -45,6 +45,10 @@ let treeRequest = 0
 let stateRequest = 0
 
 const inspectorId = computed(() => props.inspector.id)
+// uni-devtools 改点 8：mp 多页 = 多 app（Components 需要 app 列隔离页面树），
+// 但 Pinia 是全局单例（探针经 getApp() 单实例枚举 _s，与页面无关）——app 列对
+// pinia inspector 无意义，且官方 Web 单 app 场景从不显示；对齐官方，pinia 下隐藏。
+const showAppList = computed(() => apps.value.length > 1 && props.inspector.id !== 'pinia')
 const selectedNode = computed(() =>
   flattenTreeNodes(tree.value).find((node) => node.id === selectedNodeId.value),
 )
@@ -252,11 +256,12 @@ onUnmounted(() => {
 <template>
   <section ref="container" class="h-full min-h-0">
     <Splitpanes class="h-full min-h-0 overflow-hidden" :horizontal="horizontal">
-      <Pane v-if="apps.length > 1" class="h-full min-h-0" min-size="12" size="18">
+      <!-- uni-devtools 改点 8：见上方 showAppList 注释 -->
+      <Pane v-if="showAppList" class="h-full min-h-0" min-size="12" size="18">
         <AppList />
       </Pane>
 
-      <Pane class="h-full min-h-0" min-size="22" :size="apps.length > 1 ? 34 : 40">
+      <Pane class="h-full min-h-0" min-size="22" :size="showAppList ? 34 : 40">
         <InspectorTree
           v-model:filter="treeFilter"
           :actions="inspector.actions"

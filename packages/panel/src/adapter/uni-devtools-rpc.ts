@@ -54,6 +54,14 @@ import { mockComponentState, mockComponentTree, mockPiniaState, mockPiniaStores,
 /** 与 node 侧 `ctx.scope(NS)` 一致；改这里必须同步改 node 侧。 */
 const NAMESPACE = 'uni-helper-devtools'
 
+/**
+ * Pinia 检查器聚合根节点（官方 pinia devtools 插件同款常量：
+ * pinia/dist `PINIA_ROOT_ID = '_root'` / `PINIA_ROOT_LABEL = '🍍 Pinia (root)'`）。
+ * 根节点与各 store 平级（非父子嵌套），选中展示按 store id 聚合的 state/getters。
+ */
+const PINIA_ROOT_ID = '_root'
+const PINIA_ROOT_LABEL = '🍍 Pinia (root)'
+
 /** 显式 mock 模式（URL `?mock`）：无后端开发/回归用，界面常驻提示。 */
 export const mockMode = new URLSearchParams(window.location.search).has('mock')
 
@@ -145,7 +153,14 @@ function buildFlatTree(tree: ComponentTreeResult): FlatTree {
     }
     if (page.components)
       walk(page.components)
-    apps.push({ id: appId, name: page.route, componentCount: count })
+    // version 上报探针侧 Vue 运行时版本；官方 client 用它做 Graph tab 门禁
+    // （supportsReactivityGraphVueVersion），缺省时该 tab 整个隐藏
+    apps.push({
+      id: appId,
+      name: page.route,
+      ...(tree.vueVersion ? { version: tree.vueVersion } : {}),
+      componentCount: count,
+    })
   }
   return { apps, nodes }
 }
@@ -251,7 +266,14 @@ function toStateSnapshot(result: ComponentStateResult, version: number): Compone
   if (attrsEntries.length > 0)
     sections.push({ id: 'attrs', label: 'Attrs', entries: attrsEntries })
 
-  return { componentId: result.id, version, sections }
+  // reactivityGraph 搭 state 快照的便车透传（官方 kit 协议同名字段，
+  // Graph tab 从 components:stateSnapshot 响应里读图，无独立 RPC）
+  return {
+    componentId: result.id,
+    version,
+    sections,
+    ...(result.reactivityGraph ? { reactivityGraph: result.reactivityGraph } : {}),
+  }
 }
 
 /** Pinia store 快照 → 官方 sections（State / Getters 两个分区）。 */
@@ -282,6 +304,34 @@ function toPiniaStateSnapshot(result: PiniaStateResult, version: number): Compon
   if (getterEntries.length > 0)
     sections.push({ id: 'getters', label: 'Getters', entries: getterEntries })
   return { componentId: `inspector:pinia:${nodeId}`, version, sections }
+}
+
+/**
+ * 聚合根节点快照（官方 pinia 插件 `_root` 的 formatStoreForInspectorState(pinia) 语义）：
+ * state 组按 store id 放整个 $state 对象（可编辑，深路径编辑路由见 inspectors:editState）；
+ * getters 组按 store id 聚合（不可编辑）；无 getters 的 store 不出 getters 条目。
+ */
+function toPiniaRootSnapshot(states: PiniaStateResult[], version: number): ComponentStateSnapshotMessage {
+  const withRootMeta = (entry: StateEntry): StateEntry => ({
+    ...entry,
+    meta: { ...entry.meta, inspectorId: 'pinia', nodeId: PINIA_ROOT_ID, disableAdd: true },
+  })
+  const sections: ComponentStateSnapshotMessage['sections'] = []
+  const stateEntries = states.map(
+    s => withRootMeta(toStateEntry('state', s.id, { value: s.state })),
+  )
+  if (stateEntries.length > 0)
+    sections.push({ id: 'state', label: 'State', entries: stateEntries })
+  const getterEntries = states
+    .filter(s => Object.keys(s.getters ?? {}).length > 0)
+    .map((s) => {
+      const entry = withRootMeta(toStateEntry('getters', s.id, { value: s.getters }))
+      entry.editable = false
+      return entry
+    })
+  if (getterEntries.length > 0)
+    sections.push({ id: 'getters', label: 'Getters', entries: getterEntries })
+  return { componentId: `inspector:pinia:${PINIA_ROOT_ID}`, version, sections }
 }
 
 /** 与 kit 的 `connectDevtoolsClient()` 同签名的同步工厂（连接在内部异步建立）。 */
@@ -492,21 +542,41 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         const res = mockMode
           ? mockPiniaStores()
           : await callUni<GetPiniaStoresResult>('get-pinia-stores')
-        const stores = (res?.stores ?? [])
-          .filter(store => !filter || store.id.toLowerCase().includes(filter.toLowerCase()))
-          .map(store => ({
-            id: `store:${store.id}`,
-            label: store.id,
-            name: store.id,
-            tags: [{ label: 'store' }],
-          }))
-        return { inspectorId, rootNodes: stores }
+        // 官方 pinia 插件语义：「🍍 Pinia (root)」与各 store 平级（stores =
+        // [pinia, ..._s.values()]，非父子嵌套）；store 节点无标签；过滤同时匹配
+        // 根标签与 store id
+        const matches = (text: string): boolean => !filter || text.toLowerCase().includes(filter.toLowerCase())
+        const rootNodes: Array<{ id: string, label: string }> = []
+        if (matches(PINIA_ROOT_LABEL))
+          rootNodes.push({ id: PINIA_ROOT_ID, label: PINIA_ROOT_LABEL })
+        for (const store of res?.stores ?? []) {
+          if (matches(store.id))
+            rootNodes.push({ id: `store:${store.id}`, label: store.id })
+        }
+        return { inspectorId, rootNodes }
       }
 
       case 'inspectors:stateSnapshot': {
         await ensureReady()
         const { inspectorId, nodeId } = (request.payload ?? {}) as { inspectorId?: string, nodeId?: string }
-        if (inspectorId !== 'pinia' || !nodeId?.startsWith('store:'))
+        if (inspectorId !== 'pinia')
+          return undefined
+        // 聚合根：逐 store 拉取后按官方 _root 语义组装
+        if (nodeId === PINIA_ROOT_ID) {
+          const res = mockMode
+            ? mockPiniaStores()
+            : await callUni<GetPiniaStoresResult>('get-pinia-stores')
+          const states: PiniaStateResult[] = []
+          for (const store of res?.stores ?? []) {
+            states.push(
+              mockMode
+                ? mockPiniaState(store.id)
+                : await callUni<PiniaStateResult>('get-pinia-state', { id: store.id }),
+            )
+          }
+          return toPiniaRootSnapshot(states, inspectorVersionByNode.get(nodeId) ?? 0)
+        }
+        if (!nodeId?.startsWith('store:'))
           return undefined
         const storeId = nodeId.slice('store:'.length)
         const state = mockMode
@@ -691,10 +761,24 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         const payload = request.payload as {
           inspectorId?: string, nodeId?: string, sectionId?: string, path?: string[], value?: unknown, remove?: boolean
         }
-        if (payload.inspectorId !== 'pinia' || !payload.nodeId?.startsWith('store:'))
+        if (payload.inspectorId !== 'pinia')
           return { status: 0, error: NOT_SUPPORTED('该 inspector 的状态编辑') }
-        const storeId = payload.nodeId.slice('store:'.length)
-        const path = payload.path ?? []
+        // 聚合根编辑（官方插件 `path.unshift('state')` 的逆向）：面板 path 已去
+        // sectionId，形如 [storeId, key, ...嵌套]，翻译回目标 store 的键路径
+        let storeId: string
+        let path = payload.path ?? []
+        if (payload.nodeId === PINIA_ROOT_ID) {
+          if (path.length < 2 || !path[0])
+            return { status: 0, error: '聚合根编辑需要 [storeId, key, ...] 形式的路径' }
+          storeId = path[0]!
+          path = path.slice(1)
+        }
+        else if (payload.nodeId?.startsWith('store:')) {
+          storeId = payload.nodeId.slice('store:'.length)
+        }
+        else {
+          return { status: 0, error: NOT_SUPPORTED('该 inspector 的状态编辑') }
+        }
         if (path.length === 0)
           return { status: 0, error: '缺少编辑路径' }
         if (mockMode) {
@@ -716,7 +800,8 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
             remove: payload.remove,
           })
         }
-        // 官方刷新语义：inspector 以 nodeId 为维度递增 version
+        // 官方刷新语义：inspector 以 nodeId 为维度递增 version（聚合根编辑按
+        // 发起视图的 nodeId 失效——当前选中即根视图，刷新它）
         const nodeId = payload.nodeId
         const version = (inspectorVersionByNode.get(nodeId) ?? 0) + 1
         inspectorVersionByNode.set(nodeId, version)

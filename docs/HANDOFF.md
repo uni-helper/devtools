@@ -20,7 +20,7 @@
 | 组件树（多页=多 app、文件名命名、实时推送 ~0.3s）                                                                                | ✅          | Components 标签            |
 | 状态查看（官方分组 props/data/setup/setup-other/computed/attrs + (Computed)/(Ref)/(Reactive) 徽标 + computed tooltip/recompute） | ✅          | 同上，右侧 State 面板      |
 | 状态编辑（顶层 + **深路径**、数组索引、删除）                                                                                    | ✅          | 值行铅笔按钮               |
-| Pinia 检查器（stores 树、State/Getters、编辑+失效刷新）                                                                          | ✅          | Pinia 标签（官方内建映射） |
+| Pinia 检查器（官方树形：🍍 root 聚合视图+平级 stores、无页面列、编辑+失效刷新）                                                  | ✅          | Pinia 标签（官方内建映射） |
 | 路由页面栈（pages.json 注册路由 + 当前栈 + 匹配 + 导航）                                                                         | ✅          | Pages 标签                 |
 | openInEditor（launch-editor + 项目根越界守卫）                                                                                   | ✅          | 树行文件名 / 状态行动作    |
 | Timeline                                                                                                                         | ⏸ 有据降级 | tab 禁用（结论见 §7 W6）   |
@@ -35,7 +35,7 @@ packages/
 │   ├── src/adapter/fixtures.ts           ?mock 假数据（组件 + Pinia 双 store）
 │   ├── src/composables/devtools-connection.ts  官方改点：connectUniRpcClient + vite stub 桥接
 │   ├── src/components/nav/SideNavItem.vue      官方改点：点击死代码修复（§8-13）
-│   └── （官方源码共 7 处改动，均有 "uni-devtools" 注释标记）
+│   └── （官方源码共 8 处改动，均有 "uni-devtools" 注释标记）
 ├── devtools-kit/     vendored @vue/devtools-kit（协议/codec/rpc；exports 指 src；仅依赖 devframe@1.1.0）
 ├── devframe/         node 侧 + 探针 + 编译期插桩
 │   ├── src/devframe.ts     DevframeDefinition + 12 个 RPC + sharedState('component-tree')
@@ -114,6 +114,11 @@ plain `<script>` SFC / layout 产物无 `__name`/`__file`——文件名也是�
 componentId 用官方合成约定 `inspector:<inspectorId>:<nodeId>`；编辑失效事件名是
 `inspectors:stateInvalidated`（**事件名**，不是 command 名 `invalidateState`）且必须带 `reason`；
 getters 标 `editable: false`。
+**官方树形对齐**：根节点 `_root`/`🍍 Pinia (root)` 与各 store **平级**（官方 pinia 插件
+`stores = [pinia, ..._s.values()]`，非父子嵌套；store 节点无标签）；选中根显示按 store id
+聚合的 State（整对象可编辑）/Getters；聚合编辑 path 形如 `[storeId, key, ...]`（面板已去
+sectionId），适配器翻译回 `update-pinia-state`；pinia inspector 隐藏 AppList 页面列
+（官方 CustomInspectorPanel 改点 8）。
 
 **其他**：组件 id = `route#uid`（appId 恒为 `id.split('#')[0]`；改了同步 fixtures 与适配器）；
 面板产物路径 `resolveClientAssets()`（env `UNI_DEVTOOLS_PANEL_DIR` → panel/dist → assets/panel 兜底）。
@@ -181,7 +186,9 @@ CR 验证：vitest 38/38 + e2e 5+2 + tsc 0 + 双 build + 产物语法全检 + CD
    `createDevServer`（devframe/adapters/dev）自建 sidecar
 8. **面板是 iframe 时**主题由父窗口 `.dark`/`.light` class 跟随（官方 color-mode 已内置）+
    storage 键 `devframes-color-scheme`；standalone 直连 token 在 URL `?devframe_auth_token=`
-9. **官方 client 修改须克制**：共 7 处（connection×2/color-mode/uno/tabs/字体/SideNavItem），
+9. **官方 client 修改须克制**：共 8 处（connection×2/color-mode/uno/tabs/字体/SideNavItem/
+   CustomInspectorPanel 的 pinia 隐藏 AppList——mp 多页=多 app，但 pinia 全局单例，
+   app 列无意义且官方单 app 从不显示），
    均有 uni-devtools 注释标记；不格式化官方源码（lint ignores 已排除移植包）
 10. **mp script setup 无 setupState（已解）**：绑定被编译进 render 闭包，运行时无从枚举闭包
     变量——只能在**编译期**捕获（`instrument.ts` 用 rollup `this.parse` 做 AST 定位，形状
