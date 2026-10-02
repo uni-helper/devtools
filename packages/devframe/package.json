@@ -7,14 +7,18 @@
     ".": "./src/index.ts",
     "./relay": "./src/relay.ts",
     "./types": "./src/types.ts",
-    "./plugin": "./dist/plugin.mjs",
+    "./plugin": {
+      "types": "./src/plugin.ts",
+      "import": "./dist/plugin.mjs",
+      "require": "./dist/plugin.cjs"
+    },
     "./agent": "./src/agent/index.ts",
     "./agent/render-hook": "./src/agent/render-hook.ts"
   },
   "types": "./src/index.ts",
   "scripts": {
     "build": "pnpm run build:plugin",
-    "build:plugin": "esbuild src/plugin.ts --bundle --platform=node --format=esm --external:vite --outfile=dist/plugin.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\" && rm -rf dist/client && cp -R node_modules/vite-plugin-inspect/dist/client dist/client",
+    "build:plugin": "esbuild src/plugin.ts --bundle --platform=node --format=esm --external:vite --outfile=dist/plugin.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\" && esbuild src/plugin.ts --bundle --platform=node --format=cjs --external:vite --define:import.meta.url=__uniImportMetaUrl --banner:js=\"const __uniImportMetaUrl = require('node:url').pathToFileURL(__filename).href;\" --outfile=dist/plugin.cjs && rm -rf dist/client && cp -R node_modules/vite-plugin-inspect/dist/client dist/client",
     "dev": "node scripts/dev.mjs",
     "test:e2e": "node scripts/e2e-node.mjs"
   },
