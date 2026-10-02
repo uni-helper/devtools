@@ -209,6 +209,16 @@ CR 验证：vitest 38/38 + e2e 5+2 + tsc 0 + 双 build + 产物语法全检 + CD
 17. **推送要带内容比对门**（CR P1-1）：渲染钩子让每次渲染都调度推送，动画页面=300ms 全量
     推送风暴；门在 push.ts（lastPushedTreeJson），实例重建时必须重置（防 sidecar 重启后
     首推被挡）
+18. **同 route 多实例是两层 bug**（用户真机反馈，第一轮只修了一半）：
+    ① 探针 navigate 原先一律 `uni.navigateTo`——Pages 面板反复导航当前页把同一页面
+    压 N 份（mp 栈上限 10）。修复：目标与栈顶同页（归一化去 query 比路径）改
+    `redirectTo`，tabBar 兜底 switchTab 保留；决策在 `agent/navigate.ts`（10 例单测）。
+    ② 更深的一层：Vue uid 按页面实例计数，同 route 压两次栈 → 两实例节点 id 全是
+    `route#1` 互相撞车、appId 也重复——面板按 appId 过滤把两棵树**合并成乱序重复树**，
+    treePatched 按 id 去重再互相覆盖。修复：`tree.ts` 对栈内第 2+ 次出现的 route 追加
+    出现序号（`pages/index@2`，首个保持裸 route，单实例契约/fixtures 不变；4 例单测
+    `tree.test.ts`）。排查教训：**改了 dist/plugin.mjs 必须重启 dev:mp-weixin watch**
+    ——运行中的 vite 持旧插件内存态，重建 dist 不会热更，产物「看起来新其实旧」
 
 ## 9. 下一步（按优先级）
 

@@ -13,6 +13,7 @@ import { createRpcClient } from 'devframe/rpc/client'
 import { config } from 'virtual:uni-devtools-agent'
 import { type UniSocketChannelHandle, createUniSocketChannel } from './socket'
 import { bindPushDeps, cancelScheduledPush, pushComponentTreeNow, resetPushGate, schedulePushComponentTree } from './push.ts'
+import { navigateInMiniProgram } from './navigate.ts'
 import { type PageComponentTree, collectComponentTree, getRegisteredInstance } from './tree'
 import { type PiniaStateResult, type PiniaStoresResult, type UpdatePiniaStateResult, getPiniaState, getPiniaStores, updatePiniaState } from './pinia'
 import {
@@ -39,6 +40,22 @@ let changeHooksInstalled = false
 declare const wx: any
 declare const uni: any
 declare const getCurrentPages: any
+
+/** 安全读取当前页面栈（mp 全局 getCurrentPages 可能不存在或抛错） */
+function getCurrentPagesSafe(): any[] {
+  const getPages = typeof getCurrentPages === 'function'
+    ? getCurrentPages
+    : (typeof globalThis !== 'undefined' && typeof (globalThis as any).getCurrentPages === 'function'
+        ? (globalThis as any).getCurrentPages
+        : undefined)
+  try {
+    const pages = getPages ? getPages() : []
+    return Array.isArray(pages) ? pages : []
+  }
+  catch {
+    return []
+  }
+}
 
 /**
  * 安装生命周期与路由变更监听器，自动发现组件树变化
@@ -172,13 +189,7 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
       currentRoute: { path: string, fullPath?: string, query?: Record<string, unknown> } | null
       stack: Array<{ path: string, query?: Record<string, unknown>, options?: Record<string, unknown> }>
     } => {
-      const getPages = typeof getCurrentPages === 'function'
-        ? getCurrentPages
-        : (typeof globalThis !== 'undefined' && typeof (globalThis as any).getCurrentPages === 'function'
-            ? (globalThis as any).getCurrentPages
-            : undefined)
-
-      const pages = getPages ? getPages() : []
+      const pages = getCurrentPagesSafe()
       const stack = pages.map((page: any) => {
         const rawRoute = page?.route || page?.__route__ || ''
         const path = rawRoute ? (rawRoute.startsWith('/') ? rawRoute : `/${rawRoute}`) : '/'
@@ -204,39 +215,18 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
         stack,
       }
     },
-    'uni-devtools:agent:navigate': async (params: { path: string }): Promise<{ ok: boolean, error?: string }> => {
+    'uni-devtools:agent:navigate': (params: { path: string }): Promise<{ ok: boolean, error?: string }> => {
       const url = params?.path
       if (!url) {
-        return { ok: false, error: 'Path is required' }
+        return Promise.resolve({ ok: false, error: 'Path is required' })
       }
       const uniObj = typeof uni !== 'undefined' ? uni : (globalThis as any).uni
       if (!uniObj) {
-        return { ok: false, error: 'uni runtime is not available' }
+        return Promise.resolve({ ok: false, error: 'uni runtime is not available' })
       }
 
-      return new Promise((resolve) => {
-        uniObj.navigateTo({
-          url,
-          success: () => {
-            schedulePushComponentTree(200)
-            resolve({ ok: true })
-          },
-          fail: (err: any) => {
-            if (typeof uniObj.switchTab === 'function') {
-              uniObj.switchTab({
-                url,
-                success: () => {
-                  schedulePushComponentTree(200)
-                  resolve({ ok: true })
-                },
-                fail: () => resolve({ ok: false, error: err?.errMsg || String(err) }),
-              })
-              return
-            }
-            resolve({ ok: false, error: err?.errMsg || String(err) })
-          },
-        })
-      })
+      // 同页导航在探针侧改用 redirect 防叠栈（决策逻辑与单测见 navigate.ts）
+      return navigateInMiniProgram(uniObj, url, getCurrentPagesSafe)
     },
   }
 

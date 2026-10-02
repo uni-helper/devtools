@@ -233,12 +233,21 @@ export function collectComponentTree(customPages?: any[]): PageComponentTree[] {
   }
 
   const results: PageComponentTree[] = []
+  // 同一 route 在页面栈中出现多次时（同页/交替 navigateTo 压栈），Vue uid 按
+  // 页面实例各自计数会撞车：两个实例的节点 id 都是 `route#1`、appId 也同为
+  // route——面板按 appId 过滤会把两棵树合并成乱序重复树，treePatched 按 id
+  // 去重时进一步互相覆盖、越积越乱。为第 2+ 次出现的实例在 route 上追加
+  // 出现序号；首个实例保持裸 route，单实例场景 id 与冻结契约完全一致。
+  const routeOccurrences = new Map<string, number>()
 
   for (const page of pages) {
     if (!page)
       continue
 
-    const route = String(page.route || page.__route__ || page.path || 'unknown')
+    const rawRoute = String(page.route || page.__route__ || page.path || 'unknown')
+    const seen = (routeOccurrences.get(rawRoute) ?? 0) + 1
+    routeOccurrences.set(rawRoute, seen)
+    const route = seen > 1 ? `${rawRoute}@${seen}` : rawRoute
     const vm = page.$vm || page
     const visited = new Set<any>()
     let components: ComponentTreeNode | null = null
