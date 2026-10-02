@@ -1,4 +1,5 @@
 import type { ComponentStateResult, ComponentTreeResult, GetPiniaStoresResult, PiniaStateResult } from '@uni-helper/devtools-devframe/types'
+import type { NetworkRecord } from '../types/network'
 
 /**
  * 面板的假数据，只在显式 mock 模式（URL 带 `?mock`）下使用。
@@ -224,3 +225,171 @@ export function mockGetComponentRenderCode(id: string): string | undefined {
     '}',
   ].join('\n')
 }
+
+// ---------------------------------------------------------------------------
+// Network (Task C): mock 网络请求记录（GET / POST / upload / download / fail / 截断）
+// ---------------------------------------------------------------------------
+
+function createInitialMockNetworkRecords(): NetworkRecord[] {
+  const now = Date.now()
+  return [
+    {
+      id: 1,
+      type: 'request',
+      method: 'GET',
+      url: 'https://api.example.com/v1/user/profile?uid=42',
+      page: 'pages/index/index',
+      status: 200,
+      statusText: 'OK',
+      requestHeaders: {
+        accept: 'application/json',
+        authorization: 'Bearer token-abc-123',
+      },
+      responseHeaders: {
+        'content-type': 'application/json; charset=utf-8',
+        'x-request-id': 'req-001',
+      },
+      responseBody: {
+        id: 42,
+        username: 'uni_dev',
+        nickname: 'Uni Dev',
+        roles: ['admin', 'developer'],
+      },
+      responseSize: 88,
+      startTime: now - 15000,
+      duration: 42,
+      ok: true,
+    },
+    {
+      id: 2,
+      type: 'request',
+      method: 'POST',
+      url: 'https://api.example.com/v1/orders',
+      page: 'pages/index/index',
+      status: 201,
+      statusText: 'Created',
+      requestHeaders: {
+        'content-type': 'application/json',
+        'authorization': 'Bearer token-abc-123',
+      },
+      responseHeaders: {
+        'content-type': 'application/json; charset=utf-8',
+        'x-request-id': 'req-002',
+      },
+      requestBody: {
+        itemId: 'sku_998',
+        quantity: 2,
+        remark: 'fast delivery please',
+      },
+      responseBody: {
+        orderId: 'ord_20261002_001',
+        status: 'created',
+        totalPrice: 199.9,
+      },
+      responseSize: 68,
+      startTime: now - 12000,
+      duration: 85,
+      ok: true,
+    },
+    {
+      id: 3,
+      type: 'upload',
+      method: 'POST',
+      url: 'https://cdn.example.com/upload/avatar',
+      page: 'pages/settings/settings',
+      status: 200,
+      requestHeaders: {
+        authorization: 'Bearer token-abc-123',
+      },
+      responseHeaders: {
+        'content-type': 'application/json',
+      },
+      requestBody: {
+        filePath: 'wxfile://tmp_avatar.png',
+        name: 'avatar',
+        formData: { user: 'uni_dev' },
+      },
+      responseBody: {
+        url: 'https://cdn.example.com/avatar/42.png',
+        size: 45020,
+      },
+      responseSize: 58,
+      startTime: now - 9000,
+      duration: 230,
+      ok: true,
+    },
+    {
+      id: 4,
+      type: 'download',
+      method: 'GET',
+      url: 'https://cdn.example.com/assets/report.pdf',
+      page: 'pages/settings/settings',
+      status: 200,
+      responseHeaders: {
+        'content-type': 'application/pdf',
+        'content-length': '1048576',
+      },
+      responseBody: 'wxfile://tmp_report.pdf',
+      responseSize: 1048576,
+      startTime: now - 6000,
+      duration: 512,
+      ok: true,
+    },
+    {
+      id: 5,
+      type: 'request',
+      method: 'GET',
+      url: 'https://api.example.com/v1/health-check',
+      page: 'pages/index/index',
+      status: 0,
+      requestHeaders: {
+        accept: 'application/json',
+      },
+      error: 'request:fail timeout (connection timed out after 5000ms)',
+      responseSize: 0,
+      startTime: now - 3000,
+      duration: 5003,
+      ok: false,
+    },
+    {
+      id: 6,
+      type: 'request',
+      method: 'POST',
+      url: 'https://api.example.com/v1/logs/batch',
+      page: 'pages/index/index',
+      status: 200,
+      requestHeaders: {
+        'content-type': 'application/json',
+      },
+      responseHeaders: {
+        'content-type': 'application/json',
+      },
+      requestBody: {
+        batchId: 'batch_777',
+        itemsCount: 500,
+      },
+      responseBody: '{"status":"ok","processed":500,"details":[{"line":0,"msg":"log snippet 0"},{"line":1,"msg":"log snippet 1"},"... [truncated]"]}',
+      requestBodyTruncated: false,
+      responseBodyTruncated: true,
+      responseSize: 65536,
+      startTime: now - 1000,
+      duration: 115,
+      ok: true,
+    },
+  ]
+}
+
+let mockNetworkStore: NetworkRecord[] = createInitialMockNetworkRecords()
+
+export function mockNetworkRecords(): NetworkRecord[] {
+  return JSON.parse(JSON.stringify(mockNetworkStore)) as NetworkRecord[]
+}
+
+export function mockClearNetworkRecords(): void {
+  mockNetworkStore = []
+}
+
+export function mockResetNetworkRecords(): void {
+  mockNetworkStore = createInitialMockNetworkRecords()
+}
+

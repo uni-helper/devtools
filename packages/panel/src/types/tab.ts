@@ -4,6 +4,7 @@ export type BuiltinDevtoolsTabId =
   | 'pages'
   | 'timeline'
   | 'graph'
+  | 'network' // uni-devtools: network requests tab
   | 'inspect' // uni-devtools: vite inspect iframe tab
   | 'settings'
 

@@ -177,6 +177,6 @@ function createCategorizedTabs(
 }
 
 function getTabCategory(tab: DevtoolsTab): string {
-  if (['overview', 'components', 'graph', 'pages', 'timeline'].includes(tab.id)) return 'app'
+  if (['overview', 'components', 'graph', 'pages', 'network', 'timeline'].includes(tab.id)) return 'app'
   return 'modules'
 }

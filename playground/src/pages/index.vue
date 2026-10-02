@@ -22,6 +22,7 @@ import TreeDemo from '@/components/demos/TreeDemo.vue'
 import DynamicKeepAliveDemo from '@/components/demos/DynamicKeepAliveDemo.vue'
 import AttrsFallthroughDemo from '@/components/demos/AttrsFallthroughDemo.vue'
 import OptionsApiFullDemo from '@/components/demos/OptionsApiFullDemo.vue'
+import NetworkDemoCard from '@/components/demos/NetworkDemoCard.vue'
 
 // 当前导航分类 Tab
 type CategoryTab =
@@ -437,7 +438,18 @@ function readChildSnapshot() {
     </view>
 
     <!-- ======================================================== -->
-    <!-- 场景 6: 递归组件与 KeepAlive 缓存组件 -->
+    <!-- 场景 6: Network 采集演示（W13） -->
+    <view v-if="activeTab === 'ALL'" mt-6>
+      <view text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5>
+        <text class="i-carbon-api" text-indigo-500 />
+        <text>六、网络请求采集 (Network)</text>
+      </view>
+
+      <NetworkDemoCard />
+    </view>
+
+    <!-- ======================================================== -->
+    <!-- 场景 7: 递归组件与 KeepAlive 缓存组件 -->
     <!-- ======================================================== -->
     <view v-if="activeTab === 'ALL' || activeTab === 'TREE_KEEPALIVE'">
       <view text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5>
@@ -453,7 +465,7 @@ function readChildSnapshot() {
     </view>
 
     <!-- ======================================================== -->
-    <!-- 场景 7: Attrs 透传与 inheritAttrs: false -->
+    <!-- 场景 8: Attrs 透传与 inheritAttrs: false -->
     <!-- ======================================================== -->
     <view v-if="activeTab === 'ALL' || activeTab === 'PROPS'">
       <view text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5>
@@ -473,7 +485,7 @@ function readChildSnapshot() {
     </view>
 
     <!-- ======================================================== -->
-    <!-- 场景 8: Options API 全量语法支持 -->
+    <!-- 场景 9: Options API 全量语法支持 -->
     <!-- ======================================================== -->
     <view v-if="activeTab === 'ALL' || activeTab === 'OPTIONS_API'">
       <view text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5>
@@ -489,7 +501,7 @@ function readChildSnapshot() {
     </view>
 
     <!-- ======================================================== -->
-    <!-- 场景 9: 保留原有旧版沙盒组件 (保持向后兼容) -->
+    <!-- 场景 10: 保留原有旧版沙盒组件 (保持向后兼容) -->
     <!-- ======================================================== -->
     <view v-if="activeTab === 'ALL' || activeTab === 'LEGACY'">
       <view text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5>

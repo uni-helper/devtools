@@ -19,6 +19,11 @@ const routes: RouteRecordRaw[] = [
     meta: { tabId: 'pages' },
   },
   {
+    path: '/network',
+    component: () => import('./pages/network.vue'),
+    meta: { tabId: 'network' },
+  },
+  {
     path: '/timeline',
     component: () => import('./pages/timeline.vue'),
     meta: { tabId: 'timeline' },

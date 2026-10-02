@@ -37,6 +37,14 @@ export const builtinTabs: DevtoolsTabDefinition[] = [
     path: '/graph',
   },
   {
+    id: 'network',
+    title: 'Network',
+    icon: 'i-carbon-api',
+    order: -75,
+    description: 'Network requests captured by the mini-program probe',
+    path: '/network',
+  },
+  {
     id: 'timeline',
     title: 'Timeline',
     icon: 'i-carbon-roadmap',

@@ -50,7 +50,31 @@ import type {
 } from '@uni-helper/devtools-devframe/types'
 import { encodeValue } from '@vue/devtools-kit'
 import { connectDevframe } from 'devframe/client'
-import { mockComponentState, mockComponentTree, mockGetComponentRenderCode, mockPiniaState, mockPiniaStores, mockUpdateComponentState, mockUpdatePiniaState } from './fixtures'
+import type {
+  ClearNetworkRecordsResult,
+  GetNetworkRecordsResult,
+  NetworkRecord,
+  NetworkSharedState,
+  UniNetworkApi,
+} from '../types/network'
+import {
+  mockClearNetworkRecords,
+  mockComponentState,
+  mockComponentTree,
+  mockGetComponentRenderCode,
+  mockNetworkRecords,
+  mockPiniaState,
+  mockPiniaStores,
+  mockUpdateComponentState,
+  mockUpdatePiniaState,
+} from './fixtures'
+
+let activeUniNetwork: UniNetworkApi | undefined
+
+/** 供面板页面（如 Network tab）直接安全访问当前活跃实例的 UniNetworkApi */
+export function getUniNetworkApi(): UniNetworkApi | undefined {
+  return activeUniNetwork
+}
 
 /** 与 node 侧 `ctx.scope(NS)` 一致；改这里必须同步改 node 侧。 */
 const NAMESPACE = 'uni-helper-devtools'
@@ -351,8 +375,41 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
   let client: Awaited<ReturnType<typeof connectDevframe>> | undefined
   let ready: Promise<void> | undefined
   let unsubSharedState: (() => void) | undefined
+  let unsubNetworkSharedState: (() => void) | undefined
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
+
+  let cachedNetworkRecords: NetworkRecord[] = []
+  const networkListeners = new Set<(records: NetworkRecord[]) => void>()
+
+  function notifyNetwork(): void {
+    const snapshot = [...cachedNetworkRecords]
+    for (const handler of networkListeners) {
+      try {
+        handler(snapshot)
+      }
+      catch (error) {
+        console.error('[uni-devtools] network listener error:', error)
+      }
+    }
+  }
+
+  function applyNetworkRecords(incoming: NetworkRecord[]): void {
+    if (incoming.length === 0) {
+      cachedNetworkRecords = []
+      notifyNetwork()
+      return
+    }
+    const map = new Map<number, NetworkRecord>()
+    for (const r of cachedNetworkRecords)
+      map.set(r.id, r)
+    for (const r of incoming)
+      map.set(r.id, r)
+    cachedNetworkRecords = Array.from(map.values()).sort((a, b) => a.id - b.id)
+    if (cachedNetworkRecords.length > 500)
+      cachedNetworkRecords.splice(0, cachedNetworkRecords.length - 500)
+    notifyNetwork()
+  }
 
   function emit(event: Omit<DevtoolsRpcEvent, 'time'> & { type: DevtoolsRpcEvent['type'] }): void {
     const envelope = { time: Date.now(), ...event } as DevtoolsRpcEvent
@@ -415,18 +472,68 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
     return await scoped.rpc.call(method, ...args) as T
   }
 
+  async function pullNetworkOnce(): Promise<void> {
+    if (mockMode) {
+      applyNetworkRecords(mockNetworkRecords())
+      return
+    }
+    try {
+      const res = await callUni<GetNetworkRecordsResult>('get-network-records')
+      if (res && Array.isArray(res.records))
+        applyNetworkRecords(res.records)
+    }
+    catch (error) {
+      console.warn('[uni-devtools] get-network-records 拉取失败:', error)
+    }
+  }
+
+  const uniNetwork: UniNetworkApi = {
+    getRecords(): NetworkRecord[] {
+      return [...cachedNetworkRecords]
+    },
+    async clear(): Promise<void> {
+      if (mockMode) {
+        mockClearNetworkRecords()
+        cachedNetworkRecords = []
+        notifyNetwork()
+        return
+      }
+      await callUni<ClearNetworkRecordsResult>('clear-network-records')
+      cachedNetworkRecords = []
+      notifyNetwork()
+    },
+    subscribe(cb: (records: NetworkRecord[]) => void): () => void {
+      networkListeners.add(cb)
+      try {
+        cb([...cachedNetworkRecords])
+      }
+      catch (err) {
+        console.error('[uni-devtools] network listener initial error:', err)
+      }
+      return () => {
+        networkListeners.delete(cb)
+      }
+    },
+  }
+  activeUniNetwork = uniNetwork
+
   function resetConnectionState(): void {
     scoped = undefined
     unsubSharedState?.()
     unsubSharedState = undefined
+    unsubNetworkSharedState?.()
+    unsubNetworkSharedState = undefined
     // 关键：重连后的首个 treeSnapshot 必须重拉，否则引用守卫失效、
     // 面板会一直展示断开前的陈旧树（CR P1-7）。
     flat = EMPTY_TREE
+    cachedNetworkRecords = []
+    notifyNetwork()
   }
 
   async function initConnection(): Promise<void> {
     if (mockMode) {
       applyTreeSnapshot(mockComponentTree())
+      applyNetworkRecords(mockNetworkRecords())
       emitConnection('connected')
       return
     }
@@ -475,6 +582,23 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       catch (error) {
         // 订阅失败不致命：连接仍在，树走 get-component-tree 主动拉取路径。
         console.warn('[uni-devtools] sharedState 订阅失败，树更新退化为手动/首拉模式:', error)
+      }
+      try {
+        const networkShared = await scoped.rpc.sharedState<NetworkSharedState>('network-records', {
+          initialValue: { records: [], latestId: 0, updatedAt: 0 },
+        })
+        if (disposed)
+          return
+        unsubNetworkSharedState = networkShared.on('updated', (snapshot) => {
+          if (snapshot && Array.isArray(snapshot.records))
+            applyNetworkRecords(snapshot.records)
+        })
+        await pullNetworkOnce().catch(() => {})
+      }
+      catch (error) {
+        // 订阅失败不致命：连接仍在，网络记录走 get-network-records 主动拉取路径。
+        console.warn('[uni-devtools] network sharedState 订阅失败，网络记录退化为主动拉取模式:', error)
+        await pullNetworkOnce().catch(() => {})
       }
     }
     catch (error) {
@@ -946,6 +1070,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         connectionHandlers.delete(handler)
       }
     },
+    uniNetwork,
     dispose() {
       disposed = true
       if (reconnectTimer) {
@@ -954,11 +1079,16 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       }
       unsubSharedState?.()
       unsubSharedState = undefined
+      unsubNetworkSharedState?.()
+      unsubNetworkSharedState = undefined
+      networkListeners.clear()
+      if (activeUniNetwork === uniNetwork)
+        activeUniNetwork = undefined
       resetConnectionState()
       client?.close?.()
       client = undefined
       eventHandlers.clear()
       connectionHandlers.clear()
     },
-  } as DevtoolsRpcClient
+  } as DevtoolsRpcClient & { uniNetwork: UniNetworkApi }
 }
