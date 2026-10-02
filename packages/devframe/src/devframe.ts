@@ -10,6 +10,8 @@ import { isInspectAvailable } from './inspect-serve.ts'
 import type {
   ComponentStateResult,
   ComponentTreeResult,
+  GetComponentRenderCodeParams,
+  GetComponentRenderCodeResult,
   GetInspectStatusResult,
   GetPiniaStoresResult,
   GetRegisteredRoutesResult,
@@ -297,6 +299,20 @@ export function createUniDevtoolsDevframe(
         setup: () => ({
           handler: async (args: RecomputeComponentStateParams): Promise<RecomputeComponentStateResult> => {
             return await registry.callAgent<RecomputeComponentStateResult>('uni-devtools:agent:recomputeComponentState', args)
+          },
+        }),
+      }))
+
+      // W12 Show render code：官方 components:getRenderCode 桥（探针取运行时
+      // render 函数源码并解插桩包装层，见 agent/render-code.ts）
+      uni.rpc.register(defineRpcFunction({
+        name: 'get-component-render-code',
+        type: 'query',
+        jsonSerializable: true,
+        agent: { description: 'Get the runtime render function source of one component by id.' },
+        setup: () => ({
+          handler: async (args: GetComponentRenderCodeParams): Promise<GetComponentRenderCodeResult> => {
+            return await registry.callAgent<GetComponentRenderCodeResult>('uni-devtools:agent:getComponentRenderCode', args)
           },
         }),
       }))

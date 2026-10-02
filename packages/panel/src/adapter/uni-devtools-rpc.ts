@@ -42,6 +42,7 @@ import type {
   ComponentStateEntry,
   ComponentStateResult,
   ComponentTreeResult,
+  GetComponentRenderCodeResult,
   GetPiniaStoresResult,
   GetRegisteredRoutesResult,
   PiniaStateResult,
@@ -49,7 +50,7 @@ import type {
 } from '@uni-helper/devtools-devframe/types'
 import { encodeValue } from '@vue/devtools-kit'
 import { connectDevframe } from 'devframe/client'
-import { mockComponentState, mockComponentTree, mockPiniaState, mockPiniaStores, mockUpdateComponentState, mockUpdatePiniaState } from './fixtures'
+import { mockComponentState, mockComponentTree, mockGetComponentRenderCode, mockPiniaState, mockPiniaStores, mockUpdateComponentState, mockUpdatePiniaState } from './fixtures'
 
 /** 与 node 侧 `ctx.scope(NS)` 一致；改这里必须同步改 node 侧。 */
 const NAMESPACE = 'uni-helper-devtools'
@@ -709,8 +710,20 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         }
       }
 
+      // W12 Show render code：官方 query 按需拉取（componentId → 探针 render.toString()）
+      case 'components:getRenderCode': {
+        await ensureReady()
+        const { componentId } = (request.payload ?? {}) as { componentId?: string }
+        if (!componentId)
+          return undefined
+        if (mockMode)
+          return mockGetComponentRenderCode(componentId)
+        // 探针侧失败如实回落 undefined（官方语义：无 render 可展示）
+        const res = await callUni<GetComponentRenderCodeResult>('get-component-render-code', { id: componentId }).catch(() => undefined)
+        return res?.code
+      }
+
       case 'components:inspect':
-      case 'components:getRenderCode':
       case 'components:getBounds':
       case 'components:getName':
       case 'values:expand':

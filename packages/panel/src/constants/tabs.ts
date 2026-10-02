@@ -55,16 +55,6 @@ export const builtinTabs: DevtoolsTabDefinition[] = [
     path: '/inspect',
   },
   {
-    id: 'plugins',
-    title: 'Plugins',
-    icon: 'i-carbon-plug',
-    order: -30,
-    description: 'Devtools plugin compatibility surface',
-    disabled: true,
-    disabledReason: '插件协议待探针支持',
-    path: '/plugins',
-  },
-  {
     id: 'settings',
     title: 'Settings',
     icon: 'i-carbon-settings-adjust',

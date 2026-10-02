@@ -21,7 +21,7 @@ export function __uniDevtoolsNotifyRender(renderFn: any): any {
   // 且使用 $setup/$data——只转发前两个会让其渲染即崩。前两个具名参 + rest 使
   // length 保持 2（函数式组件 render.length > 1 判定用，虽然本包装不作用于它，
   // 保守起见维持约定）。
-  return function wrappedRender(this: any, _ctx: unknown, _cache: unknown, ...rest: unknown[]) {
+  const wrapped = function wrappedRender(this: any, _ctx: unknown, _cache: unknown, ...rest: unknown[]) {
     try {
       schedulePushComponentTree(300)
     }
@@ -30,4 +30,12 @@ export function __uniDevtoolsNotifyRender(renderFn: any): any {
     }
     return renderFn.call(this, _ctx, _cache, ...rest)
   }
+  // 冻结契约：render-code.ts 读取端按此标记解包原始 render（字面量两端同步，
+  // HANDOFF §5；不可枚举——不进 Object.keys/JSON 序列化）
+  Object.defineProperty(wrapped, '__uni_devtools_original_render__', {
+    value: renderFn,
+    enumerable: false,
+    configurable: true,
+  })
+  return wrapped
 }

@@ -2,12 +2,13 @@
  * Frozen Wire Contracts for Uni-Helper DevTools
  *
  * Scope: `uni-helper-devtools`
- * RPCs (14):
+ * RPCs (15):
  *   - `ping`: () => PingResult
  *   - `get-component-tree`: () => ComponentTreeResult
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
  *   - `update-component-state`: (args: UpdateComponentStateParams) => UpdateComponentStateResult
  *   - `recompute-component-state`: (args: RecomputeComponentStateParams) => RecomputeComponentStateResult
+ *   - `get-component-render-code`: (args: GetComponentRenderCodeParams) => GetComponentRenderCodeResult（W12 Show render code）
  *   - `open-in-editor`: (args: OpenInEditorParams) => OpenInEditorResult
  *   - `get-registered-routes`: () => GetRegisteredRoutesResult（W5 路由栈）
  *   - `get-router-info`: () => RouterInfoResult（W5 路由栈）
@@ -80,6 +81,15 @@ export interface RecomputeComponentStateParams {
 
 export interface RecomputeComponentStateResult {
   ok: boolean
+}
+
+export interface GetComponentRenderCodeParams {
+  id: string
+}
+
+/** 运行时 render 函数源码（解插桩包装层；官方 components:getRenderCode 桥） */
+export interface GetComponentRenderCodeResult {
+  code?: string
 }
 
 export interface PingResult {

@@ -29,11 +29,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./pages/custom-inspector.vue'),
   },
   {
-    path: '/plugins',
-    component: () => import('./pages/plugins.vue'),
-    meta: { tabId: 'plugins' },
-  },
-  {
     path: '/graph',
     component: () => import('./pages/graph.vue'),
     meta: { tabId: 'graph' },

@@ -3,7 +3,6 @@ export type BuiltinDevtoolsTabId =
   | 'components'
   | 'pages'
   | 'timeline'
-  | 'plugins'
   | 'graph'
   | 'inspect' // uni-devtools: vite inspect iframe tab
   | 'settings'

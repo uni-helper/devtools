@@ -15,18 +15,19 @@
 
 ## 2. 功能矩阵（当前能力）
 
-| 功能                                                                                                                             | 状态        | 入口                                        |
-| -------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------- |
-| 组件树（多页=多 app、文件名命名、实时推送 ~0.3s）                                                                                | ✅          | Components 标签                             |
-| 状态查看（官方分组 props/data/setup/setup-other/computed/attrs + (Computed)/(Ref)/(Reactive) 徽标 + computed tooltip/recompute） | ✅          | 同上，右侧 State 面板                       |
-| 状态编辑（顶层 + **深路径**、数组索引、删除）                                                                                    | ✅          | 值行铅笔按钮                                |
-| Pinia 检查器（官方树形：🍍 root 聚合视图+平级 stores、无页面列、编辑+失效刷新）                                                  | ✅          | Pinia 标签（官方内建映射）                  |
-| 路由页面栈（pages.json 注册路由 + 当前栈 + 匹配 + 导航）                                                                         | ✅          | Pages 标签                                  |
-| openInEditor（launch-editor + 项目根越界守卫）                                                                                   | ✅          | 树行文件名 / 状态行动作                     |
-| Timeline                                                                                                                         | ⏸ 有据降级 | tab 禁用（结论见 §7 W6）                    |
-| Reactivity Graph（setup 绑定↔render/watch 依赖图，d3-force 力导向）                                                             | ✅ 真机待验 | Graph 标签（W10，§7 B-graph-1002）          |
-| Vite Inspect（转换管线检查器，iframe 内嵌 vite-plugin-inspect UI）                                                               | ✅ 真机待验 | Vite Inspect 标签（W11，§7 B-inspect-1002） |
-| plugins / 组件 DOM 定位（inspectDom/highlight）                                                                                  | ❌ 未做     | tab 禁用                                    |
+| 功能                                                                                                                             | 状态        | 入口                                               |
+| -------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------- |
+| 组件树（多页=多 app、文件名命名、实时推送 ~0.3s）                                                                                | ✅          | Components 标签                                    |
+| 状态查看（官方分组 props/data/setup/setup-other/computed/attrs + (Computed)/(Ref)/(Reactive) 徽标 + computed tooltip/recompute） | ✅          | 同上，右侧 State 面板                              |
+| 状态编辑（顶层 + **深路径**、数组索引、删除）                                                                                    | ✅          | 值行铅笔按钮                                       |
+| Pinia 检查器（官方树形：🍍 root 聚合视图+平级 stores、无页面列、编辑+失效刷新）                                                  | ✅          | Pinia 标签（官方内建映射）                         |
+| 路由页面栈（pages.json 注册路由 + 当前栈 + 匹配 + 导航）                                                                         | ✅          | Pages 标签                                         |
+| openInEditor（launch-editor + 项目根越界守卫）                                                                                   | ✅          | 树行文件名 / 状态行动作                            |
+| Timeline                                                                                                                         | ⏸ 有据降级 | tab 禁用（结论见 §7 W6）                           |
+| Reactivity Graph（setup 绑定↔render/watch 依赖图，d3-force 力导向）                                                             | ✅ 真机待验 | Graph 标签（W10，§7 B-graph-1002）                 |
+| Vite Inspect（转换管线检查器，iframe 内嵌 vite-plugin-inspect UI）                                                               | ✅ 真机待验 | Vite Inspect 标签（W11，§7 B-inspect-1002）        |
+| Show render code（组件 render 函数源码，解插桩包装层 + 官方缩进归一）                                                            | ✅ 真机待验 | Components 页组件操作（W12，§7 B-rendercode-1002） |
+| plugins / 组件 DOM 定位（inspectDom/highlight）                                                                                  | ❌ 未做     | tab 禁用                                           |
 
 ## 3. 仓库地图（只列关键）
 
@@ -40,7 +41,7 @@ packages/
 │   └── （官方源码共 8 处改动，均有 "uni-devtools" 注释标记）
 ├── devtools-kit/     vendored @vue/devtools-kit（协议/codec/rpc；exports 指 src；仅依赖 devframe@1.1.0）
 ├── devframe/         node 侧 + 探针 + 编译期插桩
-│   ├── src/devframe.ts     DevframeDefinition + 14 个 RPC + sharedState('component-tree')
+│   ├── src/devframe.ts     DevframeDefinition + 15 个 RPC + sharedState('component-tree')
 │   ├── src/relay.ts        AgentRegistry 定向调用（探针不可信校验）
 │   ├── src/plugin.ts       Vite 插件（sidecar + 虚拟模块注入探针 + instrument post transform）
 │   ├── src/instrument.ts   ★ 编译期插桩（__file 注入 / 闭包绑定捕获 / render 钩子包装）
@@ -49,11 +50,12 @@ packages/
 │   │   ├── state.ts    组件状态读写（深路径语义）
 │   │   ├── reactivity-graph.ts  响应式依赖图采集（W10，Vue 3.5+ 链表遍历）
 │   │   ├── pinia.ts    Pinia 采集（免注入，app 实例枚举 _s）
-│   │   ├── render-hook.ts  渲染钩子运行时半边（参数全转发）
+│   │   ├── render-hook.ts  渲染钩子运行时半边（参数全转发；暴露原始 render 标记）
+│   │   ├── render-code.ts  Show render code 采集（解包装 + 官方缩进归一）
 │   │   ├── inspect-serve.ts   Vite Inspect 静态托管（h3 serveStatic + 状态探测）
 │   │   ├── push.ts     推送调度（防抖 + 内容比对门）
 │   │   └── serialize.ts    共享序列化/ref 判定
-│   ├── test/               vitest 82 例（instrument/pinia/router/open-in-editor/render-hook/state/reactivity-graph）
+│   ├── test/               vitest 101 例（instrument/pinia/router/open-in-editor/render-hook/state/reactivity-graph/render-code/inspect-serve）
 │   ├── scripts/e2e-node.mjs 机器验收（5+2 项全链路）
 │   └── scripts/dev.mjs     本地起 sidecar（打印带 token 面板 URL）
 ├── panel-legacy/     旧 @antfu/design 面板留底（不再维护；df/client.ts 有历史借鉴价值）
@@ -80,7 +82,7 @@ devtools/             官方仓库下载（参考源，勿改，已 gitignore）
   wx.onAppRoute + uni.addInterceptor + 2s 快照比对兜底
 
 【node 侧】devframe Definition（sidecar，createDevServer 自建 HTTP+WS）
-  12 个 RPC + sharedState('component-tree') ← 定向调用探针（AgentRegistry）
+  15 个 RPC + sharedState('component-tree') ← 定向调用探针（AgentRegistry）
 
 【面板侧】官方 client（不改）→ useDevtoolsClient → 适配器（uni-devtools-rpc.ts）
   page=app / 嵌套树→扁平快照 / {data,setup}→sections / inspectors 协议(Pinia)
@@ -94,12 +96,13 @@ plain `<script>` SFC / layout 产物无 `__name`/`__file`——文件名也是�
 
 ## 5. 冻结契约（不许单方改；多处同步）
 
-**RPC（scope `uni-helper-devtools`，共 14 个，形状见 `packages/devframe/src/types.ts`）**
+**RPC（scope `uni-helper-devtools`，共 15 个，形状见 `packages/devframe/src/types.ts`）**
 
 - 基础 6：`ping` / `get-component-tree` / `get-component-state` / `update-component-state` / `push-component-tree` / `recompute-component-state`
 - W2：`open-in-editor`（launch-editor + getProjectRoot 三级推断 + 越界拦截）
 - W5：`get-registered-routes`（pages.json 解析，容注释/尾逗号/subPackages）/ `get-router-info`（getCurrentPages 栈）/ `navigate-to`
 - W11：`get-inspect-status`（node 本地读盘，不经探针；Vite Inspect tab 门控）
+- W12：`get-component-render-code`（探针 render.toString() 解插桩包装层；官方 components:getRenderCode 桥）
 - W4：`get-pinia-stores` / `get-pinia-state` / `update-pinia-state`
 
 **状态契约（ComponentStateResult）**：对齐官方分组 props / data / setup / setupOther / computed / attrs；setup 绑定经 getSetupBindingInfo 判定输出 (Computed)/(Ref)/(Reactive) 徽标与 raw 源码 tooltip；函数/组件样对象归入 setupOther；recompute-component-state 仅支持 setup 段 computed ref 触发重算。
@@ -119,6 +122,8 @@ AppSnapshot.version 消费）。**门禁分歧**：vendored kit `protocol/featur
 
 - `__file`：虚拟入口 createComponent/createPage 前守卫注入；命名链兜底取 basename
 - `__uni_devtools_bindings__`：挂 setup 返回的 render 函数上（`instrument.ts` ↔ `agent/state.ts`）
+- `__uni_devtools_original_render__`：包装 render 上暴露的原函数引用（`render-hook.ts` 写入端
+  ↔ `render-code.ts` 读取端，字面量冻结同步、不可枚举；W12）
 - `__uniDevtoolsNotifyRender`：render 包装钩子，子路径导出 `./agent/render-hook`
   （package.json exports 冻结同步；**必须转发全部实参**，见 §8-14）
 
@@ -226,6 +231,17 @@ vite-plugin-inspect@0.8.8（build:true）+ `inspect-serve.ts`（h3 serveStatic �
 冒烟全通**（/inspect/ 返回真实 inspect UI——真 tmpdir 恰有 10-1 老插件数据、
 list.json/metrics/assets 全 200、traversal 404、面板根不受扰）。
 
+**B-rendercode-1002（Show render code 批次，2026-10-02 晚，claude 主持人 + agy）**：
+Components 页「Show render code」打通——A（agy T-b78a08，新 pane）探针采集器
+`agent/render-code.ts`（回落链 internal.render→type.render→type.setup、解
+`__uni_devtools_original_render__` 标记、官方 normalizeFunctionIndentation 归一缩进、
+全防御；16 单测）；B/C（主持人）render-hook 包装层挂原函数标记（defineProperty
+不可枚举）+ 第 15 个 RPC `get-component-render-code` + 适配器 `components:getRenderCode`
+真映射（失败回落 undefined 对齐官方）+ fixtures mock（CounterCard 编译形态样例）。
+验证：vitest 11 套件 101/101、eslint 0 错、plugin.mjs 重建 node --check 过、
+panel typecheck 0 新增错误 + build ✓。mp 上展示的是**编译后** render 源码（官方
+同为运行时函数 toString，语义一致）。
+
 ## 8. 血泪教训（必读，全是修过的真 bug）
 
 1. **kit 命令语义**：`RuntimeCommandResult.status` **1=成功、0=失败**（像退出码，反直觉）
@@ -329,7 +345,9 @@ list.json/metrics/assets 全 200、traversal 404、面板根不受扰）。
    容错启发分类，可能显示为 effect/unknown），<3.5 无链表结构产出空图且 tab 隐藏，属预期降级）/
    **Vite Inspect 标签**（W11：改插件后**必须重启 dev:mp-weixin watch**（§8-11/18）才会
    挂上 vite-plugin-inspect；首个 buildEnd 产出报告后面板刷新一次才见 tab（capabilities
-   连接初始化拉取）；仅 standalone 直连模式生效）
+   连接初始化拉取）；仅 standalone 直连模式生效）/ **Show render code**（W12：选中
+   组件 → 组件操作里 Show render code → 弹编译后 render 源码面板；mp 上为 uni 编译器
+   产物而非模板源码，属预期）
 2. Pinia 实时推送：目前拉取式（选中才读），可加探针 $subscribe → invalidateState 事件
 3. W6 Timeline 后续（若要做）：见 T-2d81ad reply 的 3~4 人日方案
    （官方页解耦 / 编译期插桩采集 / 环形缓冲批量推送）

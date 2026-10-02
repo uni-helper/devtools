@@ -200,3 +200,27 @@ export function mockUpdatePiniaState(params: { id: string, key: string, value: u
   data.state[params.key] = params.value
   return { ok: true, id: params.id, key: params.key }
 }
+
+/**
+ * mock：编译后 render 源码样例（Show render code 的 ?mock 冒烟）。
+ * 真实链路为探针 render.toString()（解插桩包装层），此处手造 uni mp 编译形态。
+ */
+export function mockGetComponentRenderCode(id: string): string | undefined {
+  if (id !== 'pages/index/index#4')
+    return undefined
+  return [
+    'import { resolveComponent as _resolveComponent, createVNode as _createVNode, toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"',
+    '',
+    'export function render(_ctx, _cache) {',
+    '  const _component_ActionButton = _resolveComponent("ActionButton")',
+    '  return (_openBlock(), _createElementBlock("view", { class: "counter-card" }, [',
+    '    _createVNode("text", { key: 0 }, _toDisplayString(_ctx.count), 1),',
+    '    _createVNode(_component_ActionButton, {',
+    '      key: 1,',
+    '      step: _ctx.step,',
+    '      "onUpdate:count": _ctx.onIncrement,',
+    '    }, null, 8, ["step", "onUpdate:count"]),',
+    '  ]))',
+    '}',
+  ].join('\n')
+}

@@ -14,6 +14,7 @@ import { config } from 'virtual:uni-devtools-agent'
 import { type UniSocketChannelHandle, createUniSocketChannel } from './socket'
 import { bindPushDeps, cancelScheduledPush, pushComponentTreeNow, resetPushGate, schedulePushComponentTree } from './push.ts'
 import { navigateInMiniProgram } from './navigate.ts'
+import { getComponentRenderCode } from './render-code.ts'
 import { type PageComponentTree, collectComponentTree, getRegisteredInstance, getVueRuntimeVersion } from './tree'
 import { type PiniaStateResult, type PiniaStoresResult, type UpdatePiniaStateResult, getPiniaState, getPiniaStores, updatePiniaState } from './pinia'
 import {
@@ -165,6 +166,10 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     'uni-devtools:agent:getComponentState': (params: { id: string } | string): ComponentStateResult => {
       const id = typeof params === 'string' ? params : params?.id
       return getComponentState(id)
+    },
+    'uni-devtools:agent:getComponentRenderCode': (params: { id: string } | string): { code?: string } => {
+      const id = typeof params === 'string' ? params : params?.id
+      return getComponentRenderCode(id)
     },
     'uni-devtools:agent:updateComponentState': (params: any, maybeKey?: string, maybeVal?: unknown): UpdateStateResult => {
       const res = typeof params === 'object' && params !== null && 'id' in params
