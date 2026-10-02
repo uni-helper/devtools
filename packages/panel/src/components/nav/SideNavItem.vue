@@ -25,6 +25,10 @@ const tabPath = computed(() => props.tab.path ?? `/${props.tab.id}`)
 const router = useRouter()
 function onTabClick(e: MouseEvent) {
   if (props.tab.disabled) return
+  // 对齐 RouterLink guardEvent 语义：修饰键/非左键点击放行默认行为
+  //（ctrl/cmd 点击开新标签页等），仅普通左键做应用内导航
+  if (e.metaKey || e.altKey || e.ctrlKey || e.shiftKey) return
+  if (e.button !== undefined && e.button !== 0) return
   e.preventDefault()
   void router.push(tabPath.value)
 }

@@ -185,18 +185,32 @@ function toStateSnapshot(result: ComponentStateResult, version: number): Compone
 
 /** Pinia store 快照 → 官方 sections（State / Getters 两个分区）。 */
 function toPiniaStateSnapshot(result: PiniaStateResult, version: number): ComponentStateSnapshotMessage {
+  // 官方编辑路由靠 entry.meta.inspectorId/nodeId 区分 inspector 条目（kit
+  // createInspectorStateSnapshot 的 toInspectorLegacyStateEntries 同款注入；漏了
+  // 会路由到 components:editState 且因 inspector 页无选中组件而静默无效——CR P0）；
+  // componentId 也对齐官方合成约定 `inspector:<id>:<nodeId>`
+  const nodeId = `store:${result.id}`
+  const withInspectorMeta = (entry: StateEntry): StateEntry => ({
+    ...entry,
+    meta: { ...entry.meta, inspectorId: 'pinia', nodeId, disableAdd: true },
+  })
   const sections: ComponentStateSnapshotMessage['sections'] = []
   const stateEntries = Object.entries(result.state ?? {}).map(
-    ([key, value]) => toStateEntry('state', key, value),
+    ([key, value]) => withInspectorMeta(toStateEntry('state', key, value)),
   )
   if (stateEntries.length > 0)
     sections.push({ id: 'state', label: 'State', entries: stateEntries })
+  // getters 是 computed 求值属性：探针侧编辑必然 Key not found，如实标记不可编辑
   const getterEntries = Object.entries(result.getters ?? {}).map(
-    ([key, value]) => toStateEntry('getters', key, value),
+    ([key, value]) => {
+      const entry = withInspectorMeta(toStateEntry('getters', key, value))
+      entry.editable = false
+      return entry
+    },
   )
   if (getterEntries.length > 0)
     sections.push({ id: 'getters', label: 'Getters', entries: getterEntries })
-  return { componentId: result.id, version, sections }
+  return { componentId: `inspector:pinia:${nodeId}`, version, sections }
 }
 
 /** 与 kit 的 `connectDevtoolsClient()` 同签名的同步工厂（连接在内部异步建立）。 */
@@ -615,7 +629,12 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         if (mockMode) {
           if (path.length !== 1 || payload.remove)
             return { status: 0, error: NOT_SUPPORTED('mock 平铺数据的嵌套路径/删除') }
-          mockUpdatePiniaState({ id: storeId, key: path[0]!, value: payload.value })
+          try {
+            mockUpdatePiniaState({ id: storeId, key: path[0]!, value: payload.value })
+          }
+          catch (error) {
+            return { status: 0, error: error instanceof Error ? error.message : String(error) }
+          }
         }
         else {
           await callUni('update-pinia-state', {
@@ -630,13 +649,15 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         const nodeId = payload.nodeId
         const version = (inspectorVersionByNode.get(nodeId) ?? 0) + 1
         inspectorVersionByNode.set(nodeId, version)
+        // 事件名是 kit RuntimeDomainEvent 的 `inspectors:stateInvalidated`
+        // （`invalidateState` 是 command 名——写反会被官方事件入口静默丢弃，
+        // CR P0）；nodeId 必带，官方按它判断是否刷新当前选中 store
         emit({
-          type: 'inspectors:invalidateState',
+          type: 'inspectors:stateInvalidated',
           inspectorId: 'pinia',
-          // kit 的 InspectorTarget 类型未声明 nodeId，但官方 client 的失效处理
-          // 读 event.nodeId（devtools-client.ts touchInspectorInvalidation）
           nodeId,
-        } as unknown as DevtoolsRpcEvent)
+          reason: 'edit',
+        })
         return { status: 1 }
       }
 

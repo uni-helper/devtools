@@ -11,18 +11,23 @@
  * 禁浏览器 API（globalThis 在既有探针代码中已验证可用）。
  */
 
-import { schedulePushComponentTree } from './index.ts'
+import { schedulePushComponentTree } from './push.ts'
 
 export function __uniDevtoolsNotifyRender(renderFn: any): any {
   if (typeof renderFn !== 'function')
     return renderFn
-  return function wrappedRender(this: any, _ctx: unknown, _cache: unknown) {
+  // 必须转发全部实参：mp 运行时以 7 参调用 render（proxy, renderCache, props,
+  // setupState, data, ctx），plain <script>/Options 组件的编译 render 是 6 参签名
+  // 且使用 $setup/$data——只转发前两个会让其渲染即崩。前两个具名参 + rest 使
+  // length 保持 2（函数式组件 render.length > 1 判定用，虽然本包装不作用于它，
+  // 保守起见维持约定）。
+  return function wrappedRender(this: any, _ctx: unknown, _cache: unknown, ...rest: unknown[]) {
     try {
       schedulePushComponentTree(300)
     }
     catch {
       // 探针未初始化/推送异常绝不影响渲染
     }
-    return renderFn.call(this, _ctx, _cache)
+    return renderFn.call(this, _ctx, _cache, ...rest)
   }
 }

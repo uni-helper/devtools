@@ -12,6 +12,7 @@
 import { createRpcClient } from 'devframe/rpc/client'
 import { config } from 'virtual:uni-devtools-agent'
 import { type UniSocketChannelHandle, createUniSocketChannel } from './socket'
+import { bindPushDeps, cancelScheduledPush, pushComponentTreeNow, resetPushGate, schedulePushComponentTree } from './push.ts'
 import { type PageComponentTree, collectComponentTree, getRegisteredInstance } from './tree'
 import { type PiniaStateResult, type PiniaStoresResult, type UpdatePiniaStateResult, getPiniaState, getPiniaStores, updatePiniaState } from './pinia'
 import {
@@ -33,47 +34,11 @@ export interface AgentInstance {
 }
 
 let activeAgentInstance: AgentInstance | null = null
-let pushTimer: any = null
 let changeHooksInstalled = false
 
 declare const wx: any
 declare const uni: any
 declare const getCurrentPages: any
-
-/**
- * 带有 debounce 防抖的组件树快照推送触发器（默认 300ms 防抖）
- */
-export function schedulePushComponentTree(delay = 300): void {
-  if (pushTimer) {
-    clearTimeout(pushTimer)
-  }
-  pushTimer = setTimeout(() => {
-    pushTimer = null
-    pushComponentTreeNow().catch(() => {})
-  }, delay)
-}
-
-/**
- * 立即采集当前活跃页面的组件树快照并推送到 node 侧 sharedState
- */
-export async function pushComponentTreeNow(): Promise<void> {
-  if (!activeAgentInstance || !activeAgentInstance.socketHandle.isConnected()) {
-    return
-  }
-
-  const pages = collectComponentTree()
-  const snapshot = {
-    fetchedAt: Date.now(),
-    pages,
-  }
-
-  try {
-    await activeAgentInstance.rpc.$call('uni-helper-devtools:push-component-tree', snapshot)
-  }
-  catch {
-    // 允许网络暂未就绪或未注册该方法时静默跳过
-  }
-}
 
 /**
  * 安装生命周期与路由变更监听器，自动发现组件树变化
@@ -279,14 +244,12 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     channel: socketHandle.channel,
   })
 
+  bindPushDeps({ getActiveInstance: () => activeAgentInstance })
+
   const instance: AgentInstance = {
     rpc,
     socketHandle,
     dispose: () => {
-      if (pushTimer) {
-        clearTimeout(pushTimer)
-        pushTimer = null
-      }
       socketHandle.dispose()
       if (activeAgentInstance === instance) {
         activeAgentInstance = null
@@ -295,6 +258,9 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
   }
 
   activeAgentInstance = instance
+  // 重连/重建实例后首推必须放行：node 侧（尤其重启后的 sidecar）sharedState
+  // 可能仍是空初值，内容比对门不能挡住「内容相同但没送达过」的首推
+  resetPushGate()
   setupChangeDetectionHooks()
   return instance
 }
@@ -304,10 +270,7 @@ export function getAgentInstance(): AgentInstance | null {
 }
 
 export function disposeAgent(): void {
-  if (pushTimer) {
-    clearTimeout(pushTimer)
-    pushTimer = null
-  }
+  cancelScheduledPush()
   if (activeAgentInstance) {
     activeAgentInstance.dispose()
     activeAgentInstance = null
@@ -317,6 +280,8 @@ export function disposeAgent(): void {
 export {
   collectComponentTree,
   createUniSocketChannel,
+  pushComponentTreeNow,
+  schedulePushComponentTree,
   getComponentState,
   getPiniaState,
   getPiniaStores,

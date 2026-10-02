@@ -162,7 +162,10 @@ export function mockPiniaState(id: string): PiniaStateResult {
 
 export function mockUpdatePiniaState(params: { id: string, key: string, value: unknown }): { ok: true, id: string, key: string } {
   const data = piniaStateById[params.id]
-  if (data && params.key in data.state)
-    data.state[params.key] = params.value
+  // 语义对齐探针 updatePiniaState：键不存在抛错（getters 不是可写 state），
+  // 不静默假装成功——mock 与真实链路行为不一致会掩盖面板侧 bug
+  if (!data || !(params.key in data.state))
+    throw new Error(`[updatePiniaState] Key "${params.key}" not found on store "${params.id}"`)
+  data.state[params.key] = params.value
   return { ok: true, id: params.id, key: params.key }
 }
