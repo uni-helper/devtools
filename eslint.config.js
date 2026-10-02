@@ -5,19 +5,15 @@ export default antfu(
     unocss: false,
     formatters: true,
     ignores: [
-    // uni-devtools 移植包（官方源码 + vendored kit + legacy 留底）不参与本仓 lint
+    // uni-devtools 移植包（官方源码 + vendored kit）不参与本仓 lint
       'packages/panel/**',
-      'packages/panel-legacy/**',
       'packages/devtools-kit/**',
       // devframe 内的 vendored 兜底面板产物（dist 形态，非手写源码）
       'packages/devframe/assets/**',
-      // vendored 官方 hub-ui 外壳 + devframe POC 留底（结论已抽到 FINDINGS.md）
-      'packages/hub-ui/**',
+      // devframe POC 留底（结论已抽到 FINDINGS.md）
       'spike/**',
       '**/node_modules/**',
-      '**/uniJs.js',
       'playground/**',
-      '**/plugin/client/**',
     ],
   },
   {

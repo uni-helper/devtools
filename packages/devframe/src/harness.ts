@@ -90,7 +90,6 @@ export async function startHubHarness(options: HarnessOptions = {}) {
 
   let ui: any
   try {
-    // @ts-expect-error optional hub-ui package
     const hubUi = await import('@devframes/hub-ui')
     if (typeof hubUi.createUi === 'function')
       ui = hubUi.createUi()

@@ -1,5 +1,5 @@
 {
-  "watch": ["packages/plugin/src/**/*", "packages/plugin/inspect/**/*"],
+  "watch": ["packages/devframe/src/**/*"],
   "ext": "ts,vue,js",
   "exec": "npm -C playground run dev:mp-weixin"
 }

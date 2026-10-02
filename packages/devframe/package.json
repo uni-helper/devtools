@@ -14,7 +14,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "pnpm run build:plugin",
-    "build:plugin": "esbuild src/plugin.ts --bundle --platform=node --format=esm --external:vite --alias:vite-plugin-inspect=$(pwd)/../plugin/node_modules/vite-plugin-inspect/dist/index.mjs --outfile=dist/plugin.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\" && rm -rf dist/client && cp -R ../plugin/node_modules/vite-plugin-inspect/dist/client dist/client",
+    "build:plugin": "esbuild src/plugin.ts --bundle --platform=node --format=esm --external:vite --outfile=dist/plugin.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\" && rm -rf dist/client && cp -R node_modules/vite-plugin-inspect/dist/client dist/client",
     "dev": "node scripts/dev.mjs",
     "test:e2e": "node scripts/e2e-node.mjs"
   },
@@ -24,9 +24,11 @@
   },
   "devDependencies": {
     "@devframes/hub": "^1.1.0",
+    "@devframes/hub-ui": "^1.1.0",
     "@types/node": "^20.14.2",
     "esbuild": "^0.20.2",
     "h3": "^2.0.1-rc.32",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vite-plugin-inspect": "^0.8.8"
   }
 }
