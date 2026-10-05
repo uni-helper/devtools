@@ -85,7 +85,8 @@ describe('getRegisteredRoutesFromFs', () => {
   })
 
   it('在 UNI_INPUT_DIR 指向 playground/src 时读回页面', () => {
-    process.env.UNI_INPUT_DIR = resolve(process.cwd(), 'playground/src')
+    // 包级测试时 cwd 在 packages/devframe，需要回溯到项目根
+    process.env.UNI_INPUT_DIR = resolve(process.cwd(), '../../playground/src')
     const routes = getRegisteredRoutesFromFs()
     expect(routes.length).toBeGreaterThanOrEqual(2)
     const paths = routes.map(r => r.path)
