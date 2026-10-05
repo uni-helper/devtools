@@ -6,6 +6,7 @@ import { Pane, Splitpanes } from 'splitpanes'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { buildComponentTree } from '../composables/component-tree'
 import { useDevtoolsClient } from '../composables/devtools-client'
+import { REACTIVITY_GRAPH_MIN_VUE_VERSION } from '../utils/vue-version'
 
 interface GraphPageAction {
   icon: string
@@ -29,6 +30,7 @@ const {
   inspectComponentInPage,
   reactivityGraphEnabled,
   selectComponent: setSelectedComponent,
+  selectedApp,
   selectedComponent,
   selectedComponentId,
   unhighlightComponent,
@@ -45,7 +47,14 @@ const componentTreeNodes = computed(() =>
 )
 const graph = computed(() => componentState.value?.reactivityGraph)
 const graphEmptyText = computed(() => {
-  if (!reactivityGraphEnabled.value) return 'Reactivity Graph requires Vue 3.6 or later.'
+  // 运行时 Vue < 3.5 时采集不到数据（3.5 起才有双向链表），此 Tab 不做隐藏而是说明原因——
+  // 静默隐藏会让用户以为工具坏了。
+  if (!reactivityGraphEnabled.value) {
+    const runtime = selectedApp.value?.version
+    return `Reactivity Graph requires Vue ${REACTIVITY_GRAPH_MIN_VUE_VERSION} or later${
+      runtime ? ` — this runtime is Vue ${runtime}` : ''
+    }.`
+  }
   if (!selectedComponent.value) return 'Select a component to inspect its reactivity graph.'
   if (componentStateLoading.value) return 'Loading reactivity graph...'
   return 'No data'

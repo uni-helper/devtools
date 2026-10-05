@@ -24,7 +24,7 @@ export interface CategorizedDevtoolsTab extends DevtoolsTab {
 export type CategorizedDevtoolsTabs = [DevtoolsTabCategory, CategorizedDevtoolsTab[]][]
 
 export function useDevtoolsTabCatalog() {
-  const { inspectors, plugins, reactivityGraphEnabled, inspectEnabled } = useDevtoolsClient()
+  const { inspectors, plugins, inspectEnabled } = useDevtoolsClient()
   const { settings } = useDevtoolsSettings()
   const routerInspector = computed(() => findRouterInspector(inspectors.value, plugins.value))
 
@@ -36,12 +36,9 @@ export function useDevtoolsTabCatalog() {
     )
 
     return [
-      ...builtinTabs.flatMap((tab) =>
-        resolveBuiltinTab(tab, {
-          reactivityGraphEnabled: reactivityGraphEnabled.value,
-          inspectEnabled: inspectEnabled.value,
-        }),
-      ),
+      // graph tab 不做可见性门禁：运行时 Vue < 3.5 时页面内会说明原因（见 pages/graph.vue）。
+      // 静默隐藏会让用户以为工具坏了。
+      ...builtinTabs.filter((tab) => tab.id !== 'inspect' || inspectEnabled.value),
       ...visibleInspectors.map((inspector, index) =>
         createInspectorTab(inspector, index, plugins.value),
       ),
@@ -80,18 +77,6 @@ export function useDevtoolsTabs(activeTab: ComputedRef<DevtoolsTabId>) {
     systemTabs,
     activeTabMeta,
   }
-}
-
-function resolveBuiltinTab(
-  tab: DevtoolsTab,
-  features: {
-    reactivityGraphEnabled: boolean
-    inspectEnabled: boolean
-  },
-): DevtoolsTab[] {
-  if (tab.id === 'graph' && !features.reactivityGraphEnabled) return []
-  if (tab.id === 'inspect' && !features.inspectEnabled) return []
-  return [tab]
 }
 
 function createInspectorTab(
