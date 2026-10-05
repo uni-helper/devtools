@@ -9,7 +9,7 @@ import { getInternal, getOptions, getUid, getVNode, isInstanceDestroyed } from '
 export interface ComponentTreeNode {
   id: string
   name: string
-  type: string
+  type: 'page' | 'component'
   file?: string
   children?: ComponentTreeNode[]
 }
@@ -20,6 +20,7 @@ export interface PageComponentTree {
 }
 
 declare const getCurrentPages: any
+declare const getApp: any
 
 /**
  * 组件实例注册表（供运行时状态查看与编辑定位 vm）
