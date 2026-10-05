@@ -8,13 +8,13 @@
   "author": "FliPPeDround <flippedround@qq.com>",
   "license": "MIT",
   "funding": "https://afdian.com/a/flippedround",
-  "homepage": "https://github.com/flippedround/uni-devtools#readme",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/flippedround/uni-devtools.git"
+    "url": "git+https://github.com/uni-helper/devtools.git"
   },
   "bugs": {
-    "url": "https://github.com/flippedround/uni-devtools/issues"
+    "url": "https://github.com/uni-helper/devtools/issues"
   },
   "keywords": [
     "unplugin",
