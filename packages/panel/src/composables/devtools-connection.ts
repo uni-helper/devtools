@@ -109,6 +109,8 @@ export function createDevtoolsConnection(options: DevtoolsConnectionOptions) {
           if (!client)
             throw new Error('Devtools RPC client is not connected')
           const [file] = args
+          if (typeof file !== 'string')
+            throw new Error('vite:core:open-in-editor requires a file path')
           const result = await client.command({
             type: 'components:openInEditor',
             payload: { file },

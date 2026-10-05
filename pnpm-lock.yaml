@@ -115,12 +115,6 @@ importers:
         specifier: ^0.8.8
         version: 0.8.8(rollup@4.63.5)(vite@8.3.1(@types/node@20.17.8)(esbuild@0.20.2)(jiti@2.7.0)(sass-embedded@1.82.0)(terser@5.36.0)(tsx@4.19.2)(yaml@2.6.1))
 
-  packages/devtools-kit:
-    dependencies:
-      devframe:
-        specifier: 1.1.0
-        version: 1.1.0(cac@7.0.0)(srvx@1.0.5)
-
   packages/panel:
     dependencies:
       '@fontsource/dm-mono':
@@ -133,8 +127,8 @@ importers:
         specifier: workspace:*
         version: link:../devframe
       '@vue/devtools-kit':
-        specifier: workspace:*
-        version: link:../devtools-kit
+        specifier: 9.0.0-beta.0
+        version: 9.0.0-beta.0(cac@7.0.0)(srvx@1.0.5)
       d3-force:
         specifier: ^3.0.0
         version: 3.0.0
@@ -3602,6 +3596,9 @@ packages:
 
   '@vue/devtools-kit@8.2.1':
     resolution: {integrity: sha512-FIGIuq3AWReEpbAHY/cRGeHDfI0qOb8OCQ3YjbEAX04uaxIDbGc9rhkbVcG7rnfHPXE3RsU5KrWOu9V/okd8AQ==}
+
+  '@vue/devtools-kit@9.0.0-beta.0':
+    resolution: {integrity: sha512-bzmnFWg1pPeW22JXmqb4fkZ8ou/N6uk3ps6Hn/00hwS+S2JyW6kObqQXJoeUFfVRYd0b69sBbKWoqk5XQhUv6Q==}
 
   '@vue/devtools-shared@8.2.1':
     resolution: {integrity: sha512-Fkac7lUdGReh6pVOi3AYPRGe82LQqRmAfThW7RRligOAP0ZA/Z1z9XLHDM9dv34pV2HRc79DK8uKPeG2fLnA/g==}
@@ -12093,6 +12090,15 @@ snapshots:
       birpc: 2.9.0
       hookable: 5.5.3
       perfect-debounce: 2.1.0
+
+  '@vue/devtools-kit@9.0.0-beta.0(cac@7.0.0)(srvx@1.0.5)':
+    dependencies:
+      devframe: 1.1.0(cac@7.0.0)(srvx@1.0.5)
+    transitivePeerDependencies:
+      - '@devframes/agentic'
+      - cac
+      - ocache
+      - srvx
 
   '@vue/devtools-shared@8.2.1': {}
 

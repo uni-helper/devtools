@@ -13,7 +13,7 @@
     "@fontsource/dm-mono": "^5.2.5",
     "@fontsource/dm-sans": "^5.2.5",
     "@uni-helper/devtools-devframe": "workspace:*",
-    "@vue/devtools-kit": "workspace:*",
+    "@vue/devtools-kit": "9.0.0-beta.0",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
     "d3-zoom": "^3.0.0",

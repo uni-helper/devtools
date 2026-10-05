@@ -1,7 +1,7 @@
 /**
  * uni-devtools 适配器：把官方 Vue Devtools client 消费的 kit RPC 协议
- * （query / command / runtime events，契约见 vendored
- * `@vue/devtools-kit` 的 `src/protocol/requests.ts`）映射到我们的
+ * （query / command / runtime events，契约见 npm 版 `@vue/devtools-kit` 的
+ * `protocol/requests.ts`）映射到我们的
  * devframe RPC（scope `uni-helper-devtools`）与探针数据上。
  *
  * 这是「方案 A」唯一的桥：官方 UI 与 `useDevtoolsClient` 一行不改，
@@ -179,8 +179,9 @@ function buildFlatTree(tree: ComponentTreeResult): FlatTree {
     }
     if (page.components)
       walk(page.components)
-    // version 上报探针侧 Vue 运行时版本；官方 client 用它做 Graph tab 门禁
-    // （supportsReactivityGraphVueVersion），缺省时该 tab 整个隐藏
+    // version 上报探针侧 Vue 运行时版本；面板用它做 Graph tab 门禁
+    // （本地实现的 supportsReactivityGraphVueVersion，门槛 3.5.0）。
+    // 门禁不通过时该 tab 仍可见，只是页面内说明原因（见 pages/graph.vue）
     apps.push({
       id: appId,
       name: page.route,

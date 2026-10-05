@@ -10,7 +10,7 @@ import type {
   RouterRouteRecordSnapshot,
   RouterSnapshotMessage,
 } from '@vue/devtools-kit'
-import { supportsReactivityGraphVueVersion } from '@vue/devtools-kit'
+import { supportsReactivityGraphVueVersion } from '../utils/vue-version'
 import type { DevtoolsRpcClient } from '@vue/devtools-kit/client'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { applyComponentTreePatches as patchComponentTree } from '../utils/component-tree-patches'
