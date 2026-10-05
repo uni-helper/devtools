@@ -65,6 +65,7 @@ import {
   mockNetworkRecords,
   mockPiniaState,
   mockPiniaStores,
+  mockTickNetworkRecords,
   mockUpdateComponentState,
   mockUpdatePiniaState,
 } from './fixtures'
@@ -377,6 +378,8 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
   let unsubSharedState: (() => void) | undefined
   let unsubNetworkSharedState: (() => void) | undefined
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+  // mock 模式心跳：驱动在途演示记录超时结算（真实模式数据来自探针推送，无此需要）
+  let mockTickTimer: ReturnType<typeof setInterval> | undefined
   let disposed = false
 
   let cachedNetworkRecords: NetworkRecord[] = []
@@ -523,6 +526,10 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
     unsubSharedState = undefined
     unsubNetworkSharedState?.()
     unsubNetworkSharedState = undefined
+    if (mockTickTimer) {
+      clearInterval(mockTickTimer)
+      mockTickTimer = undefined
+    }
     // 关键：重连后的首个 treeSnapshot 必须重拉，否则引用守卫失效、
     // 面板会一直展示断开前的陈旧树（CR P1-7）。
     flat = EMPTY_TREE
@@ -535,6 +542,9 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       applyTreeSnapshot(mockComponentTree())
       applyNetworkRecords(mockNetworkRecords())
       emitConnection('connected')
+      mockTickTimer = setInterval(() => {
+        applyNetworkRecords(mockTickNetworkRecords())
+      }, 1000)
       return
     }
     emitConnection('connecting')
@@ -1076,6 +1086,10 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       if (reconnectTimer) {
         clearTimeout(reconnectTimer)
         reconnectTimer = undefined
+      }
+      if (mockTickTimer) {
+        clearInterval(mockTickTimer)
+        mockTickTimer = undefined
       }
       unsubSharedState?.()
       unsubSharedState = undefined

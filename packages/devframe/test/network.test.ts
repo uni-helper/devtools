@@ -642,4 +642,82 @@ describe('network: 探针网络采集器', () => {
       expect(ret).toBe('non-object-ret')
     })
   })
+
+  describe('8. 完成态补推（pending → 终态）', () => {
+    it('pending 快照随批次先行推出后，完成态仍会补推（回归：面板 FAIL 误报）', async () => {
+      const pushes: any[][] = []
+      const mockCall = vi.fn().mockImplementation((_name: string, args: any) => {
+        pushes.push(args.records)
+        return Promise.resolve({ ok: true })
+      })
+      installNetworkInterceptors({
+        getActiveInstance: () => ({
+          rpc: { $call: mockCall },
+          socketHandle: { isConnected: () => true },
+        }),
+      })
+
+      let slowOptions: any
+      requestHandler = (opts: any) => {
+        if (opts.url === '/api/slow') {
+          slowOptions = opts
+          return { taskId: 'slow' }
+        }
+        if (opts.complete)
+          opts.complete({})
+      }
+
+      // 慢请求发起后一直在途
+      fakeUni.request({ url: '/api/slow', success: () => {} })
+      // 快请求完成触发批次：慢请求以 pending 快照（status=0、无 duration）混入
+      fakeUni.request({ url: '/api/fast', complete: () => {} })
+      await pushNetworkRecordsNow()
+
+      expect(pushes.length).toBe(1)
+      const pendingSnapshot = pushes[0]!.find((r: any) => r.url === '/api/slow')
+      expect(pendingSnapshot.status).toBe(0)
+      expect(pendingSnapshot.duration).toBeUndefined()
+      // 水位推进到批次内最大 id（快请求创建在慢请求之后）
+      expect(__getLastPushedIdForTest()).toBe(pushes[0]![pushes[0]!.length - 1]!.id)
+
+      // 慢请求完成：终态必须补推（id 已 ≤ 水位，靠脏集带出）
+      slowOptions.success({ statusCode: 201, data: '{"ok":true}' })
+      slowOptions.complete({ statusCode: 201 })
+      await pushNetworkRecordsNow()
+
+      expect(pushes.length).toBe(2)
+      const finalRecord = pushes[1]!.find((r: any) => r.url === '/api/slow')
+      expect(finalRecord.status).toBe(201)
+      expect(finalRecord.ok).toBe(true)
+      expect(finalRecord.duration).toBeGreaterThanOrEqual(0)
+    })
+
+    it('终态补推后脏集出清：重复调用不再重复推', async () => {
+      const mockCall = vi.fn().mockResolvedValue({ ok: true })
+      installNetworkInterceptors({
+        getActiveInstance: () => ({
+          rpc: { $call: mockCall },
+          socketHandle: { isConnected: () => true },
+        }),
+      })
+
+      let options: any
+      requestHandler = (opts: any) => {
+        options = opts
+        return { taskId: 't' }
+      }
+
+      fakeUni.request({ url: '/api/repush', success: () => {} })
+      await pushNetworkRecordsNow()
+      expect(mockCall).toHaveBeenCalledTimes(1)
+
+      options.complete({})
+      await pushNetworkRecordsNow()
+      expect(mockCall).toHaveBeenCalledTimes(2)
+
+      // 已推过的终态不重推
+      await pushNetworkRecordsNow()
+      expect(mockCall).toHaveBeenCalledTimes(2)
+    })
+  })
 })

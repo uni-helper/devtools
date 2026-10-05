@@ -230,8 +230,14 @@ export function mockGetComponentRenderCode(id: string): string | undefined {
 // Network (Task C): mock 网络请求记录（GET / POST / upload / download / fail / 截断）
 // ---------------------------------------------------------------------------
 
+/** 在途演示记录（id 7）的 id 与结算窗口：mock 心跳超时后就地结算，演示 pending → 终态原行更新 */
+const MOCK_PENDING_RECORD_ID = 7
+const MOCK_PENDING_SETTLES_AFTER_MS = 5000
+let mockPendingCreatedAt = 0
+
 function createInitialMockNetworkRecords(): NetworkRecord[] {
   const now = Date.now()
+  mockPendingCreatedAt = now
   return [
     {
       id: 1,
@@ -376,6 +382,21 @@ function createInitialMockNetworkRecords(): NetworkRecord[] {
       duration: 115,
       ok: true,
     },
+    {
+      // 在途记录（无 duration）：演示 (pending) 态与 Waterfall 条生长
+      id: 7,
+      type: 'request',
+      method: 'GET',
+      url: 'https://api.example.com/v1/stream/poll',
+      page: 'pages/index/index',
+      status: 0,
+      requestHeaders: {
+        accept: 'application/json',
+      },
+      responseSize: 0,
+      startTime: now - 300,
+      ok: false,
+    },
   ]
 }
 
@@ -391,5 +412,21 @@ export function mockClearNetworkRecords(): void {
 
 export function mockResetNetworkRecords(): void {
   mockNetworkStore = createInitialMockNetworkRecords()
+}
+
+/** mock 心跳（1s 间隔由适配器驱动）：在途演示记录超时后就地结算并返回最新快照 */
+export function mockTickNetworkRecords(): NetworkRecord[] {
+  const pending = mockNetworkStore.find(
+    rec => rec.id === MOCK_PENDING_RECORD_ID && rec.duration == null,
+  )
+  if (pending && Date.now() - mockPendingCreatedAt >= MOCK_PENDING_SETTLES_AFTER_MS) {
+    pending.status = 200
+    pending.ok = true
+    pending.responseHeaders = { 'content-type': 'application/json' }
+    pending.responseBody = { poll: 'settled-by-mock' }
+    pending.responseSize = 27
+    pending.duration = Math.max(0, Date.now() - pending.startTime)
+  }
+  return mockNetworkRecords()
 }
 

@@ -47,6 +47,12 @@ const ringBuffer: NetworkRecord[] = []
 // __resetNetworkForTest 回到确定性小 id）。
 let nextRecordId = Date.now()
 let lastPushedId = 0
+// 完成态补推脏集：记录创建时（pending 快照）可能随其他请求触发的批次先被推出、
+// id 记入水位，等它完成时 id 已 ≤ lastPushedId，只按「id 越过水位」过滤永远推
+// 不出去——node 侧停在 status=0 的 pending 快照上，面板误显示 FAIL（回归自 W13
+// 真机数据：先行发起的请求全部 FAIL、后发起的正常显示）。终态结算与新建记录都
+// 记脏，推送成功后出清。
+const dirtyPushIds = new Set<number>()
 let pushTimer: any = null
 let networkDeps: NetworkDeps | null = null
 
@@ -280,6 +286,7 @@ function createPendingRecord(type: NetworkRecordType, options: any): NetworkReco
   if (ringBuffer.length > MAX_NETWORK_RING) {
     ringBuffer.shift()
   }
+  dirtyPushIds.add(record.id)
 
   return record
 }
@@ -335,6 +342,7 @@ function handleComplete(record: NetworkRecord): void {
   if (record.duration === undefined) {
     record.duration = Math.max(0, Date.now() - record.startTime)
   }
+  dirtyPushIds.add(record.id)
   scheduleNetworkPush()
 }
 
@@ -532,6 +540,7 @@ export function getNetworkRecords(params?: GetNetworkRecordsParams | any): GetNe
 
 export function clearNetworkRecords(): ClearNetworkRecordsResult {
   ringBuffer.length = 0
+  dirtyPushIds.clear()
   return { ok: true }
 }
 
@@ -565,16 +574,30 @@ export async function pushNetworkRecordsNow(): Promise<void> {
     return
   }
 
-  const incremental = ringBuffer.filter(r => r.id > lastPushedId)
+  // 环形淘汰的脏 id 不再追：记录已出局，推送无主可寻
+  if (dirtyPushIds.size > 0) {
+    const ringIds = new Set(ringBuffer.map(r => r.id))
+    for (const id of dirtyPushIds) {
+      if (!ringIds.has(id)) {
+        dirtyPushIds.delete(id)
+      }
+    }
+  }
+
+  const incremental = ringBuffer.filter(r => r.id > lastPushedId || dirtyPushIds.has(r.id))
   if (incremental.length === 0) {
     return
   }
 
   const maxId = incremental[incremental.length - 1].id
+  const pushedIds = incremental.map(r => r.id)
 
   try {
     await instance.rpc.$call('uni-helper-devtools:push-network-records', { records: incremental })
     lastPushedId = Math.max(lastPushedId, maxId)
+    for (const id of pushedIds) {
+      dirtyPushIds.delete(id)
+    }
   }
   catch {}
 }
@@ -583,6 +606,7 @@ export function __resetNetworkForTest(): void {
   ringBuffer.length = 0
   nextRecordId = 1
   lastPushedId = 0
+  dirtyPushIds.clear()
   cancelScheduledNetworkPush()
   networkDeps = null
 }

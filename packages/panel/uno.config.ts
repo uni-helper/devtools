@@ -1,5 +1,12 @@
 import { defineConfig, presetIcons, presetWind3, transformerDirectives } from 'unocss'
 
+// presetWind3 给 var() 颜色套透明度修饰时会把 alpha 静默丢弃（bg-primary-500/20
+// 直接渲染成实心色，settings 开关因此全绿）。primary 各阶显式包一层 color-mix +
+// <alpha-value>，无修饰时 alpha=1，行为与普通色一致。
+function primaryTone(variable: string, fallback: string) {
+  return `color-mix(in srgb, var(${variable}, ${fallback}) calc(<alpha-value>*100%), transparent)`
+}
+
 export default defineConfig({
   shortcuts: [
     {
@@ -62,21 +69,20 @@ export default defineConfig({
     colors: {
       // uni-devtools：primary 全系走 CSS 变量（HUB_UI_SPEC §6.2 唯一硬性视觉契约），
       // 变量定义与 --devframe-primary 的 color-mix 派生见 src/style.css。fallback
-      // 保留官方原色，standalone 且无重载时与官方观感一致；透明度修饰
-      // （bg-primary-500/12 等）由 UnoCSS 对 var 色的 color-mix 处理保持可用。
+      // 保留官方原色，standalone 且无重载时与官方观感一致。
       primary: {
-        50: 'var(--devframe-primary-50, #eefcf6)',
-        100: 'var(--devframe-primary-100, #d7f8ea)',
-        200: 'var(--devframe-primary-200, #b3efd9)',
-        300: 'var(--devframe-primary-300, #7ee0bf)',
-        400: 'var(--devframe-primary-400, #42c99c)',
-        DEFAULT: 'var(--devframe-primary, #00b878)',
-        500: 'var(--devframe-primary-500, #00a86f)',
-        600: 'var(--devframe-primary-600, #00895d)',
-        700: 'var(--devframe-primary-700, #00704f)',
-        800: 'var(--devframe-primary-800, #035940)',
-        900: 'var(--devframe-primary-900, #064936)',
-        950: 'var(--devframe-primary-950, #02291f)',
+        50: primaryTone('--devframe-primary-50', '#eefcf6'),
+        100: primaryTone('--devframe-primary-100', '#d7f8ea'),
+        200: primaryTone('--devframe-primary-200', '#b3efd9'),
+        300: primaryTone('--devframe-primary-300', '#7ee0bf'),
+        400: primaryTone('--devframe-primary-400', '#42c99c'),
+        DEFAULT: primaryTone('--devframe-primary', '#00b878'),
+        500: primaryTone('--devframe-primary-500', '#00a86f'),
+        600: primaryTone('--devframe-primary-600', '#00895d'),
+        700: primaryTone('--devframe-primary-700', '#00704f'),
+        800: primaryTone('--devframe-primary-800', '#035940'),
+        900: primaryTone('--devframe-primary-900', '#064936'),
+        950: primaryTone('--devframe-primary-950', '#02291f'),
       },
     },
   },

@@ -67,38 +67,6 @@ function isMacOS() {
       </div>
 
       <div class="mt-5 flex flex-wrap items-center justify-center gap-6">
-        <a
-          href="https://github.com/vuejs/devtools"
-          target="_blank"
-          class="color-inherit op50 transition-[opacity,color] duration-200 flex items-center gap-1 no-underline hover:text-blue hover:op100"
-        >
-          <div class="i-carbon-star" />
-          Star on GitHub
-        </a>
-        <a
-          href="https://github.com/vuejs/devtools/discussions/111"
-          target="_blank"
-          class="color-inherit op50 transition-[opacity,color] duration-200 flex items-center gap-1 no-underline hover:text-yellow hover:op100"
-        >
-          <div class="i-carbon-data-enrichment" />
-          Ideas & Suggestions
-        </a>
-        <a
-          href="https://github.com/vuejs/devtools/discussions/112"
-          target="_blank"
-          class="color-inherit op50 transition-[opacity,color] duration-200 flex items-center gap-1 no-underline hover:text-lime hover:op100"
-        >
-          <div class="i-carbon-plan" />
-          Project Roadmap
-        </a>
-        <a
-          href="https://github.com/vuejs/devtools/issues"
-          target="_blank"
-          class="color-inherit op50 transition-[opacity,color] duration-200 flex items-center gap-1 no-underline hover:text-rose hover:op100"
-        >
-          <div class="i-carbon-debug" />
-          Bug Reports
-        </a>
         <RouterLink
           to="/settings"
           replace

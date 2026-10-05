@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Pane, Splitpanes } from 'splitpanes'
-import { computed, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
 import { getUniNetworkApi } from '../adapter/uni-devtools-rpc'
 import { useDevtoolsClient } from '../composables/devtools-client'
 import type { NetworkRecord, UniNetworkApi } from '../types/network'
@@ -33,6 +33,7 @@ watch(
 
 onUnmounted(() => {
   unsub?.()
+  stopPendingTick()
 })
 
 watch(records, (newRecords) => {
@@ -41,12 +42,13 @@ watch(records, (newRecords) => {
   }
 })
 
+// 请求按发起顺序展示（越早越靠上，与 Chrome DevTools Network 一致）；探针
+// 侧 id 单调递增，id 升序即发起顺序
 const filteredRecords = computed(() => {
-  const list = [...records.value].reverse()
   const query = filterText.value.trim().toLowerCase()
   if (!query)
-    return list
-  return list.filter((r) => {
+    return records.value
+  return records.value.filter((r) => {
     const matchUrl = r.url?.toLowerCase().includes(query)
     const matchMethod = r.method?.toLowerCase().includes(query)
     const matchStatus = String(r.status).includes(query)
@@ -55,11 +57,107 @@ const filteredRecords = computed(() => {
   })
 })
 
+// ---- Waterfall 瀑布列 ----
+
+/** 终态结算（complete 回调）必写 duration；缺失即请求仍在途，与已结算的网络层失败（FAIL）区分 */
+function isPendingRecord(record: NetworkRecord): boolean {
+  return record.duration == null
+}
+
+const nowTick = ref(Date.now())
+let pendingTickTimer: ReturnType<typeof setInterval> | undefined
+
+function stopPendingTick(): void {
+  if (pendingTickTimer) {
+    clearInterval(pendingTickTimer)
+    pendingTickTimer = undefined
+  }
+}
+
+// 在途请求的瀑布条以当前时刻为右端点：仅在存在 pending 记录时开 1s 心跳，
+// 让未结算的条随时间生长，全结算后停表
+watch(
+  () => filteredRecords.value.some(isPendingRecord),
+  (hasPending) => {
+    if (hasPending && !pendingTickTimer) {
+      pendingTickTimer = setInterval(() => {
+        nowTick.value = Date.now()
+      }, 1000)
+    }
+    else if (!hasPending) {
+      stopPendingTick()
+    }
+  },
+  { immediate: true },
+)
+
+const waterfallLayout = computed(() => {
+  const list = filteredRecords.value
+  if (list.length === 0)
+    return undefined
+  let start = Number.POSITIVE_INFINITY
+  let end = 0
+  for (const r of list) {
+    start = Math.min(start, r.startTime)
+    end = Math.max(end, r.duration != null ? r.startTime + r.duration : nowTick.value)
+  }
+  return { start, span: Math.max(end - start, 1) }
+})
+
+function getWaterfallStyle(record: NetworkRecord): { left: string, width: string } {
+  const layout = waterfallLayout.value
+  if (!layout)
+    return { left: '0%', width: '0%' }
+  const endTs = record.duration != null ? record.startTime + record.duration : nowTick.value
+  const left = Math.min(Math.max(((record.startTime - layout.start) / layout.span) * 100, 0), 99.2)
+  const width = Math.min(Math.max(((endTs - record.startTime) / layout.span) * 100, 0.8), 100 - left)
+  return { left: `${left}%`, width: `${width}%` }
+}
+
+function getWaterfallBarClass(record: NetworkRecord): string {
+  if (isPendingRecord(record))
+    return 'bg-gray-400/60 animate-pulse'
+  if (record.status >= 200 && record.status < 300)
+    return 'bg-green-500/80'
+  if (record.status >= 300 && record.status < 400)
+    return 'bg-cyan-500/80'
+  return 'bg-red-500/80'
+}
+
+// ---- 列表跟随滚动：新记录追加在列表尾部，钉在底部时自动跟随 ----
+
+const listPaneRef = ref<any>()
+let followNewest = true
+
+function onListScroll(): void {
+  const el = listPaneRef.value?.$el as HTMLElement | undefined
+  if (!el)
+    return
+  followNewest = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+}
+
+watch(records, () => {
+  if (!followNewest)
+    return
+  nextTick(() => {
+    const el = listPaneRef.value?.$el as HTMLElement | undefined
+    if (el)
+      el.scrollTop = el.scrollHeight
+  })
+})
+
 async function clearRecords() {
   if (networkApi.value) {
     await networkApi.value.clear()
     selectedRecord.value = undefined
+    followNewest = true
   }
+}
+
+function onSelectRecord(record: NetworkRecord): void {
+  selectedRecord.value = record
+  // 用户在翻历史记录：暂停跟随滚动，避免阅读中被新请求顶走
+  followNewest = false
 }
 
 function formatUrl(rawUrl: string): string {
@@ -98,14 +196,20 @@ function formatTime(ts: number): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-function getStatusClass(status: number): string {
-  if (status >= 200 && status < 300)
-    return 'bg-green-400/10 text-green-500'
-  if (status >= 300 && status < 400)
-    return 'bg-cyan-400/10 text-cyan-500'
-  if (status >= 400)
-    return 'bg-red-400/10 text-red-500'
-  return 'bg-gray-400/10 text-gray-500'
+interface StatusView {
+  text: string
+  class: string
+}
+
+function getStatusView(record: NetworkRecord): StatusView {
+  if (isPendingRecord(record))
+    return { text: '(pending)', class: 'bg-gray-400/10 text-gray-400 animate-pulse' }
+  if (record.status >= 200 && record.status < 300)
+    return { text: String(record.status), class: 'bg-green-400/10 text-green-500' }
+  if (record.status >= 300 && record.status < 400)
+    return { text: String(record.status), class: 'bg-cyan-400/10 text-cyan-500' }
+  // status=0 且已结算：网络层失败（fail 回调），与在途 pending 区分
+  return { text: record.status > 0 ? String(record.status) : 'FAIL', class: 'bg-red-400/10 text-red-500' }
 }
 
 function getTypeBadgeClass(type: string): string {
@@ -179,7 +283,7 @@ function formatBody(body: unknown): string {
     <!-- Main Content: Splitpanes -->
     <Splitpanes class="overflow-hidden">
       <!-- Left pane: Records List -->
-      <Pane :size="selectedRecord ? 60 : 100" class="overflow-auto!">
+      <Pane ref="listPaneRef" :size="selectedRecord ? 60 : 100" class="overflow-auto!" @scroll="onListScroll">
         <!-- Empty state: not connected -->
         <div v-if="!connected && records.length === 0" class="h-full flex flex-col items-center justify-center gap-2 p-12 text-center op50">
           <span class="i-carbon-warning text-3xl" />
@@ -210,6 +314,12 @@ function formatBody(body: unknown): string {
               <th class="w-20 px-2 py-1.5 text-right font-500 op60">Duration</th>
               <th class="w-20 px-2 py-1.5 text-right font-500 op60">Size</th>
               <th class="w-20 px-2 py-1.5 text-right font-500 op60">Time</th>
+              <th class="w-44 min-w-36 px-2 py-1.5 font-500 op60">
+                <span class="flex items-center justify-between gap-2">
+                  <span>Waterfall</span>
+                  <span v-if="waterfallLayout" class="font-mono text-10px font-400 op50">{{ formatDuration(waterfallLayout.span) }}</span>
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -218,11 +328,11 @@ function formatBody(body: unknown): string {
               :key="item.id"
               class="cursor-pointer border-b border-base/40 text-xs transition select-none"
               :class="selectedRecord?.id === item.id ? 'bg-active' : 'hover:bg-active/50'"
-              @click="selectedRecord = item"
+              @click="onSelectRecord(item)"
             >
               <td class="w-16 whitespace-nowrap px-2 py-1.5">
-                <span class="rounded px-1.5 py-0.5 font-mono font-bold text-11px" :class="getStatusClass(item.status)">
-                  {{ item.status || 'FAIL' }}
+                <span class="rounded px-1.5 py-0.5 font-mono font-bold text-11px" :class="getStatusView(item).class">
+                  {{ getStatusView(item).text }}
                 </span>
               </td>
               <td class="w-16 whitespace-nowrap px-2 py-1.5 font-mono font-bold text-11px">
@@ -244,6 +354,16 @@ function formatBody(body: unknown): string {
               </td>
               <td class="w-20 whitespace-nowrap px-2 py-1.5 text-right font-mono text-11px op50">
                 {{ formatTime(item.startTime) }}
+              </td>
+              <td class="w-44 min-w-36 px-2 py-1.5">
+                <div class="relative h-3 w-full overflow-hidden rounded-sm bg-gray-400/5">
+                  <div
+                    class="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full"
+                    :class="getWaterfallBarClass(item)"
+                    :style="getWaterfallStyle(item)"
+                    :title="isPendingRecord(item) ? 'In flight...' : formatDuration(item.duration)"
+                  />
+                </div>
               </td>
             </tr>
           </tbody>
@@ -276,8 +396,8 @@ function formatBody(body: unknown): string {
             </div>
             <div class="flex items-center gap-2">
               <span class="w-16 shrink-0 op50">Status:</span>
-              <span class="rounded px-1.5 py-0.25 font-bold" :class="getStatusClass(selectedRecord.status)">
-                {{ selectedRecord.status || 'FAIL' }}
+              <span class="rounded px-1.5 py-0.25 font-bold" :class="getStatusView(selectedRecord).class">
+                {{ getStatusView(selectedRecord).text }}
               </span>
             </div>
             <div class="flex items-center gap-2">
@@ -298,7 +418,7 @@ function formatBody(body: unknown): string {
             </div>
             <div class="flex items-center gap-2">
               <span class="w-16 shrink-0 op50">Time:</span>
-              <span>{{ new Date(selectedRecord.startTime).toISOString() }}</span>
+              <span>{{ formatTime(selectedRecord.startTime) }}</span>
             </div>
           </div>
 

@@ -7,6 +7,7 @@ import { launchEditor } from 'devframe/utils/launch-editor'
 import type { DevframeDockDefaults } from 'devframe/types'
 import type { AgentRegistry } from './relay.ts'
 import { isInspectAvailable } from './inspect-serve.ts'
+import { mergeNetworkRecords } from './shared/network-merge.ts'
 import type {
   ClearNetworkRecordsResult,
   ComponentStateResult,
@@ -390,9 +391,10 @@ export function createUniDevtoolsDevframe(
         }),
       }))
 
-      // W13 Network：探针 → node 增量推送（防抖批量，按 id 幂等 merge——
-      // socket 重连后探针重推全环也无害；500 容量与探针 MAX_NETWORK_RING
-      // 字面量两端冻结同步，见 types.ts W13 注释）
+      // W13 Network：探针 → node 增量推送（防抖批量；同 id 二次到达按
+      // shared/network-merge.ts 合并——pending 快照先出、完成态补推、重连全环
+      // 重推都收敛到「未知插入 / 未完成→已完成才覆盖」；500 容量与探针
+      // MAX_NETWORK_RING 字面量两端冻结同步，见 types.ts W13 注释）
       uni.rpc.register(defineRpcFunction({
         name: 'push-network-records',
         type: 'action',
@@ -403,15 +405,7 @@ export function createUniDevtoolsDevframe(
             const incoming = Array.isArray(params?.records) ? params.records : []
             if (incoming.length > 0) {
               networkSharedState.mutate((draft) => {
-                const known = new Set(draft.records.map(rec => rec.id))
-                for (const rec of incoming) {
-                  if (rec && typeof rec.id === 'number' && Number.isFinite(rec.id) && !known.has(rec.id)) {
-                    draft.records.push(rec)
-                    known.add(rec.id)
-                  }
-                }
-                // 增量乱序到达仍保持 id 升序（面板增量渲染与 sinceId 语义都依赖）
-                draft.records.sort((a, b) => a.id - b.id)
+                draft.records = mergeNetworkRecords(draft.records, incoming)
                 if (draft.records.length > 500) {
                   draft.records.splice(0, draft.records.length - 500)
                 }

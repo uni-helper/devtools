@@ -270,6 +270,25 @@ try {
   if (netInc?.records?.length !== 1 || netInc.records[0]?.id !== 2) {
     throw new Error(`get-network-records sinceId 增量拉取失败: ${JSON.stringify(netInc)}`)
   }
+  // 完成态补推（B-network-1003 回归）：同 id 的 pending 快照先随批推出、终态后补，
+  // node merge 必须以终态覆盖 pending——旧「未知 id 才插入」会让看板永远停在
+  // pending/FAIL。真实探针语义：同一记录对象就地结算后原样重推。
+  const pendingRec = netRec(3, { status: 0, ok: false, duration: undefined })
+  agentNetworkRing.push(pendingRec)
+  await agent.$call('uni-helper-devtools:push-network-records', { records: [pendingRec] })
+  const netAfterPending = await panel.$call('uni-helper-devtools:get-network-records')
+  if (netAfterPending?.records?.length !== 3) {
+    throw new Error(`pending 快照入列失败，期望 3 条实际 ${netAfterPending?.records?.length}`)
+  }
+  pendingRec.status = 201
+  pendingRec.ok = true
+  pendingRec.duration = 456
+  await agent.$call('uni-helper-devtools:push-network-records', { records: [pendingRec] })
+  const netAfterDone = await panel.$call('uni-helper-devtools:get-network-records')
+  const recDone = netAfterDone?.records?.find(rec => rec.id === 3)
+  if (netAfterDone?.records?.length !== 3 || recDone?.status !== 201 || recDone?.duration == null) {
+    throw new Error(`完成态补推 merge 失败：同 id 终态未覆盖 pending: ${JSON.stringify(recDone)}`)
+  }
   // 清空：node sharedState + 探针环形缓冲都要清（透传失败会被下一步抓到）
   const netClear = await panel.$call('uni-helper-devtools:clear-network-records')
   if (netClear?.ok !== true) {
