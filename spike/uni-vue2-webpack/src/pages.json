@@ -1,0 +1,13 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "spike"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTitleText": "uni-vue2-spike"
+  }
+}

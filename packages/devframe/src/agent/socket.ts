@@ -52,12 +52,35 @@ export interface UniSocketChannelHandle {
 
 // 兼容全局 uni 对象（小程序或 mock）
 declare const uni: any
+declare const wx: any
+declare const my: any
+declare const tt: any
+declare const swan: any
 
 function resolveUni(): any {
-  if (typeof uni !== 'undefined') {
+  if (typeof uni !== 'undefined' && uni && typeof uni.connectSocket === 'function') {
     return uni
   }
-  return (globalThis as any).uni
+  const g = typeof globalThis !== 'undefined' ? (globalThis as any) : {}
+  if (g.uni && typeof g.uni.connectSocket === 'function') {
+    return g.uni
+  }
+  if (typeof wx !== 'undefined' && wx && typeof wx.connectSocket === 'function') {
+    return wx
+  }
+  if (g.wx && typeof g.wx.connectSocket === 'function') {
+    return g.wx
+  }
+  if (typeof my !== 'undefined' && my && typeof my.connectSocket === 'function') {
+    return my
+  }
+  if (typeof tt !== 'undefined' && tt && typeof tt.connectSocket === 'function') {
+    return tt
+  }
+  if (typeof swan !== 'undefined' && swan && typeof swan.connectSocket === 'function') {
+    return swan
+  }
+  return undefined
 }
 
 export function createUniSocketChannel(
@@ -92,6 +115,7 @@ export function createUniSocketChannel(
 
     const uniObj = resolveUni()
     if (!uniObj || typeof uniObj.connectSocket !== 'function') {
+      console.warn('[uni-devtools-agent] No mini-program socket provider found (neither uni nor wx/my/tt)')
       return
     }
 
@@ -101,11 +125,13 @@ export function createUniSocketChannel(
         protocols,
         success: () => {},
         fail: (err: any) => {
+          console.error('[uni-devtools-agent] connectSocket failed:', err)
           handleDisconnect(err)
         },
       })
     }
     catch (err) {
+      console.error('[uni-devtools-agent] connectSocket throw:', err)
       handleDisconnect(err)
       return
     }
@@ -123,6 +149,7 @@ export function createUniSocketChannel(
         }
       })
       socketTask.onError((err: any) => {
+        console.error('[uni-devtools-agent] WebSocket error:', err)
         if (onError)
           onError(err)
         handleDisconnect(err)

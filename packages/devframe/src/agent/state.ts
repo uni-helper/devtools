@@ -9,6 +9,17 @@ import type { ComponentStateEntry, ComponentStateResult } from '../types.ts'
 import { checkIsRef, ensureJsonSafe, getRaw, getSetupBindingInfo, readComputedSource } from './serialize.ts'
 import { buildReactivityGraph } from './reactivity-graph.ts'
 import { getComponentDisplayName, getRegisteredInstance } from './tree.ts'
+import {
+  deleteReactive,
+  getAttrs,
+  getData,
+  getInternal,
+  getOptions,
+  getProps,
+  getProxy,
+  isInstanceDestroyed,
+  setReactive,
+} from './instance.ts'
 
 // 结果形态即 wire 契约（types.ts 单点定义，探针侧不再复制镜像）
 
@@ -65,7 +76,9 @@ export function triggerComponentUpdate(vm: any, internal: any): void {
  *    引用，读到的是活值，编辑直接落到原对象
  */
 function resolveSetupSource(vm: any, internal: any): Record<string, any> | undefined {
-  const setupState = internal?.setupState ?? (vm?.$ ? vm.$.setupState : undefined) ?? vm?.setupState
+  // Vue 3：`internal.setupState`；Vue 2.7：`vm._setupState`；Vue 2.6：两者皆无 → undefined
+  // （2.6 的 Options API 走 $data / $options.computed 两段，不需要 setup 段）
+  const setupState = internal?.setupState ?? vm?.setupState ?? vm?._setupState
   if (setupState && typeof setupState === 'object' && Object.keys(setupState).length > 0)
     return setupState
 
@@ -81,14 +94,18 @@ function resolveSetupSource(vm: any, internal: any): Record<string, any> | undef
 /**
  * 遍历合并组件定义及 mixins/extends 链上的 options（仅提取 props 与 computed）
  */
-function resolveMergedOptions(internal: any): Record<string, any> | undefined {
-  const record = internal as Record<string, unknown>
-  const raw = record.type || (record.$ && (record.$ as any).type)
+function resolveMergedOptions(vm: any): Record<string, any> | undefined {
+  const internal = getInternal(vm)
+  const raw = getOptions(vm)
   if (!raw || typeof raw !== 'object')
     return undefined
 
-  const appContext = record.appContext || (record.$ && (record.$ as any).appContext)
-  const globalMixins = appContext?.mixins
+  // Vue 2 的 `$options` 在实例化时已由 Vue 的 mergeOptions 合并过 mixins/extends，
+  // 这里直接用它，不能重跑一遍合并
+  if (!internal?.appContext)
+    return raw as Record<string, any>
+
+  const globalMixins = internal.appContext?.mixins
   const mixins = Array.isArray(globalMixins) ? globalMixins : []
   const ownMixins = (raw as any).mixins
   const extendsOptions = (raw as any).extends
@@ -136,13 +153,13 @@ export function getComponentState(id: string): ComponentStateResult {
   }
 
   try {
-    const internal = vm.$ || vm
-    const typeObj = internal.type || (internal.$ && internal.$.type) || {}
+    const internal = getInternal(vm)
+    const typeObj = getOptions(vm)
     const name = String(getComponentDisplayName(typeObj) || 'Anonymous')
-    const mergedOptions = resolveMergedOptions(internal)
+    const mergedOptions = resolveMergedOptions(vm)
 
     const props: Record<string, unknown> = {}
-    const rawProps = internal.props
+    const rawProps = getProps(vm)
     if (rawProps && typeof rawProps === 'object') {
       for (const key of Object.keys(rawProps)) {
         if (key.startsWith('_') || key.startsWith('$'))
@@ -160,7 +177,7 @@ export function getComponentState(id: string): ComponentStateResult {
     const computed: Record<string, ComponentStateEntry> = {}
     const computedOptions = mergedOptions?.computed || typeObj?.computed
     if (computedOptions && typeof computedOptions === 'object') {
-      const proxy = internal.proxy || vm
+      const proxy = getProxy(vm)
       for (const key of Object.keys(computedOptions)) {
         if (key.startsWith('_') || key.startsWith('$'))
           continue
@@ -189,9 +206,9 @@ export function getComponentState(id: string): ComponentStateResult {
 
     // $data 中排除与 props / computed 同名的键，避免跨段重复展示
     const data: Record<string, unknown> = {}
-    const rawData = vm.$data || internal.data
+    const rawData = getData(vm)
     if (rawData && typeof rawData === 'object') {
-      const declaredProps = mergedOptions?.props || typeObj?.props || internal.props
+      const declaredProps = mergedOptions?.props || typeObj?.props || getProps(vm)
       for (const key of Object.keys(rawData)) {
         if (key.startsWith('_') || key.startsWith('$'))
           continue
@@ -217,7 +234,7 @@ export function getComponentState(id: string): ComponentStateResult {
     const rawSetup = resolveSetupSource(vm, internal)
     if (rawSetup && typeof rawSetup === 'object') {
       const unwrappedSetup = getRaw(rawSetup)
-      const declaredProps = internal.props || mergedOptions?.props || typeObj?.props
+      const declaredProps = getProps(vm) || mergedOptions?.props || typeObj?.props
 
       for (const key of Object.keys(rawSetup)) {
         if (key.startsWith('_') || key.startsWith('$'))
@@ -310,7 +327,7 @@ export function getComponentState(id: string): ComponentStateResult {
     }
 
     const attrs: Record<string, unknown> = {}
-    const rawAttrs = internal.attrs
+    const rawAttrs = getAttrs(vm)
     if (rawAttrs && typeof rawAttrs === 'object') {
       for (const key of Object.keys(rawAttrs)) {
         if (key.startsWith('_') || key.startsWith('$'))
@@ -374,7 +391,7 @@ function navigateToParent(root: any, segments: string[], id: string): { parent: 
   return { parent, last: segments[segments.length - 1]! }
 }
 
-function assignFinal(target: { parent: any, last: string }, value: unknown, remove: boolean | undefined, id: string): void {
+function assignFinal(vm: any, target: { parent: any, last: string }, value: unknown, remove: boolean | undefined, id: string): void {
   const { parent, last } = target
   const current = parent[last]
 
@@ -386,19 +403,11 @@ function assignFinal(target: { parent: any, last: string }, value: unknown, remo
   }
 
   if (remove) {
-    if (Array.isArray(parent) && /^\d+$/.test(last)) {
-      parent.splice(Number(last), 1)
-      return
-    }
-    delete parent[last]
+    deleteReactive(vm, parent, last)
     return
   }
 
-  if (Array.isArray(parent) && /^\d+$/.test(last)) {
-    parent[Number(last)] = value
-    return
-  }
-  parent[last] = value
+  setReactive(vm, parent, last, value)
 }
 
 export function updateComponentState(
@@ -425,8 +434,8 @@ export function updateComponentState(
     throw new Error(`[updateComponentState] Component with id "${id}" not found in registry (may be unmounted)`)
   }
 
-  const internal = vm.$ || vm
-  if (internal?.isUnmounted) {
+  const internal = getInternal(vm)
+  if (isInstanceDestroyed(vm)) {
     throw new Error(`[updateComponentState] Component with id "${id}" has been unmounted`)
   }
 
@@ -434,9 +443,9 @@ export function updateComponentState(
 
   try {
     const setupState = resolveSetupSource(vm, internal)
-    const data = vm.$data || internal.data
-    const props = internal.props
-    const proxy = internal.proxy || vm
+    const data = getData(vm)
+    const props = getProps(vm)
+    const proxy = getProxy(vm)
 
     let updated = false
 
@@ -444,14 +453,14 @@ export function updateComponentState(
       if (!props || !(key in props)) {
         throw new Error(`[updateComponentState] Key "${key}" not found in props on component "${id}"`)
       }
-      assignFinal(navigateToParent(props, path, id), value, remove, id)
+      assignFinal(vm, navigateToParent(props, path, id), value, remove, id)
       updated = true
     }
     else if (section === 'computed') {
       if (!proxy || !(key in proxy)) {
         throw new Error(`[updateComponentState] Key "${key}" not found in computed proxy on component "${id}"`)
       }
-      assignFinal(navigateToParent(proxy, path, id), value, remove, id)
+      assignFinal(vm, navigateToParent(proxy, path, id), value, remove, id)
       updated = true
     }
     else {
@@ -507,7 +516,7 @@ export function updateComponentState(
           }
         }
         else {
-          assignFinal(navigateToParent(setupState, path, id), value, remove, id)
+          assignFinal(vm, navigateToParent(setupState, path, id), value, remove, id)
           updated = true
         }
       }
@@ -516,15 +525,15 @@ export function updateComponentState(
       if (!updated && useData && data && key in data) {
         if (path.length === 1) {
           if (remove) {
-            delete data[key]
+            deleteReactive(vm, data, key)
           }
           else {
-            data[key] = value
+            setReactive(vm, data, key, value)
           }
           updated = true
         }
         else {
-          assignFinal(navigateToParent(data, path, id), value, remove, id)
+          assignFinal(vm, navigateToParent(data, path, id), value, remove, id)
           updated = true
         }
       }

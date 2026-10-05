@@ -3,11 +3,15 @@
  * 约束：纯 JSON 安全（浏览器全局禁用由 eslint no-restricted-globals 执法）。
  */
 
-import { isRef, toRaw } from 'vue'
+import * as Vue from 'vue'
+
+const vueAny = Vue as any
+const vueToRaw = vueAny.toRaw || vueAny.default?.toRaw
+const vueIsRef = vueAny.isRef || vueAny.default?.isRef
 
 export function getRaw(val: any): any {
   try {
-    return toRaw(val)
+    return typeof vueToRaw === 'function' ? vueToRaw(val) : val
   }
   catch {
     return val
@@ -23,7 +27,7 @@ export function checkIsRef(val: any): boolean {
       return true
     }
     try {
-      if (isRef(val)) {
+      if (typeof vueIsRef === 'function' && vueIsRef(val)) {
         return true
       }
     }

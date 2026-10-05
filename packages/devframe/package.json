@@ -12,13 +12,24 @@
       "import": "./dist/plugin.mjs",
       "require": "./dist/plugin.cjs"
     },
+    "./webpack": {
+      "types": "./src/webpack.ts",
+      "import": "./dist/webpack.mjs",
+      "require": "./dist/webpack.cjs"
+    },
     "./agent": "./src/agent/index.ts",
-    "./agent/render-hook": "./src/agent/render-hook.ts"
+    "./agent/render-hook": "./src/agent/render-hook.ts",
+    "./agent/vue2": {
+      "types": "./src/agent/vue2.ts",
+      "import": "./dist/agent-vue2.mjs"
+    }
   },
   "types": "./src/index.ts",
   "scripts": {
-    "build": "pnpm run build:plugin",
+    "build": "pnpm run build:plugin && pnpm run build:agent-vue2 && pnpm run build:webpack",
     "build:plugin": "esbuild src/plugin.ts --bundle --platform=node --format=esm --external:vite --outfile=dist/plugin.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\" && esbuild src/plugin.ts --bundle --platform=node --format=cjs --external:vite --define:import.meta.url=__uniImportMetaUrl --banner:js=\"const __uniImportMetaUrl = require('node:url').pathToFileURL(__filename).href;\" --outfile=dist/plugin.cjs && rm -rf dist/client && cp -R node_modules/vite-plugin-inspect/dist/client dist/client",
+    "build:agent-vue2": "esbuild src/agent/vue2.ts --bundle --platform=browser --format=esm --external:vue --external:virtual:uni-devtools-agent --outfile=dist/agent-vue2.mjs",
+    "build:webpack": "esbuild src/webpack.ts --bundle --platform=node --format=esm --external:webpack --external:devframe --external:\"devframe/*\" --outfile=dist/webpack.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\" && esbuild src/webpack.ts --bundle --platform=node --format=cjs --external:webpack --external:devframe --external:\"devframe/*\" --define:import.meta.url=__uniImportMetaUrl --banner:js=\"const __uniImportMetaUrl = require('node:url').pathToFileURL(__filename).href;\" --outfile=dist/webpack.cjs",
     "dev": "node scripts/dev.mjs",
     "test": "vitest run",
     "test:e2e": "node scripts/e2e-node.mjs"

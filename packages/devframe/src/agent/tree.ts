@@ -1,8 +1,10 @@
 /**
  * 最小组件树采集模块
- * 沿 page.$vm → $.subTree/.component 递归采集组件树
+ * 沿 page.$vm → $children 递归采集组件树（Vue 3 走 `$.subTree/.component` 兜底）
  * 约束：纯 JSON 可序列化、无循环引用（浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
+
+import { getInternal, getOptions, getUid, getVNode, isInstanceDestroyed } from './instance.ts'
 
 export interface ComponentTreeNode {
   id: string
@@ -29,8 +31,7 @@ export function getRegisteredInstance(id: string): any | undefined {
   if (!instance)
     return undefined
 
-  const internal = instance.$ || instance
-  if (internal?.isUnmounted) {
+  if (isInstanceDestroyed(instance)) {
     instanceRegistry.delete(id)
     return undefined
   }
@@ -55,8 +56,12 @@ export function getVueRuntimeVersion(): string | undefined {
 
   for (const vm of instanceRegistry.values()) {
     try {
-      const internal = vm.$ || vm
+      const internal = getInternal(vm)
+      // Vue 3：appContext.app.version
+      // Vue 2：Vue 构造函数挂在 $options._base（Vue.extend 写入）与 constructor（静态继承）上
       const version = internal?.appContext?.app?.version
+        || internal?.$options?._base?.version
+        || internal?.constructor?.version
       if (typeof version === 'string' && version) {
         cachedVueVersion = version
         return version
@@ -71,8 +76,11 @@ export function getVueRuntimeVersion(): string | undefined {
   try {
     const app = typeof getApp === 'function' ? getApp() : (globalThis as any).getApp?.()
     const appVm = app?.$vm || app
-    const internal = appVm?.$ || appVm
-    const version = internal?.appContext?.app?.version || (app as any)?.appContext?.app?.version
+    const internal = getInternal(appVm)
+    const version = internal?.appContext?.app?.version
+      || (app as any)?.appContext?.app?.version
+      || internal?.$options?._base?.version
+      || internal?.constructor?.version
     if (typeof version === 'string' && version) {
       cachedVueVersion = version
       return version
@@ -197,9 +205,10 @@ export function extractComponentNode(
   visited.add(vm)
 
   try {
-    const internal = vm.$ || vm
-    const typeObj = internal.type || (internal.$ && internal.$.type) || {}
-    const vnodeTag = internal.vnode && typeof internal.vnode.type === 'string' ? internal.vnode.type : undefined
+    const internal = getInternal(vm)
+    const typeObj = getOptions(vm)
+    const vnode = getVNode(vm)
+    const vnodeTag = vnode && typeof vnode.type === 'string' ? vnode.type : undefined
     const rawName = getComponentDisplayName(typeObj, vnodeTag)
       || (depth === 0 ? 'App' : 'Anonymous')
 
@@ -208,7 +217,7 @@ export function extractComponentNode(
       return null
     }
 
-    const uid = internal.uid ?? (internal.$ && internal.$.uid) ?? `c_${depth}_${Math.random().toString(36).slice(2, 7)}`
+    const uid = getUid(vm) ?? `c_${depth}_${Math.random().toString(36).slice(2, 7)}`
     const id = idPrefix ? `${idPrefix}#${uid}` : String(uid)
     instanceRegistry.set(id, vm)
     const nodeType = depth === 0 ? 'page' : 'component'
@@ -271,8 +280,7 @@ export function collectComponentTree(customPages?: any[]): PageComponentTree[] {
   }
 
   for (const [id, comp] of instanceRegistry.entries()) {
-    const internal = comp.$ || comp
-    if (internal?.isUnmounted) {
+    if (isInstanceDestroyed(comp)) {
       instanceRegistry.delete(id)
     }
   }
