@@ -30,7 +30,7 @@
     "build": "turbo build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "vitest",
+    "test": "turbo test",
     "release": "bumpp -r",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "npx simple-git-hooks"
