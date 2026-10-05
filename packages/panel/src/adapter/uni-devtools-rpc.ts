@@ -206,9 +206,9 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
     flat = next
   }
 
-  /** 首次（尚无 sharedState 推送）主动拉一次树，之后 sharedState 是唯一数据源。 */
+  /** 首次（尚无 sharedState 推送）主动拉一次树，之后 sharedState 是唯一数据源。若已推快照但缺版本号，主动重拉一次补齐。 */
   async function pullTreeOnce(): Promise<void> {
-    if (flat !== EMPTY_TREE)
+    if (flat !== EMPTY_TREE && flat.apps.some(app => !!app.version))
       return
     const tree = mockMode
       ? mockComponentTree()

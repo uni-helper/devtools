@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { collectComponentTree, getRegisteredInstance } from '../src/agent/tree'
+import { clearInstanceRegistry, collectComponentTree, getRegisteredInstance, getVueRuntimeVersion } from '../src/agent/tree'
 
 const g = globalThis as any
 
 afterEach(() => {
   delete g.getCurrentPages
+  delete g.getApp
+  delete g.Vue
+  clearInstanceRegistry()
 })
 
 /** 最小可采集的假页面：page.$vm 指向带 $ 内部对象的根实例，挂一个同名 uid 的子组件 */
@@ -52,5 +55,47 @@ describe('collectComponentTree', () => {
     ]
     const routes = collectComponentTree().map(page => page.route)
     expect(routes).toEqual(['pages/index', 'pages/hi', 'pages/index@2', 'pages/index@3'])
+  })
+})
+
+describe('getVueRuntimeVersion', () => {
+  it('从已注册组件实例的 appContext 读取 Vue 版本', () => {
+    const pageWithVersion = {
+      route: 'pages/index',
+      $vm: {
+        $: {
+          uid: 1,
+          type: { name: 'IndexPage' },
+          appContext: {
+            app: { version: '3.5.13' },
+          },
+        },
+      },
+    }
+    g.getCurrentPages = () => [pageWithVersion]
+    collectComponentTree()
+    expect(getVueRuntimeVersion()).toBe('3.5.13')
+  })
+
+  it('组件实例无版本时兜底从 getApp() 读取', () => {
+    g.getApp = () => ({
+      $vm: {
+        $: {
+          appContext: {
+            app: { version: '3.5.20' },
+          },
+        },
+      },
+    })
+    expect(getVueRuntimeVersion()).toBe('3.5.20')
+  })
+
+  it('组件实例与 getApp 均无版本时兜底从全局 Vue 读取', () => {
+    g.Vue = { version: '3.5.30' }
+    expect(getVueRuntimeVersion()).toBe('3.5.30')
+  })
+
+  it('无任何版本来源时返回 undefined', () => {
+    expect(getVueRuntimeVersion()).toBeUndefined()
   })
 })

@@ -38,11 +38,12 @@ export function getRegisteredInstance(id: string): any | undefined {
   return instance
 }
 
+let cachedVueVersion: string | undefined
+
 export function clearInstanceRegistry(): void {
   instanceRegistry.clear()
+  cachedVueVersion = undefined
 }
-
-let cachedVueVersion: string | undefined
 
 /**
  * Vue 运行时版本（app.version）。面板 Graph tab 的门禁消费它
@@ -51,6 +52,7 @@ let cachedVueVersion: string | undefined
 export function getVueRuntimeVersion(): string | undefined {
   if (cachedVueVersion)
     return cachedVueVersion
+
   for (const vm of instanceRegistry.values()) {
     try {
       const internal = vm.$ || vm
@@ -64,6 +66,34 @@ export function getVueRuntimeVersion(): string | undefined {
       // 单实例读取失败换下一个
     }
   }
+
+  // 实例注册表暂无节点时（如首次推送在组件遍历前/首屏过渡期），尝试从全局 getApp() 读取
+  try {
+    const app = typeof getApp === 'function' ? getApp() : (globalThis as any).getApp?.()
+    const appVm = app?.$vm || app
+    const internal = appVm?.$ || appVm
+    const version = internal?.appContext?.app?.version || (app as any)?.appContext?.app?.version
+    if (typeof version === 'string' && version) {
+      cachedVueVersion = version
+      return version
+    }
+  }
+  catch {
+    // 忽略异常继续尝试
+  }
+
+  // 全局 Vue 尝试
+  try {
+    const gVue = (globalThis as any).Vue
+    if (typeof gVue?.version === 'string' && gVue.version) {
+      cachedVueVersion = gVue.version
+      return gVue.version
+    }
+  }
+  catch {
+    // 降级静默
+  }
+
   return undefined
 }
 

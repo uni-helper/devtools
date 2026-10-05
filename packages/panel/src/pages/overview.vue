@@ -43,7 +43,7 @@ function isMacOS() {
           class="min-h-25 min-w-40 flex flex-1 flex-col items-center justify-center gap-2 rounded-1 border border-base bg-transparent p-4 color-inherit op50 shadow-[0_1px_3px_#00000012] saturate-0 transition-[opacity,filter,background,color] duration-200 hover:bg-green/10 hover:text-green-600 hover:op100 hover:saturate-100"
         >
           <div class="i-logos-vue text-3xl" />
-          <code>v{{ vueVersion }}</code>
+          <code>{{ vueVersion === '-' ? '-' : `v${vueVersion}` }}</code>
         </div>
 
         <RouterLink

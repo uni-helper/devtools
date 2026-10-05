@@ -6,7 +6,8 @@
  * 期可解析）与整个 socket/rpc 链拖进依赖闭包，也使 render-hook 无法脱离完整
  * 探针被单测。
  */
-import { collectComponentTree } from './tree.ts'
+import type { ComponentTreeResult } from '../types.ts'
+import { collectComponentTree, getVueRuntimeVersion } from './tree.ts'
 
 interface PushDeps {
   getActiveInstance: () => { rpc: any, socketHandle: { isConnected: () => boolean } } | null
@@ -48,14 +49,16 @@ export async function pushComponentTreeNow(): Promise<void> {
   }
 
   const pages = collectComponentTree()
-  const snapshot = {
+  const vueVersion = getVueRuntimeVersion()
+  const snapshot: ComponentTreeResult = {
     fetchedAt: Date.now(),
     pages,
+    ...(vueVersion ? { vueVersion } : {}),
   }
 
   let treeJson: string
   try {
-    treeJson = JSON.stringify(pages)
+    treeJson = `${vueVersion ?? ''}:${JSON.stringify(pages)}`
   }
   catch {
     treeJson = ''

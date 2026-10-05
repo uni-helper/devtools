@@ -235,6 +235,8 @@ export function createUniDevtoolsDevframe(
               treeSharedState.mutate((draft) => {
                 draft.fetchedAt = snapshot.fetchedAt || Date.now()
                 draft.pages = snapshot.pages
+                if (snapshot.vueVersion)
+                  draft.vueVersion = snapshot.vueVersion
               })
               registry.setCachedTree(snapshot)
             }
