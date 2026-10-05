@@ -156,6 +156,8 @@ export interface OpenInEditorParams {
 
 export interface OpenInEditorResult {
   ok: boolean
+  /** 当 ok 为 false 时的友好错误消息（如编辑器未配置的设置指引） */
+  error?: string
 }
 
 export interface RegisteredRouteRecord {

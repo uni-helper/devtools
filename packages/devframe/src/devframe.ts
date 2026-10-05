@@ -373,8 +373,30 @@ export function createUniDevtoolsDevframe(
               throw new Error(`Forbidden: file path "${args.file}" resolves outside of project root (${projectRoot})`)
             }
 
-            launchEditor(resolvedFile + suffix)
-            return { ok: true }
+            // 使用回调捕获编辑器启动错误，提供友好的错误提示
+            return await new Promise<OpenInEditorResult>((resolve) => {
+              launchEditor(resolvedFile + suffix, undefined, (fileName, errorMsg) => {
+                if (errorMsg) {
+                  // 检测是否是编辑器未找到的错误
+                  if (errorMsg.includes('ENOENT') || errorMsg.includes('not found')) {
+                    resolve({
+                      ok: false,
+                      error: 'Editor not configured. To use "Open in Editor":\n\n'
+                        + '• VS Code: Run "Shell Command: Install \'code\' command in PATH"\n'
+                        + '• Or set LAUNCH_EDITOR environment variable (e.g., export LAUNCH_EDITOR=code)\n'
+                        + '• Supported editors: code, cursor, webstorm, subl, atom, etc.\n\n'
+                        + 'Learn more: https://github.com/yyx990803/launch-editor#usage',
+                    })
+                  }
+                  else {
+                    resolve({ ok: false, error: errorMsg })
+                  }
+                }
+                else {
+                  resolve({ ok: true })
+                }
+              })
+            })
           },
         }),
       }))

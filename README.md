@@ -137,6 +137,50 @@ pnpm dev:mp-weixin
 
 编译完成后，终端将输出专属的 DevTools 面板访问地址（包含鉴权 Token）。在现代浏览器中打开该 URL，并在微信开发者工具中开启服务端口与不校验合法域名，即可开始调试。
 
+### 4. 配置编辑器集成（可选）
+
+"Open in Editor"功能可让你从面板直接在本地编辑器中打开源码文件。
+
+**VS Code 用户（推荐）：**
+
+1. 打开 VS Code
+2. 按 `Cmd+Shift+P`（Mac）或 `Ctrl+Shift+P`（Windows/Linux）
+3. 输入并执行：`Shell Command: Install 'code' command in PATH`
+4. 重启终端
+
+**其他编辑器：**
+
+设置 `LAUNCH_EDITOR` 环境变量：
+
+```bash
+# VS Code
+export LAUNCH_EDITOR=code
+
+# Cursor
+export LAUNCH_EDITOR=cursor
+
+# WebStorm
+export LAUNCH_EDITOR=webstorm
+
+# Sublime Text
+export LAUNCH_EDITOR=subl
+```
+
+或在项目的 `.env` 文件中配置：
+
+```env
+LAUNCH_EDITOR=code
+```
+
+**验证配置：**
+
+```bash
+# 检查编辑器命令是否可用
+which code  # 应该输出编辑器路径
+```
+
+详细配置指南：[launch-editor 使用文档](https://github.com/yyx990803/launch-editor#usage)
+
 ---
 
 ## 📂 仓库结构
