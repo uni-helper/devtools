@@ -1,45 +1,28 @@
 /**
  * uni-devtools 适配器：把官方 Vue Devtools client 消费的 kit RPC 协议
  * （query / command / runtime events，契约见 npm 版 `@vue/devtools-kit` 的
- * `protocol/requests.ts`）映射到我们的
- * devframe RPC（scope `uni-helper-devtools`）与探针数据上。
+ * `protocol/requests.ts`）映射到我们的 devframe RPC（scope `uni-helper-devtools`）
+ * 与探针数据上。
  *
- * 这是「方案 A」唯一的桥：官方 UI 与 `useDevtoolsClient` 一行不改，
- * `devtools-connection.ts` 只把 `connectDevtoolsClient()` 换成本文件的
- * `connectUniRpcClient()`。
+ * 注入点：官方 UI 与 `useDevtoolsClient` 一行不改，`devtools-connection.ts`
+ * 把官方的 `connectDevtoolsClient()`（host 发现）换成本文件的 `connectUniRpcClient()`。
  *
- * 映射总纲（与批次 B-panel-0930 的探索测绘一致）：
- * - uni-app 的每个页面 = 一个 AppSnapshot（多 app 下拉直接复用官方 UI）；
- *   组件 id 由探针命名为 `route#uid`，appId 恒可由 `id.split('#')[0]` 得到
- * - 探针嵌套树 → 扁平 ComponentTreeNodeSnapshot[]（官方树无 children 字段）；
- *   treeSnapshot 按 request.appId 过滤（官方 client 按选中 app 存整棵树，
- *   不隔离会串页）；treePatched 事件**必须带 appId** 且与选中 app 一致，
- *   否则官方在 devtools-client 的事件入口直接静默丢弃
- * - 探针 {data,setup} → sections（扁平 StateEntry[]，path[0]=sectionId）
- * - 编辑仅顶层键（探针上限），更深的 path 如实报错，不假装成功；
- *   stateInvalidated 的 version 按**组件**计数（官方防陈旧循环以组件为维度
- *   比较 version，全局计数器会在并发编辑时把旧快照盖上新版本号）
- * - 树更新：sharedState 推送 → 按 appId 分组的「全删 + 全插」重建 patch 集
+ * 数据结构 → kit 协议形状的映射在 `./mapping`（可观测行为由 test/mapping 冻结）；
+ * 本文件只管 RPC 路由、连接生命周期与 mock 分支。kit 的反直觉约束（事件必须带
+ * appId、失效事件名 ≠ command 名、version 按组件计数等）就地注释在各分支旁。
  *
- * 生命周期：全部状态收在 `connectUniRpcClient()` 工厂闭包内——官方连接层
- * 会在健康检查失败/stop 时 dispose 旧 client 并择机新建，模块级单例会让
- * 第二个实例永久瘫痪（CR P0-2）。
+ * 生命周期：全部状态收在 `connectUniRpcClient()` 工厂闭包内——官方连接层会在
+ * 健康检查失败/stop 时 dispose 旧 client 并择机新建，模块级单例会让第二个
+ * 实例永久瘫痪。
  */
 import type { DevtoolsRpcClient, DevtoolsRpcEventHandler } from '@vue/devtools-kit/client'
 import type {
-  AppSnapshot,
-  ComponentStateSnapshotMessage,
-  ComponentTreeNodeSnapshot,
-  ComponentTreePatch,
   DevtoolsRpcEvent,
-  EncodedValue,
   RouterRouteRecordSnapshot,
   RouterRouteSnapshot,
   RouterSnapshotMessage,
-  StateEntry,
 } from '@vue/devtools-kit'
 import type {
-  ComponentStateEntry,
   ComponentStateResult,
   ComponentTreeResult,
   GetComponentRenderCodeResult,
@@ -48,8 +31,19 @@ import type {
   PiniaStateResult,
   RouterInfoResult,
 } from '@uni-helper/devtools-devframe/types'
-import { encodeValue } from '@vue/devtools-kit'
 import { connectDevframe } from 'devframe/client'
+import type { FlatTree } from './mapping'
+import {
+  appIdOf,
+  buildFlatTree,
+  computeTreeDiff,
+  mergeRecordsById,
+  PINIA_ROOT_ID,
+  PINIA_ROOT_LABEL,
+  toPiniaRootSnapshot,
+  toPiniaStateSnapshot,
+  toStateSnapshot,
+} from './mapping'
 import type {
   ClearNetworkRecordsResult,
   GetNetworkRecordsResult,
@@ -72,7 +66,6 @@ import {
 
 let activeUniNetwork: UniNetworkApi | undefined
 
-/** 供面板页面（如 Network tab）直接安全访问当前活跃实例的 UniNetworkApi */
 export function getUniNetworkApi(): UniNetworkApi | undefined {
   return activeUniNetwork
 }
@@ -80,15 +73,6 @@ export function getUniNetworkApi(): UniNetworkApi | undefined {
 /** 与 node 侧 `ctx.scope(NS)` 一致；改这里必须同步改 node 侧。 */
 const NAMESPACE = 'uni-helper-devtools'
 
-/**
- * Pinia 检查器聚合根节点（官方 pinia devtools 插件同款常量：
- * pinia/dist `PINIA_ROOT_ID = '_root'` / `PINIA_ROOT_LABEL = '🍍 Pinia (root)'`）。
- * 根节点与各 store 平级（非父子嵌套），选中展示按 store id 聚合的 state/getters。
- */
-const PINIA_ROOT_ID = '_root'
-const PINIA_ROOT_LABEL = '🍍 Pinia (root)'
-
-/** 显式 mock 模式（URL `?mock`）：无后端开发/回归用，界面常驻提示。 */
 export const mockMode = new URLSearchParams(window.location.search).has('mock')
 
 type ConnectionStatus = 'connecting' | 'connected' | 'closed'
@@ -98,7 +82,6 @@ type CommandRequest = { type: string, appId?: string, payload?: any }
 // （vendored kit `runtime/runtime.ts` 的 `?? { status: 1 }` 与错误路径 `{ status: 0, error }`）。
 type CommandResult = { status: 0 | 1, error?: unknown }
 
-/** sharedState `component-tree` 的订阅面（devframe scoped client 的一部分）。 */
 interface SharedStateLike<T> {
   on: (event: 'updated', cb: (state: T) => void) => () => void
 }
@@ -110,11 +93,6 @@ interface ScopedCtx {
      *  scope 对象本身没有 sharedState 属性（曾想当然写成 sharedState.get）。 */
     sharedState: <T extends object>(key: string, options?: { initialValue?: T }) => Promise<SharedStateLike<T>>
   }
-}
-
-interface FlatTree {
-  apps: AppSnapshot[]
-  nodes: ComponentTreeNodeSnapshot[]
 }
 
 /** 哨兵引用：连接断开后重置回来，让下一次 treeSnapshot 主动重拉而不是吐陈旧树。 */
@@ -142,228 +120,16 @@ function mockRouterSnapshot(): RouterSnapshotMessage {
   }
 }
 
-/** 组件 id → appId。探针 id 形如 `route#uid`，mock fixtures 同格式。 */
-function appIdOf(id: string): string | undefined {
-  const idx = id.indexOf('#')
-  return idx > 0 ? id.slice(0, idx) : undefined
-}
-
 const NOT_SUPPORTED = (what: string): string => `uni-devtools 探针暂不支持：${what}`
 
-/** standalone 直连时 token 附在面板 URL 上（避坑清单 §8-2）；hub iframe 场景为空。 */
+/** standalone 直连时 token 附在面板 URL 上；hub iframe 场景为空。 */
 function readAuthTokenFromUrl(): string | undefined {
   return new URLSearchParams(window.location.search).get('devframe_auth_token') ?? undefined
 }
 
-/** 探针嵌套树 → 官方扁平快照。page 即 app；`updatedAt` 必填取 fetchedAt。 */
-function buildFlatTree(tree: ComponentTreeResult): FlatTree {
-  const apps: AppSnapshot[] = []
-  const nodes: ComponentTreeNodeSnapshot[] = []
-  for (const page of tree.pages ?? []) {
-    const appId = page.route
-    let count = 0
-    const walk = (node: { id: string, name: string, file?: string, children?: Array<{ id: string, name: string, file?: string, children?: unknown[] }> }, parentId?: string): void => {
-      nodes.push({
-        id: node.id,
-        appId,
-        parentId,
-        name: node.name,
-        file: node.file,
-        updatedAt: tree.fetchedAt,
-        childCount: node.children?.length,
-        tags: parentId === undefined ? [{ label: 'page' }] : undefined,
-      })
-      count++
-      for (const child of node.children ?? [])
-        walk(child as typeof node, node.id)
-    }
-    if (page.components)
-      walk(page.components)
-    // version 上报探针侧 Vue 运行时版本；面板用它做 Graph tab 门禁
-    // （本地实现的 supportsReactivityGraphVueVersion，门槛 3.5.0）。
-    // 门禁不通过时该 tab 仍可见，只是页面内说明原因（见 pages/graph.vue）
-    apps.push({
-      id: appId,
-      name: page.route,
-      ...(tree.vueVersion ? { version: tree.vueVersion } : {}),
-      componentCount: count,
-    })
-  }
-  return { apps, nodes }
-}
-
-function sameAppSet(a: AppSnapshot[], b: AppSnapshot[]): boolean {
-  if (a.length !== b.length)
-    return false
-  const ids = new Set(a.map(app => app.id))
-  return b.every(app => ids.has(app.id))
-}
-
-// 形状由调用方显式给出：setup/setupOther/computed 段传探针 entry，
-// props/data/attrs（与 Pinia state/getters）传裸值时包一层 { value }——
-// 不做启发式探测，用户数据里恰好叫 editable/raw/fn 的键不能被误读成元信息。
-function toStateEntry(
-  sectionId: string,
-  key: string,
-  entry: ComponentStateEntry,
-): StateEntry {
-  let encodedVal: EncodedValue
-  if (entry.fn) {
-    encodedVal = {
-      kind: 'function',
-      name: entry.fnName,
-      sourcePreview: entry.fnSource,
-    }
-  }
-  else {
-    encodedVal = encodeValue(entry.value, { maxDepth: 8, maxEntries: 100 }) as EncodedValue
-  }
-
-  let editable: boolean
-  if (typeof entry.editable === 'boolean') {
-    editable = entry.editable
-  }
-  else if (sectionId === 'props' || sectionId === 'data' || sectionId === 'state') {
-    editable = true
-  }
-  else if (sectionId === 'setup') {
-    editable = !entry.readonly && entry.stateType !== 'computed'
-  }
-  else {
-    editable = false
-  }
-
-  const meta: Record<string, unknown> = {}
-  if (entry.stateType) {
-    meta.stateType = entry.stateType
-    meta.stateTypeName = entry.stateType[0].toUpperCase() + entry.stateType.slice(1)
-  }
-  if (entry.readonly === true) {
-    meta.readonly = true
-  }
-  if (entry.raw) {
-    meta.raw = entry.raw
-  }
-
-  return {
-    key,
-    path: [sectionId, key],
-    value: encodedVal,
-    editable,
-    ...(Object.keys(meta).length > 0 ? { meta } : {}),
-  }
-}
-
-function toStateSnapshot(result: ComponentStateResult, version: number): ComponentStateSnapshotMessage {
-  const sections: ComponentStateSnapshotMessage['sections'] = []
-
-  const propsEntries = Object.entries(result.props ?? {}).map(
-    ([key, value]) => toStateEntry('props', key, { value }),
-  )
-  if (propsEntries.length > 0)
-    sections.push({ id: 'props', label: 'Props', entries: propsEntries })
-
-  const dataEntries = Object.entries(result.data ?? {}).map(
-    ([key, value]) => toStateEntry('data', key, { value }),
-  )
-  if (dataEntries.length > 0)
-    sections.push({ id: 'data', label: 'Data', entries: dataEntries })
-
-  const setupEntries = Object.entries(result.setup ?? {}).map(
-    ([key, entry]) => toStateEntry('setup', key, entry),
-  )
-  if (setupEntries.length > 0)
-    sections.push({ id: 'setup', label: 'Setup', entries: setupEntries })
-
-  const setupOtherEntries = Object.entries(result.setupOther ?? {}).map(
-    ([key, entry]) => toStateEntry('setup-other', key, entry),
-  )
-  if (setupOtherEntries.length > 0)
-    sections.push({ id: 'setup-other', label: 'Setup (other)', entries: setupOtherEntries })
-
-  const computedEntries = Object.entries(result.computed ?? {}).map(
-    ([key, entry]) => toStateEntry('computed', key, entry),
-  )
-  if (computedEntries.length > 0)
-    sections.push({ id: 'computed', label: 'Computed', entries: computedEntries })
-
-  const attrsEntries = Object.entries(result.attrs ?? {}).map(
-    ([key, value]) => toStateEntry('attrs', key, { value }),
-  )
-  if (attrsEntries.length > 0)
-    sections.push({ id: 'attrs', label: 'Attrs', entries: attrsEntries })
-
-  // reactivityGraph 搭 state 快照的便车透传（官方 kit 协议同名字段，
-  // Graph tab 从 components:stateSnapshot 响应里读图，无独立 RPC）
-  return {
-    componentId: result.id,
-    version,
-    sections,
-    ...(result.reactivityGraph ? { reactivityGraph: result.reactivityGraph } : {}),
-  }
-}
-
-/** Pinia store 快照 → 官方 sections（State / Getters 两个分区）。 */
-function toPiniaStateSnapshot(result: PiniaStateResult, version: number): ComponentStateSnapshotMessage {
-  // 官方编辑路由靠 entry.meta.inspectorId/nodeId 区分 inspector 条目（kit
-  // createInspectorStateSnapshot 的 toInspectorLegacyStateEntries 同款注入；漏了
-  // 会路由到 components:editState 且因 inspector 页无选中组件而静默无效——CR P0）；
-  // componentId 也对齐官方合成约定 `inspector:<id>:<nodeId>`
-  const nodeId = `store:${result.id}`
-  const withInspectorMeta = (entry: StateEntry): StateEntry => ({
-    ...entry,
-    meta: { ...entry.meta, inspectorId: 'pinia', nodeId, disableAdd: true },
-  })
-  const sections: ComponentStateSnapshotMessage['sections'] = []
-  const stateEntries = Object.entries(result.state ?? {}).map(
-    ([key, value]) => withInspectorMeta(toStateEntry('state', key, { value })),
-  )
-  if (stateEntries.length > 0)
-    sections.push({ id: 'state', label: 'State', entries: stateEntries })
-  // getters 是 computed 求值属性：探针侧编辑必然 Key not found，如实标记不可编辑
-  const getterEntries = Object.entries(result.getters ?? {}).map(
-    ([key, value]) => {
-      const entry = withInspectorMeta(toStateEntry('getters', key, { value }))
-      entry.editable = false
-      return entry
-    },
-  )
-  if (getterEntries.length > 0)
-    sections.push({ id: 'getters', label: 'Getters', entries: getterEntries })
-  return { componentId: `inspector:pinia:${nodeId}`, version, sections }
-}
-
-/**
- * 聚合根节点快照（官方 pinia 插件 `_root` 的 formatStoreForInspectorState(pinia) 语义）：
- * state 组按 store id 放整个 $state 对象（可编辑，深路径编辑路由见 inspectors:editState）；
- * getters 组按 store id 聚合（不可编辑）；无 getters 的 store 不出 getters 条目。
- */
-function toPiniaRootSnapshot(states: PiniaStateResult[], version: number): ComponentStateSnapshotMessage {
-  const withRootMeta = (entry: StateEntry): StateEntry => ({
-    ...entry,
-    meta: { ...entry.meta, inspectorId: 'pinia', nodeId: PINIA_ROOT_ID, disableAdd: true },
-  })
-  const sections: ComponentStateSnapshotMessage['sections'] = []
-  const stateEntries = states.map(
-    s => withRootMeta(toStateEntry('state', s.id, { value: s.state })),
-  )
-  if (stateEntries.length > 0)
-    sections.push({ id: 'state', label: 'State', entries: stateEntries })
-  const getterEntries = states
-    .filter(s => Object.keys(s.getters ?? {}).length > 0)
-    .map((s) => {
-      const entry = withRootMeta(toStateEntry('getters', s.id, { value: s.getters }))
-      entry.editable = false
-      return entry
-    })
-  if (getterEntries.length > 0)
-    sections.push({ id: 'getters', label: 'Getters', entries: getterEntries })
-  return { componentId: `inspector:pinia:${PINIA_ROOT_ID}`, version, sections }
-}
-
 /** 与 kit 的 `connectDevtoolsClient()` 同签名的同步工厂（连接在内部异步建立）。 */
 export function connectUniRpcClient(): DevtoolsRpcClient {
-  // ---- 实例状态（闭包内；官方连接层会 dispose 旧实例再建新的） ----
+  // ---- 实例状态（闭包内；原因见文件头生命周期说明） ----
   const eventHandlers = new Set<DevtoolsRpcEventHandler>()
   const connectionHandlers = new Set<(status: ConnectionStatus) => void>()
   /** 按组件计数的 state version（官方防陈旧循环以组件为维度比较）。 */
@@ -404,14 +170,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       notifyNetwork()
       return
     }
-    const map = new Map<number, NetworkRecord>()
-    for (const r of cachedNetworkRecords)
-      map.set(r.id, r)
-    for (const r of incoming)
-      map.set(r.id, r)
-    cachedNetworkRecords = Array.from(map.values()).sort((a, b) => a.id - b.id)
-    if (cachedNetworkRecords.length > 500)
-      cachedNetworkRecords.splice(0, cachedNetworkRecords.length - 500)
+    cachedNetworkRecords = mergeRecordsById(cachedNetworkRecords, incoming, 500)
     notifyNetwork()
   }
 
@@ -436,26 +195,13 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
    */
   function applyTreeSnapshot(tree: ComponentTreeResult): void {
     const next = buildFlatTree(tree)
-    const appsChanged = !sameAppSet(flat.apps, next.apps)
-    if (!appsChanged) {
-      const patchesByApp = new Map<string, ComponentTreePatch[]>()
-      const push = (appId: string, patch: ComponentTreePatch): void => {
-        const list = patchesByApp.get(appId)
-        if (list)
-          list.push(patch)
-        else
-          patchesByApp.set(appId, [patch])
-      }
-      for (const node of flat.nodes)
-        push(node.appId, { op: 'remove', id: node.id })
-      for (const node of next.nodes)
-        push(node.appId, { op: 'insert', parentId: node.parentId, node })
-      for (const [appId, patches] of patchesByApp)
-        emit({ type: 'components:treePatched', appId, version: ++treeVersion, patches })
+    const diff = computeTreeDiff(flat, next)
+    if (diff.kind === 'apps-changed') {
+      emit({ type: 'apps:changed' })
     }
     else {
-      // apps 集合变化（页面增删）走官方全量刷新路径，AppList 与计数随之更新。
-      emit({ type: 'apps:changed' })
+      for (const [appId, patches] of diff.patchesByApp)
+        emit({ type: 'components:treePatched', appId, version: ++treeVersion, patches })
     }
     flat = next
   }
@@ -532,7 +278,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       mockTickTimer = undefined
     }
     // 关键：重连后的首个 treeSnapshot 必须重拉，否则引用守卫失效、
-    // 面板会一直展示断开前的陈旧树（CR P1-7）。
+    // 面板会一直展示断开前的陈旧树。
     flat = EMPTY_TREE
     cachedNetworkRecords = []
     notifyNetwork()
@@ -736,7 +482,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         await ensureReady()
         await pullTreeOnce()
         // 官方 client 按选中 app 存整棵树：必须按 appId 过滤，否则多页面
-        // 串页合并、切换 app 无感（CR P0-3）。
+        // 串页合并、切换 app 无感。
         const nodes = request.appId
           ? flat.nodes.filter(node => node.appId === request.appId)
           : flat.nodes
@@ -845,7 +591,6 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         }
       }
 
-      // W12 Show render code：官方 query 按需拉取（componentId → 探针 render.toString()）
       case 'components:getRenderCode': {
         await ensureReady()
         const { componentId } = (request.payload ?? {}) as { componentId?: string }
@@ -965,8 +710,8 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         const version = (inspectorVersionByNode.get(nodeId) ?? 0) + 1
         inspectorVersionByNode.set(nodeId, version)
         // 事件名是 kit RuntimeDomainEvent 的 `inspectors:stateInvalidated`
-        // （`invalidateState` 是 command 名——写反会被官方事件入口静默丢弃，
-        // CR P0）；nodeId 必带，官方按它判断是否刷新当前选中 store
+        // （`invalidateState` 是 command 名——写反会被官方事件入口静默丢弃）；
+        // nodeId 必带，官方按它判断是否刷新当前选中 store
         emit({
           type: 'inspectors:stateInvalidated',
           inspectorId: 'pinia',
