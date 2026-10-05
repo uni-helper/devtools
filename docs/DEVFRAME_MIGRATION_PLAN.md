@@ -30,7 +30,7 @@
 
 ### 项目背景
 
-当前 uni-helper-devtools 基于自定义 trpc + Vue SPA 架构（见 `ARCHITECTURE.md`：客户端-服务器-小程序三层，Polka + ws 中转），功能可用但存在：
+当前 uni-helper-devtools 基于自定义 trpc + Vue SPA 架构（客户端-服务器-小程序三层，Polka + ws 中转），功能可用但存在：
 
 - **协议私有**：自定义 trpc 协议无法与其他 DevTools 工具互操作
 - **重复造轮**：dev server、鉴权、面板托管等基础设施自行维护

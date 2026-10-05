@@ -40,7 +40,7 @@ packages/
 │   ├── src/composables/devtools-connection.ts  官方改点：connectUniRpcClient + vite stub 桥接
 │   ├── src/components/nav/SideNavItem.vue      官方改点：点击死代码修复（§8-13）
 │   └── （官方源码共 8 处改动，均有 "uni-devtools" 注释标记）
-├── devtools-kit/     vendored @vue/devtools-kit（协议/codec/rpc；exports 指 src；仅依赖 devframe@1.1.0）
+├── （devtools-kit 已退役：panel 直接依赖 npm 版 @vue/devtools-kit@9.0.0-beta.0）
 ├── devframe/         node 侧 + 探针 + 编译期插桩
 │   ├── src/devframe.ts     DevframeDefinition + 18 个 RPC + sharedState('component-tree'/'network-records')
 │   ├── src/relay.ts        AgentRegistry 定向调用（探针不可信校验）
@@ -279,6 +279,23 @@ Promise 式 POST / 必失败兜底）。验证：vitest 12 套件 125/125、e2e 
 typecheck 0 新增、build ✓、CDP mock 冒烟 8/8（tab→渲染→过滤→详情→清空→无跳转）。
 commit `272beb5`（探针+node）+ `c58ceb0`（panel+playground）。
 
+**B-network-1003（Network 看板修正批次，2026-10-03）**：真机反馈三连修——
+① 在途请求滞留 FAIL：根因与修法见 §8-29（探针脏集补推 + node merge 由「未知
+插入」升级为「未知插入 + 未完成→已完成才覆盖」，合并逻辑抽 `shared/network-merge.ts`
+纯函数单测）；② 面板排序改发起顺序（最早在前，去 reverse，对齐 Chrome DevTools），
+列表钉底时跟随滚动、点击行/上翻即停；③ 新增 Waterfall 瀑布列（以最早请求起点为
+原点、按 startTime/duration 定位条形，pending 记录以当前时刻为右端生长，1s 心跳
+仅在有在途记录时开启）。附带：pending 与网络层 FAIL 语义区分（`duration` 是否
+已结算，pending 显示 `(pending)` 灰色脉冲）、详情 Time 改本地格式（原 toISOString
+与列表不一致）、mock 第 7 条在途记录 5s 后由适配器心跳就地结算（演示 pending→
+终态原行更新，`mockTickNetworkRecords`）。**部署注意：node 合并逻辑打在
+`dist/plugin.mjs`（plugin export 指向 dist），改 `devframe.ts`/`agent` 后必须
+`pnpm build`（devframe）+ 重启 playground watch 才生效——本批首发时漏了 dist
+重建，用户复验时「完成仍 pending」即此因（探针走 `./agent`→src 免重建，两端
+生效路径不对称）。** 验证：vitest 31/31（network-merge 5 例 + 补推回归 2 例）、
+e2e 5.4 增补「pending 快照先出→终态补推覆盖」步骤全绿、panel vite build ✓、
+eslint 0 错（panel typecheck 两个既有错在 devtools-connection.ts，与本批无关）。
+
 ## 8. 血泪教训（必读，全是修过的真 bug）
 
 1. **kit 命令语义**：`RuntimeCommandResult.status` **1=成功、0=失败**（像退出码，反直觉）
@@ -320,7 +337,7 @@ commit `272beb5`（探针+node）+ `c58ceb0`（panel+playground）。
     要单测（render-hook.test.ts）或真机。实现：具名前两参 + rest（length 保持 2）
 15. **事件名 ≠ command 名**（CR P0-2）：失效事件是 `inspectors:stateInvalidated`
     （command 叫 invalidateState）；写反被官方事件入口**静默丢弃**。对照
-    `devtools-kit/src/runtime/types.ts` 的 RuntimeDomainEvent 联合，必填字段别漏（如 reason）
+    `@vue/devtools-kit` 的 RuntimeDomainEvent 联合，必填字段别漏（如 reason）
 16. **inspector entry 必须带 meta**（CR P0-3）：官方编辑路由靠 `entry.meta.inspectorId/nodeId`
     （kit toInspectorLegacyStateEntries 同款注入 `{inspectorId, nodeId, disableAdd}`）；漏注
     会静默路由到 components:editState 且 inspector 页无选中组件 → 编辑完全无效且无报错
@@ -385,6 +402,22 @@ commit `272beb5`（探针+node）+ `c58ceb0`（panel+playground）。
     上下文，计数器从 1 重新起算会撞 node 侧旧记录 id、被幂等 merge 当重复吞掉
     （真机必现级）。修法：计数器基数取模块加载时刻 `Date.now()`，两轮 id 空间天然
     隔离；单测经 `__resetNetworkForTest` 回到确定性小 id，两不误。
+29. **增量推送会漏「已推快照」的后续状态变更（W13）**：pending 记录创建即随批次
+    推出、id 记入水位；完成时 id 已 ≤ 水位，按「id 越过水位」过滤永远推不出去，
+    node 侧「未知 id 才插入」的幂等 merge 也救不回来——真机表现：先发起的请求
+    永远显示 FAIL（停在 status=0 的 pending 快照），后发起的正常。修法双端：探针
+    记脏集（创建/终态结算都记，推送按「水位 ∪ 脏集」取数、成功后出清、环形淘汰
+    的脏 id 出清防泄漏）；node merge 升级为「未知插入 + 未完成→已完成才覆盖」
+    （`shared/network-merge.ts`，终态落定不被重连重推的旧快照回滚）。任何「水位
+    增量推送」设计都必须回答：同一条记录的**后续状态变更**走什么通道？
+
+30. **presetWind3 对 var() 主题色静默丢弃透明度修饰**（W13 settings 全绿实锤）：`bg-primary-500/20`
+    与 `bg-primary-500` 在产物里合并成**同一条实心规则**（alpha 被丢掉），settings 开关轨道因此
+    全绿、`nav-item-active`/`border-active`/focus ring 全部实心。修法：primary 各阶在
+    uno.config.ts 用 `color-mix(in srgb, var(...) calc(<alpha-value>*100%), transparent)`
+    包装（`primaryTone`），无修饰时 alpha=1 行为不变。附带教训：同一元素**基础类+条件类写同
+    一属性**（`bg-#8882` 与 `bg-primary-500/20` 共存）时谁赢取决于 UnoCSS 生成顺序——两态
+    样式必须互斥分支（Switch.vue 已改）。
 
 ## 9. 下一步（按优先级）
 
@@ -400,7 +433,10 @@ commit `272beb5`（探针+node）+ `c58ceb0`（panel+playground）。
    组件 → 组件操作里 Show render code → 弹编译后 render 源码面板；mp 上为 uni 编译器
    产物而非模板源码，属预期）/ **Network 标签**（W13：playground 首页场景 6 三按钮
    ——GET/POST/必失败各点一遍，面板应实时出现记录、点行看详情（headers/body）、
-   过滤、清空；**改了 dist/plugin.mjs 必须重启 dev:mp-weixin watch**（§8-11/18，
+   过滤、清空；**修正批次复验（B-network-1003）**：请求按发起顺序排列（最早在前，
+   钉底跟随滚动、上翻/点行即停）；先点 GET 再立刻点 POST 的话，先发起的请求应显示
+   `(pending)` 并在完成后**原行更新**为状态码（不再滞留 FAIL）；Waterfall 列有瀑布条
+   （pending 灰色生长、成功绿/失败红/3xx 青）；**改了 dist/plugin.mjs 必须重启 dev:mp-weixin watch**（§8-11/18，
    另注意是否有残留旧 watch 进程）；直接 wx.request 与 WebSocket 不采集属预期）
 2. Pinia 实时推送：目前拉取式（选中才读），可加探针 $subscribe → invalidateState 事件
 3. W6 Timeline 后续（若要做）：见 T-2d81ad reply 的 3~4 人日方案
