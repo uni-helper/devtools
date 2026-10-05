@@ -7,8 +7,8 @@
  * 这套 UI；我们把它托管在 sidecar 的 `${INSPECT_MOUNT_PATH}/` 下供面板 iframe。
  *
  * 静态服务用 devframe 官方 `mountStaticHandler`（h3 sub-app mount，段边界
- * 匹配 + base 剥离内建——不要自己 `app.use(path, h)`，h3 v2 是精确匹配，
- * 见 HANDOFF §8-22）。h3 仅为此处构造 app 实例（devDependencies）。
+ * 匹配 + base 剥离内建——不要自己 `app.use(path, h)`，h3 v2 是精确匹配）。
+ * h3 仅为此处构造 app 实例（devDependencies）。
  */
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'

@@ -23,7 +23,7 @@ export function generateToken(): string {
 
 /**
  * Starts a standalone DevServer harness for Uni DevTools.
- * Satisfies FINDINGS §2.1: uni-app mini-program dev requires a dedicated HTTP+WS server.
+ * uni-app mini-program dev requires a dedicated HTTP+WS server.
  */
 export async function startDevServerHarness(options: HarnessOptions = {}) {
   const host = options.host ?? 'localhost'

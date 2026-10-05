@@ -18,7 +18,7 @@ const VIRTUAL_AGENT_MODULE = 'virtual:uni-devtools-agent'
 const AGENT_IMPORT_MARKER = '__UNI_DEVTOOLS_AGENT_INJECTED__'
 
 /**
- * 地址解析（方案 §4.1 约束 3）：环境变量 → 局域网 IP → localhost。
+ * 地址解析顺序：环境变量 → 局域网 IP → localhost。
  * 微信开发者工具模拟器在本机，localhost 即可；真机/App（未来）需要 LAN IP。
  */
 function resolveHost(): string {
@@ -52,7 +52,7 @@ interface PluginState {
  * HTTP+WS 端口，与旧插件在 configResolved 自建 Polka 服务器的做法同构。
  */
 export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugin[] {
-  // 生产构建（build --watch 之外的正式打包）零注入、零挂载（方案 §4.1 约束 5）
+  // 生产构建（build --watch 之外的正式打包）零注入、零挂载
   const isDev = process.env.NODE_ENV === 'development'
 
   const state: PluginState = {
@@ -91,7 +91,7 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
       mcp: false,
       openBrowser: false,
       // 小程序 connectSocket 不发 Origin 头，默认 loopback-only 检查会拒绝升级；
-      // token 鉴权仍守门（FINDINGS 记录）
+      // token 鉴权仍守门
       allowedOrigins: false,
       auth: ((ctx: any) => createInteractiveAuth(ctx, {
         clientAuthTokens: [devToken],

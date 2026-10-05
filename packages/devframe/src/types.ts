@@ -8,18 +8,18 @@
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
  *   - `update-component-state`: (args: UpdateComponentStateParams) => UpdateComponentStateResult
  *   - `recompute-component-state`: (args: RecomputeComponentStateParams) => RecomputeComponentStateResult
- *   - `get-component-render-code`: (args: GetComponentRenderCodeParams) => GetComponentRenderCodeResult（W12 Show render code）
+ *   - `get-component-render-code`: (args: GetComponentRenderCodeParams) => GetComponentRenderCodeResult
  *   - `open-in-editor`: (args: OpenInEditorParams) => OpenInEditorResult
- *   - `get-registered-routes`: () => GetRegisteredRoutesResult（W5 路由栈）
- *   - `get-router-info`: () => RouterInfoResult（W5 路由栈）
- *   - `navigate-to`: (args: NavigateParams) => NavigateResult（W5 路由栈）
- *   - `get-pinia-stores` / `get-pinia-state` / `update-pinia-state`（W4 Pinia inspector）
- *   - `get-inspect-status`: () => GetInspectStatusResult（W11 Vite Inspect，node 本地读盘）
- *   - `get-network-records`: (args: GetNetworkRecordsParams) => GetNetworkRecordsResult（W13 Network）
- *   - `push-network-records`: (args: PushNetworkRecordsParams) => PushNetworkRecordsResult（W13，探针→node 推送）
- *   - `clear-network-records`: () => ClearNetworkRecordsResult（W13，面板清空）
+ *   - `get-registered-routes`: () => GetRegisteredRoutesResult
+ *   - `get-router-info`: () => RouterInfoResult
+ *   - `navigate-to`: (args: NavigateParams) => NavigateResult
+ *   - `get-pinia-stores` / `get-pinia-state` / `update-pinia-state`
+ *   - `get-inspect-status`: () => GetInspectStatusResult（node 本地读盘，不经探针）
+ *   - `get-network-records`: (args: GetNetworkRecordsParams) => GetNetworkRecordsResult
+ *   - `push-network-records`: (args: PushNetworkRecordsParams) => PushNetworkRecordsResult（探针→node 推送）
+ *   - `clear-network-records`: () => ClearNetworkRecordsResult（面板清空）
  *
- * W10 Reactivity Graph 扩展（无新 RPC，字段搭既有快照的车）：
+ * Reactivity Graph 扩展（无新 RPC，字段搭既有快照的车）：
  *   - `get-component-state` 返回新增 `reactivityGraph?: ReactivityGraphSnapshot`
  *   - `get-component-tree` 返回新增 `vueVersion?: string`
  */
@@ -113,8 +113,8 @@ export interface ComponentTreeResult {
 }
 
 // ---------------------------------------------------------------------------
-// Reactivity Graph（W10）：镜像 vendored kit `protocol/messages.ts` 的同名类型。
-// 对端在 vendored kit 内无法反向导入本仓，字面量契约两端冻结同步（HANDOFF §4）
+// Reactivity Graph：镜像 vendored kit `protocol/messages.ts` 的同名类型。
+// 对端在 vendored kit 内无法反向导入本仓，字面量契约两端冻结同步
 // ---------------------------------------------------------------------------
 
 export type ReactivityGraphNodeType =
@@ -225,11 +225,11 @@ export interface UpdatePiniaStateResult {
 }
 
 // ---------------------------------------------------------------------------
-// Network（W13）：探针包装 uni.request/uploadFile/downloadFile 采集真实请求。
+// Network：探针包装 uni.request/uploadFile/downloadFile 采集真实请求。
 // 契约同时服务两条消费方：面板 Network tab（sharedState 增量推送）与后续
 // Coding Agent（`get-network-records` 拉取）——字段名按 wire 冻结，两端不得单方改。
 //
-// 拦截层级的证据（勿凭感觉改，见 B-network-1002 工单）：
+// 拦截层级的证据（勿凭感觉改）：
 // uni mp 运行时在 vendor.js 求值期经 initUni(shims, protocols, wx) 把平台 API
 // 按引用固化（initWx 拷贝 newWx[key] = wx[key]），探针注入晚于该时刻，补丁
 // wx.request 拦不住 uni.request；而 uni 是 Proxy，uni.request = wrapper 落到

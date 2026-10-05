@@ -31,7 +31,7 @@ export function __uniDevtoolsNotifyRender(renderFn: any): any {
     return renderFn.call(this, _ctx, _cache, ...rest)
   }
   // 冻结契约：render-code.ts 读取端按此标记解包原始 render（字面量两端同步，
-  // HANDOFF §5；不可枚举——不进 Object.keys/JSON 序列化）
+  // 不可枚举——不进 Object.keys/JSON 序列化）
   Object.defineProperty(wrapped, '__uni_devtools_original_render__', {
     value: renderFn,
     enumerable: false,

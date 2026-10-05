@@ -218,7 +218,7 @@ export function createUniDevtoolsDevframe(
         initialValue: initialTree,
       })
 
-      // W13 Network：探针增量推送的网络记录（面板 Network tab 订阅渲染；
+      // 探针增量推送的网络记录（面板 Network tab 订阅渲染；
       // Coding Agent 后续经 get-network-records 拉取同一份数据）
       const networkSharedState = await uni.rpc.sharedState('network-records', {
         initialValue: { records: [], latestId: 0, updatedAt: 0 } as NetworkSharedState,
@@ -316,7 +316,7 @@ export function createUniDevtoolsDevframe(
         }),
       }))
 
-      // W12 Show render code：官方 components:getRenderCode 桥（探针取运行时
+      // 官方 components:getRenderCode 桥（探针取运行时
       // render 函数源码并解插桩包装层，见 agent/render-code.ts）
       uni.rpc.register(defineRpcFunction({
         name: 'get-component-render-code',
@@ -377,7 +377,7 @@ export function createUniDevtoolsDevframe(
         }),
       }))
 
-      // Vite Inspect（W11）：node 本地读盘判断报告是否产出（不经探针——
+      // Vite Inspect：node 本地读盘判断报告是否产出（不经探针——
       // 这是构建管线数据，不是运行时数据），面板据此门控 Inspect tab
       uni.rpc.register(defineRpcFunction({
         name: 'get-inspect-status',
@@ -391,10 +391,10 @@ export function createUniDevtoolsDevframe(
         }),
       }))
 
-      // W13 Network：探针 → node 增量推送（防抖批量；同 id 二次到达按
+      // 探针 → node 增量推送（防抖批量；同 id 二次到达按
       // shared/network-merge.ts 合并——pending 快照先出、完成态补推、重连全环
       // 重推都收敛到「未知插入 / 未完成→已完成才覆盖」；500 容量与探针
-      // MAX_NETWORK_RING 字面量两端冻结同步，见 types.ts W13 注释）
+      // MAX_NETWORK_RING 字面量两端冻结同步）
       uni.rpc.register(defineRpcFunction({
         name: 'push-network-records',
         type: 'action',
@@ -421,7 +421,7 @@ export function createUniDevtoolsDevframe(
         }),
       }))
 
-      // W13 Network：拉取（面板兜底 + Coding Agent 消费入口）。探针在线走
+      // 拉取（面板兜底 + Coding Agent 消费入口）。探针在线走
       // 探针环形缓冲（真源），离线回落 sharedState 历史
       uni.rpc.register(defineRpcFunction({
         name: 'get-network-records',
@@ -447,7 +447,7 @@ export function createUniDevtoolsDevframe(
         }),
       }))
 
-      // W13 Network：清空（面板按钮）。node 清 sharedState + 尽力透传探针
+      // 清空（面板按钮）。node 清 sharedState + 尽力透传探针
       // （探针离线时仅清 node 侧历史，同样算成功）
       uni.rpc.register(defineRpcFunction({
         name: 'clear-network-records',

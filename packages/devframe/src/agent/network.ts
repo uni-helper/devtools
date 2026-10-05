@@ -49,8 +49,8 @@ let nextRecordId = Date.now()
 let lastPushedId = 0
 // 完成态补推脏集：记录创建时（pending 快照）可能随其他请求触发的批次先被推出、
 // id 记入水位，等它完成时 id 已 ≤ lastPushedId，只按「id 越过水位」过滤永远推
-// 不出去——node 侧停在 status=0 的 pending 快照上，面板误显示 FAIL（回归自 W13
-// 真机数据：先行发起的请求全部 FAIL、后发起的正常显示）。终态结算与新建记录都
+// 不出去——node 侧停在 status=0 的 pending 快照上，面板误显示 FAIL（真机复现：
+// 先行发起的请求全部 FAIL、后发起的正常显示）。终态结算与新建记录都
 // 记脏，推送成功后出清。
 const dirtyPushIds = new Set<number>()
 let pushTimer: any = null
