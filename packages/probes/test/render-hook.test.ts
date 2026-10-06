@@ -7,7 +7,7 @@
  * 只有真机或本测试能拦住）。
  */
 import { describe, expect, it } from 'vitest'
-import { __uniDevtoolsNotifyRender } from '../src/agent/render-hook'
+import { __uniDevtoolsNotifyRender } from '../src/runtime/render-hook'
 
 const ctx = { a: 1 }
 const cache = [1, 2]

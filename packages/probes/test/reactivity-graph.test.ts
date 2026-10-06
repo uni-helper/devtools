@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { proxyRefs } from 'vue'
-import { buildReactivityGraph } from '../src/agent/reactivity-graph'
+import { buildReactivityGraph } from '../src/runtime/reactivity-graph'
 
 const BINDINGS_PROP = '__uni_devtools_bindings__'
 

@@ -3,8 +3,8 @@ import {
   createBaseRpcFunctions,
   getCurrentPagesSafe,
   resolveRuntimeUni,
-} from '../src/agent/rpc-base'
-import { clearInstanceRegistry, extractComponentNode } from '../src/agent/tree'
+} from '../src/runtime/rpc-base'
+import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree'
 
 describe('rpc-base: createBaseRpcFunctions', () => {
   beforeEach(() => {

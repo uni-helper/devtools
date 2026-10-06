@@ -5,13 +5,13 @@
  * 约束：纯 JSON 安全、禁浏览器 API、不引入任何 node/devtools-kit 运行时依赖。
  */
 
+import { BINDINGS_PROP } from '@uni-helper/devtools-shared'
 import type {
   ReactivityGraphNode,
   ReactivityGraphNodeType,
   ReactivityGraphSnapshot,
   ReactivityRelationship,
-} from '../types.ts'
-import { BINDINGS_PROP } from '../shared/contracts.ts'
+} from '@uni-helper/devtools-shared'
 import { getRaw, getSetupBindingInfo } from './serialize.ts'
 
 /** 模块级对象 ID 映射，保证同一对象跨快照 id 稳定 */

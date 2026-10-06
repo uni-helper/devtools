@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { navigateInMiniProgram, normalizeRoutePath } from '../src/agent/navigate'
+import { navigateInMiniProgram, normalizeRoutePath } from '../src/runtime/navigate'
 
 /** 造一个 uni 导航 API stub，默认各方法均成功；无论是否覆写实现都记录调用供断言 */
 function createUniStub(overrides: {

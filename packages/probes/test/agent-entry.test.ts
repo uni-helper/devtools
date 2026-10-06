@@ -33,13 +33,13 @@ const VUE3_ONLY_KEYS = [
 
 /** 单例与「全局钩子已安装」标记都是模块级、不可从外部重置，故每例取一份全新模块图 */
 async function freshEntries(): Promise<{
-  vue3: typeof import('../src/agent/index')
-  vue2: typeof import('../src/agent/vue2')
+  vue3: typeof import('../src/vue3/index')
+  vue2: typeof import('../src/vue2/index')
 }> {
   vi.resetModules()
   return {
-    vue3: await import('../src/agent/index'),
-    vue2: await import('../src/agent/vue2'),
+    vue3: await import('../src/vue3/index'),
+    vue2: await import('../src/vue2/index'),
   }
 }
 

@@ -20,13 +20,14 @@
  * - 全程 try/catch 防御，插桩任何异常不得影响原请求
  */
 
+import { NODE_RPC } from '@uni-helper/devtools-shared'
 import type {
   ClearNetworkRecordsResult,
   GetNetworkRecordsParams,
   GetNetworkRecordsResult,
   NetworkRecord,
   NetworkRecordType,
-} from '../types.ts'
+} from '@uni-helper/devtools-shared'
 
 export const MAX_NETWORK_RING = 500
 export const MAX_NETWORK_BODY_CHARS = 65536
@@ -41,11 +42,37 @@ export interface NetworkDeps {
 }
 
 const ringBuffer: NetworkRecord[] = []
-// id 基数取模块加载时刻（≈进程启动）：mp 重编译会整段重载探针上下文，若从 1
-// 重新计数，新记录会撞 node 侧 sharedState 里上一轮的同 id 旧记录、被幂等
-// merge 当重复吞掉。取时间戳基数让两轮 id 空间天然隔离（单测经
-// __resetNetworkForTest 回到确定性小 id）。
-let nextRecordId = Date.now()
+const GLOBAL_RECORD_ID_KEY = '__uni_devtools_network_next_id__'
+
+function getGlobalRecordId(): number | undefined {
+  if (typeof globalThis !== 'undefined' && typeof (globalThis as any)[GLOBAL_RECORD_ID_KEY] === 'number') {
+    return (globalThis as any)[GLOBAL_RECORD_ID_KEY]
+  }
+  return undefined
+}
+
+function setGlobalRecordId(id: number | undefined): void {
+  if (typeof globalThis !== 'undefined') {
+    if (id === undefined) {
+      delete (globalThis as any)[GLOBAL_RECORD_ID_KEY]
+    }
+    else {
+      (globalThis as any)[GLOBAL_RECORD_ID_KEY] = id
+    }
+  }
+}
+
+function initRecordId(): number {
+  const globalId = getGlobalRecordId()
+  if (globalId !== undefined) {
+    return globalId
+  }
+  const initial = Date.now() * 1000
+  setGlobalRecordId(initial)
+  return initial
+}
+
+let nextRecordId = initRecordId()
 let lastPushedId = 0
 // 完成态补推脏集：记录创建时（pending 快照）可能随其他请求触发的批次先被推出、
 // id 记入水位，等它完成时 id 已 ≤ lastPushedId，只按「id 越过水位」过滤永远推
@@ -241,8 +268,18 @@ function processResponseBody(type: NetworkRecordType, res: any): {
   }
 }
 
-function createPendingRecord(type: NetworkRecordType, options: any): NetworkRecord {
+function allocateNextRecordId(): number {
+  const globalId = getGlobalRecordId()
+  if (globalId !== undefined && globalId > nextRecordId) {
+    nextRecordId = globalId
+  }
   const id = nextRecordId++
+  setGlobalRecordId(nextRecordId)
+  return id
+}
+
+function createPendingRecord(type: NetworkRecordType, options: any): NetworkRecord {
+  const id = allocateNextRecordId()
 
   let method = 'GET'
   if (type === 'upload' || type === 'download') {
@@ -593,7 +630,7 @@ export async function pushNetworkRecordsNow(): Promise<void> {
   const pushedIds = incremental.map(r => r.id)
 
   try {
-    await instance.rpc.$call('uni-helper-devtools:push-network-records', { records: incremental })
+    await instance.rpc.$call(NODE_RPC.pushNetworkRecords, { records: incremental })
     lastPushedId = Math.max(lastPushedId, maxId)
     for (const id of pushedIds) {
       dirtyPushIds.delete(id)
@@ -605,10 +642,15 @@ export async function pushNetworkRecordsNow(): Promise<void> {
 export function __resetNetworkForTest(): void {
   ringBuffer.length = 0
   nextRecordId = 1
+  setGlobalRecordId(1)
   lastPushedId = 0
   dirtyPushIds.clear()
   cancelScheduledNetworkPush()
   networkDeps = null
+}
+
+export function __initRecordIdForReloadTest(): void {
+  nextRecordId = initRecordId()
 }
 
 export function __getLastPushedIdForTest(): number {

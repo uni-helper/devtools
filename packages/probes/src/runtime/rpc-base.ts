@@ -7,7 +7,8 @@
  * - 强类型：createBaseRpcFunctions 返回类型显式声明，保持 Object Spread 后的类型推导
  */
 
-import type { ClearNetworkRecordsResult, GetNetworkRecordsResult } from '../types'
+import { AGENT_BASE_RPC } from '@uni-helper/devtools-shared'
+import type { ClearNetworkRecordsResult, GetNetworkRecordsResult } from '@uni-helper/devtools-shared'
 import type { PageComponentTree } from './tree'
 import type { ComponentStateResult, UpdateStateResult } from './state'
 import { collectComponentTree, getVueRuntimeVersion } from './tree'
@@ -57,44 +58,44 @@ export function resolveRuntimeUni(runtimeHint?: any): any {
  * 返回类型显式声明，确保 TypeScript 完整推导每个方法的签名
  */
 export function createBaseRpcFunctions(): {
-  'uni-devtools:agent:ping': () => number
-  'uni-devtools:agent:getComponentTree': () => { pages: PageComponentTree[], vueVersion?: string }
-  'uni-devtools:agent:getNetworkRecords': (params?: any) => GetNetworkRecordsResult
-  'uni-devtools:agent:clearNetworkRecords': () => ClearNetworkRecordsResult
-  'uni-devtools:agent:getComponentState': (params: { id: string } | string) => ComponentStateResult
-  'uni-devtools:agent:updateComponentState': (params: any, maybeKey?: string, maybeVal?: unknown) => UpdateStateResult
-  'uni-devtools:agent:getRouterInfo': () => {
+  [AGENT_BASE_RPC.ping]: () => number
+  [AGENT_BASE_RPC.getComponentTree]: () => { pages: PageComponentTree[], vueVersion?: string }
+  [AGENT_BASE_RPC.getNetworkRecords]: (params?: any) => GetNetworkRecordsResult
+  [AGENT_BASE_RPC.clearNetworkRecords]: () => ClearNetworkRecordsResult
+  [AGENT_BASE_RPC.getComponentState]: (params: { id: string } | string) => ComponentStateResult
+  [AGENT_BASE_RPC.updateComponentState]: (params: any, maybeKey?: string, maybeVal?: unknown) => UpdateStateResult
+  [AGENT_BASE_RPC.getRouterInfo]: () => {
     currentRoute: { path: string, fullPath?: string, query?: Record<string, unknown> } | null
     stack: Array<{ path: string, query?: Record<string, unknown>, options?: Record<string, unknown> }>
   }
-  'uni-devtools:agent:navigate': (params: { path: string }) => Promise<{ ok: boolean, error?: string }>
+  [AGENT_BASE_RPC.navigate]: (params: { path: string }) => Promise<{ ok: boolean, error?: string }>
 } {
   return {
-    'uni-devtools:agent:ping': (): number => {
+    [AGENT_BASE_RPC.ping]: (): number => {
       return Date.now()
     },
 
-    'uni-devtools:agent:getComponentTree': (): { pages: PageComponentTree[], vueVersion?: string } => {
+    [AGENT_BASE_RPC.getComponentTree]: (): { pages: PageComponentTree[], vueVersion?: string } => {
       return {
         pages: collectComponentTree(),
         vueVersion: getVueRuntimeVersion(),
       }
     },
 
-    'uni-devtools:agent:getNetworkRecords': (params?: any): GetNetworkRecordsResult => {
+    [AGENT_BASE_RPC.getNetworkRecords]: (params?: any): GetNetworkRecordsResult => {
       return getNetworkRecords(params)
     },
 
-    'uni-devtools:agent:clearNetworkRecords': (): ClearNetworkRecordsResult => {
+    [AGENT_BASE_RPC.clearNetworkRecords]: (): ClearNetworkRecordsResult => {
       return clearNetworkRecords()
     },
 
-    'uni-devtools:agent:getComponentState': (params: { id: string } | string): ComponentStateResult => {
+    [AGENT_BASE_RPC.getComponentState]: (params: { id: string } | string): ComponentStateResult => {
       const id = typeof params === 'string' ? params : params?.id
       return getComponentState(id)
     },
 
-    'uni-devtools:agent:updateComponentState': (params: any, maybeKey?: string, maybeVal?: unknown): UpdateStateResult => {
+    [AGENT_BASE_RPC.updateComponentState]: (params: any, maybeKey?: string, maybeVal?: unknown): UpdateStateResult => {
       const res = typeof params === 'object' && params !== null && 'id' in params
         ? updateComponentState(params)
         : updateComponentState({ id: params, key: maybeKey!, value: maybeVal })
@@ -102,7 +103,7 @@ export function createBaseRpcFunctions(): {
       return res
     },
 
-    'uni-devtools:agent:getRouterInfo': (): {
+    [AGENT_BASE_RPC.getRouterInfo]: (): {
       currentRoute: { path: string, fullPath?: string, query?: Record<string, unknown> } | null
       stack: Array<{ path: string, query?: Record<string, unknown>, options?: Record<string, unknown> }>
     } => {
@@ -133,7 +134,7 @@ export function createBaseRpcFunctions(): {
       }
     },
 
-    'uni-devtools:agent:navigate': (params: { path: string }): Promise<{ ok: boolean, error?: string }> => {
+    [AGENT_BASE_RPC.navigate]: (params: { path: string }): Promise<{ ok: boolean, error?: string }> => {
       const url = params?.path
       if (!url) {
         return Promise.resolve({ ok: false, error: 'Path is required' })

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { getComponentRenderCode } from '../src/agent/render-code.ts'
-import { clearInstanceRegistry, extractComponentNode } from '../src/agent/tree.ts'
+import { getComponentRenderCode } from '../src/runtime/render-code.ts'
+import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree.ts'
 
 const ORIGINAL_RENDER_PROP = '__uni_devtools_original_render__'
 

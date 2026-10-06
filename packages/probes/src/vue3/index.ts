@@ -12,9 +12,10 @@
  * `rpc-base.ts`，生命周期与单例在 `lifecycle.ts`。
  */
 
-import type { AgentConfig, AgentInstance } from './lifecycle.ts'
-import { createBaseRpcFunctions } from './rpc-base.ts'
-import { disposeAgent, getAgentInstance, initAgentPipeline } from './lifecycle.ts'
+import { AGENT_RPC_VUE3 } from '@uni-helper/devtools-shared'
+import type { AgentConfig, AgentInstance } from '../runtime/lifecycle.ts'
+import { createBaseRpcFunctions } from '../runtime/rpc-base.ts'
+import { disposeAgent, getAgentInstance, initAgentPipeline } from '../runtime/lifecycle.ts'
 import {
   type PiniaStateResult,
   type PiniaStoresResult,
@@ -22,9 +23,9 @@ import {
   getPiniaState,
   getPiniaStores,
   updatePiniaState,
-} from './pinia.ts'
-import { getComponentRenderCode } from './render-code.ts'
-import { recomputeComponentState } from './state.ts'
+} from '../runtime/pinia.ts'
+import { getComponentRenderCode } from '../runtime/render-code.ts'
+import { recomputeComponentState } from '../runtime/state.ts'
 
 declare const uni: any
 
@@ -33,21 +34,21 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     ...createBaseRpcFunctions(), // 8 个基础 RPC 方法（Vue 2/3 通用）
 
     // Vue 3 专属方法
-    'uni-devtools:agent:getComponentRenderCode': (params: { id: string } | string): { code?: string } => {
+    [AGENT_RPC_VUE3.getComponentRenderCode]: (params: { id: string } | string): { code?: string } => {
       const id = typeof params === 'string' ? params : params?.id
       return getComponentRenderCode(id)
     },
-    'uni-devtools:agent:recomputeComponentState': (params: { id: string, section: string, path: string[] }): { ok: boolean } => {
+    [AGENT_RPC_VUE3.recomputeComponentState]: (params: { id: string, section: string, path: string[] }): { ok: boolean } => {
       return recomputeComponentState(params.id, params.section, params.path)
     },
-    'uni-devtools:agent:getPiniaStores': (): PiniaStoresResult => {
+    [AGENT_RPC_VUE3.getPiniaStores]: (): PiniaStoresResult => {
       return getPiniaStores()
     },
-    'uni-devtools:agent:getPiniaState': (args: { id: string } | string): PiniaStateResult => {
+    [AGENT_RPC_VUE3.getPiniaState]: (args: { id: string } | string): PiniaStateResult => {
       const id = typeof args === 'string' ? args : args?.id
       return getPiniaState(id)
     },
-    'uni-devtools:agent:updatePiniaState': (params: any): UpdatePiniaStateResult => {
+    [AGENT_RPC_VUE3.updatePiniaState]: (params: any): UpdatePiniaStateResult => {
       return updatePiniaState(params)
     },
   }
@@ -63,15 +64,15 @@ export type { AgentConfig, AgentInstance }
 export { disposeAgent, getAgentInstance }
 
 // 向后兼容导出（按实际模块分别 re-export，保持现有外部消费方不受影响）
-export { collectComponentTree, getRegisteredInstance, getVueRuntimeVersion } from './tree.ts'
-export { createUniSocketChannel } from './socket.ts'
-export { pushComponentTreeNow, schedulePushComponentTree } from './push.ts'
-export { getComponentState, recomputeComponentState, updateComponentState } from './state.ts'
-export { getPiniaState, getPiniaStores, updatePiniaState } from './pinia.ts'
+export { collectComponentTree, getRegisteredInstance, getVueRuntimeVersion } from '../runtime/tree.ts'
+export { createUniSocketChannel } from '../socket/index.ts'
+export { pushComponentTreeNow, schedulePushComponentTree } from '../runtime/push.ts'
+export { getComponentState, recomputeComponentState, updateComponentState } from '../runtime/state.ts'
+export { getPiniaState, getPiniaStores, updatePiniaState } from '../runtime/pinia.ts'
 export {
   clearNetworkRecords,
   getNetworkRecords,
   installNetworkInterceptors,
   resetNetworkPushState,
   scheduleNetworkPush,
-} from './network.ts'
+} from '../runtime/network.ts'

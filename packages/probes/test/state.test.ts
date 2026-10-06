@@ -3,8 +3,8 @@ import {
   getComponentState,
   recomputeComponentState,
   updateComponentState,
-} from '../src/agent/state'
-import { clearInstanceRegistry, extractComponentNode } from '../src/agent/tree'
+} from '../src/runtime/state'
+import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree'
 
 const BINDINGS_PROP = '__uni_devtools_bindings__'
 

@@ -4,8 +4,8 @@
  * 约束：纯 JSON 安全序列化（浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
 
-import { BINDINGS_PROP } from '../shared/contracts.ts'
-import type { ComponentStateEntry, ComponentStateResult } from '../types.ts'
+import { BINDINGS_PROP } from '@uni-helper/devtools-shared'
+import type { ComponentStateEntry, ComponentStateResult } from '@uni-helper/devtools-shared'
 import { checkIsRef, ensureJsonSafe, getRaw, getSetupBindingInfo, readComputedSource } from './serialize.ts'
 import { buildReactivityGraph } from './reactivity-graph.ts'
 import { getComponentDisplayName, getRegisteredInstance } from './tree.ts'
@@ -42,6 +42,19 @@ export interface UpdateStateResult {
   ok: true
   key: string
   value: unknown
+}
+
+/**
+ * 检查 key 是否在 props 声明中（支持数组和对象形式）
+ */
+function isDeclaredProp(key: string, declaredProps: unknown): boolean {
+  if (!declaredProps)
+    return false
+  if (Array.isArray(declaredProps))
+    return declaredProps.includes(key)
+  if (typeof declaredProps === 'object')
+    return key in (declaredProps as Record<string, unknown>)
+  return false
 }
 
 /**
@@ -137,8 +150,17 @@ function mergeOptionGroup(to: Record<string, any>, from: any): void {
   if (from.computed && typeof from.computed === 'object') {
     to.computed = Object.assign(to.computed || {}, from.computed)
   }
-  if (from.props && typeof from.props === 'object') {
-    to.props = Object.assign(to.props || {}, from.props)
+  if (from.props) {
+    to.props = to.props || {}
+    if (Array.isArray(from.props)) {
+      for (const prop of from.props) {
+        if (typeof prop === 'string')
+          to.props[prop] = null
+      }
+    }
+    else if (typeof from.props === 'object') {
+      Object.assign(to.props, from.props)
+    }
   }
 }
 
@@ -234,13 +256,17 @@ export function getComponentState(id: string): ComponentStateResult {
     const rawSetup = resolveSetupSource(vm, internal)
     if (rawSetup && typeof rawSetup === 'object') {
       const unwrappedSetup = getRaw(rawSetup)
-      const declaredProps = getProps(vm) || mergedOptions?.props || typeObj?.props
+      const declaredProps = mergedOptions?.props || typeObj?.props || getProps(vm)
+      const computedOptions = mergedOptions?.computed || typeObj?.computed
 
       for (const key of Object.keys(rawSetup)) {
         if (key.startsWith('_') || key.startsWith('$'))
           continue
         // 排除与 props 同名的绑定（镜像 collectSetupBindings）
-        if (declaredProps && key in declaredProps)
+        if (isDeclaredProp(key, declaredProps))
+          continue
+        // 排除与 computed 同名的绑定
+        if (computedOptions && key in computedOptions)
           continue
 
         try {
@@ -291,15 +317,19 @@ export function getComponentState(id: string): ComponentStateResult {
               if (rawSource) {
                 entry.raw = rawSource
               }
+              const hasSetter = typeof (refObj as any)?.setter === 'function' || typeof (refObj as any)?.set === 'function'
+              entry.editable = hasSetter && !isReadonly
             }
             else if (isRef) {
               entry.stateType = 'ref'
+              entry.editable = !isReadonly
             }
             else if (isReactive) {
               entry.stateType = 'reactive'
+              entry.editable = !isReadonly
             }
 
-            if (isReadonly) {
+            if (isReadonly || (isComputed && !entry.editable)) {
               entry.readonly = true
             }
 
@@ -469,6 +499,13 @@ function assignFinal(vm: any, target: { parent: any, last: string }, value: unkn
   if (checkIsRef(current)) {
     if (remove)
       throw new Error(`[updateComponentState] Cannot remove ref binding "${last}" on component "${id}"`)
+    const info = getSetupBindingInfo(current)
+    if (info.computed) {
+      const hasSetter = typeof (current as any)?.setter === 'function' || typeof (current as any)?.set === 'function'
+      if (!hasSetter || info.readonly) {
+        throw new Error(`[updateComponentState] Cannot update readonly computed ref "${last}" on component "${id}"`)
+      }
+    }
     current.value = value
     return
   }

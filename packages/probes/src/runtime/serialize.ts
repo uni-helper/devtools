@@ -19,24 +19,44 @@ export function getRaw(val: any): any {
 }
 
 /**
- * 判断是否为 ref（兼容 Vue isRef、__v_isRef 标识与含 value 属性的响应式对象）
+ * 判断是否为 ref（严格基于响应式标记与原型/构造函数判定，避免误判普通对象）
  */
 export function checkIsRef(val: any): boolean {
-  if (val && typeof val === 'object') {
-    if (val.__v_isRef === true) {
+  if (!val || typeof val !== 'object') {
+    return false
+  }
+  if (val.__v_isRef === true || val._isRef === true) {
+    return true
+  }
+  try {
+    if (typeof vueIsRef === 'function' && vueIsRef(val)) {
+      return true
+    }
+  }
+  catch {
+    // 容错环境无 Vue 导出
+  }
+  const raw = getRaw(val)
+  if (raw && raw !== val && typeof raw === 'object') {
+    if (raw.__v_isRef === true || raw._isRef === true) {
       return true
     }
     try {
-      if (typeof vueIsRef === 'function' && vueIsRef(val)) {
+      if (typeof vueIsRef === 'function' && vueIsRef(raw)) {
         return true
       }
     }
-    catch {
-      // 容错环境无 Vue 导出
-    }
-    if ('value' in val) {
-      return true
-    }
+    catch {}
+  }
+  const ctorName = val.constructor?.name ?? raw?.constructor?.name
+  if (
+    ctorName === 'RefImpl'
+    || ctorName === 'ComputedRefImpl'
+    || ctorName === 'CustomRefImpl'
+    || ctorName === 'ObjectRefImpl'
+    || ctorName === 'Ref'
+  ) {
+    return 'value' in val
   }
   return false
 }
@@ -70,7 +90,8 @@ export function getSetupBindingInfo(val: unknown): SetupBindingInfo {
     || typeof record._dirty === 'boolean'
   )
   const reactive = record.__v_isReactive === true
-  const readonly = record.__v_isReadonly === true
+  const hasSetter = typeof record.setter === 'function' || typeof record.set === 'function'
+  const readonly = record.__v_isReadonly === true || (computed && !hasSetter)
 
   return {
     ref,

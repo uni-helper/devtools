@@ -16,7 +16,7 @@
 
 import { createRpcClient } from 'devframe/rpc/client'
 import { config } from 'virtual:uni-devtools-agent'
-import { type UniSocketChannelHandle, createUniSocketChannel } from './socket.ts'
+import { type UniSocketChannelHandle, createUniSocketChannel } from '../socket/index.ts'
 import { bindPushDeps, cancelScheduledPush, resetPushGate, schedulePushComponentTree } from './push.ts'
 import { collectComponentTree } from './tree.ts'
 import {

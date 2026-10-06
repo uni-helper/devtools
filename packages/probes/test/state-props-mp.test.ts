@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getComponentState, updateComponentState } from '../src/agent/state'
-import { clearInstanceRegistry, extractComponentNode } from '../src/agent/tree'
+import { getComponentState, updateComponentState } from '../src/runtime/state'
+import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree'
 
 /**
  * props 编辑在 mp 运行时下的写入路径。

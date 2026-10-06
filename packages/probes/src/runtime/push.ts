@@ -6,7 +6,8 @@
  * 期可解析）与整个 socket/rpc 链拖进依赖闭包，也使 render-hook 无法脱离完整
  * 探针被单测。
  */
-import type { ComponentTreeResult } from '../types.ts'
+import { NODE_RPC } from '@uni-helper/devtools-shared'
+import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
 import { collectComponentTree, getVueRuntimeVersion } from './tree.ts'
 
 interface PushDeps {
@@ -69,7 +70,7 @@ export async function pushComponentTreeNow(): Promise<void> {
   lastPushedTreeJson = treeJson
 
   try {
-    await instance.rpc.$call('uni-helper-devtools:push-component-tree', snapshot)
+    await instance.rpc.$call(NODE_RPC.pushComponentTree, snapshot)
   }
   catch {
     // 允许网络暂未就绪或未注册该方法时静默跳过

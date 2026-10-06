@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
  * lifecycle.ts 持有模块级单例与「进程级全局钩子已安装」标记，二者都不可从外部重置。
  * 因此每个用例用 vi.resetModules() + 动态 import 拿一份全新模块，保证用例间互不串状态。
  */
-async function freshLifecycle(): Promise<typeof import('../src/agent/lifecycle')> {
+async function freshLifecycle(): Promise<typeof import('../src/runtime/lifecycle')> {
   vi.resetModules()
-  return import('../src/agent/lifecycle')
+  return import('../src/runtime/lifecycle')
 }
 
 function baseOptions() {

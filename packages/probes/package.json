@@ -1,0 +1,33 @@
+{
+  "name": "@uni-helper/devtools-probes",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Uni DevTools 小程序探针：Vue 2/3 双线入口 + 运行时采集（组件树/状态/Pinia/网络/响应式图）",
+  "exports": {
+    "./vue3": "./src/vue3/index.ts",
+    "./vue2": {
+      "types": "./src/vue2/index.ts",
+      "import": "./dist/agent-vue2.mjs"
+    },
+    "./render-hook": "./src/runtime/render-hook.ts",
+    "./socket": "./src/socket/index.ts"
+  },
+  "scripts": {
+    "build": "pnpm run build:agent-vue2",
+    "build:agent-vue2": "esbuild src/vue2/index.ts --bundle --platform=browser --format=esm --external:vue --external:virtual:uni-devtools-agent --outfile=dist/agent-vue2.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@uni-helper/devtools-shared": "workspace:*",
+    "birpc": "^4.2.0",
+    "devframe": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "@uni-helper/devtools-vite": "workspace:*",
+    "esbuild": "^0.20.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "vue": "^3.5.43"
+  }
+}

@@ -42,9 +42,32 @@ export function getRegisteredInstance(id: string): any | undefined {
 
 let cachedVueVersion: string | undefined
 
+/**
+ * 针对没有 uid 的组件（如 Vue 2 合成组件），使用 WeakMap 维护实例级稳定 ID。
+ * 避免 Math.random() 导致每次快照 ID 漂移、面板误判为节点重建而重置选中态与状态检查器。
+ */
+let syntheticUidMap: WeakMap<object, string> = new WeakMap()
+let syntheticUidSeq = 0
+
+function getSyntheticUid(vm: any, depth: number): string {
+  if (typeof vm === 'object' && vm !== null) {
+    let syntheticId = syntheticUidMap.get(vm)
+    if (!syntheticId) {
+      syntheticUidSeq += 1
+      syntheticId = `c_${depth}_${syntheticUidSeq}`
+      syntheticUidMap.set(vm, syntheticId)
+    }
+    return syntheticId
+  }
+  syntheticUidSeq += 1
+  return `c_${depth}_${syntheticUidSeq}`
+}
+
 export function clearInstanceRegistry(): void {
   instanceRegistry.clear()
   cachedVueVersion = undefined
+  syntheticUidMap = new WeakMap()
+  syntheticUidSeq = 0
 }
 
 /**
@@ -205,6 +228,15 @@ export function extractComponentNode(
   }
   visited.add(vm)
 
+  // uni-mp-vue 内核只在 mountComponent 时向父组件 ctx.$children push，
+  // 卸载时从不移除（内核级缺陷）——v-if 切换渲染组件后 $children 链里
+  // 残留已销毁实例，切回后新实例再追加，新旧两份同入快照，面板组件树
+  // 出现同一组件重复展示。mp 下 subTree 为空、$children 是唯一遍历路径，
+  // 必须在这里排除死实例（其子树同样已销毁，一并剪掉）。
+  if (isInstanceDestroyed(vm)) {
+    return null
+  }
+
   try {
     const internal = getInternal(vm)
     const typeObj = getOptions(vm)
@@ -218,7 +250,7 @@ export function extractComponentNode(
       return null
     }
 
-    const uid = getUid(vm) ?? `c_${depth}_${Math.random().toString(36).slice(2, 7)}`
+    const uid = getUid(vm) ?? getSyntheticUid(vm, depth)
     const id = idPrefix ? `${idPrefix}#${uid}` : String(uid)
     instanceRegistry.set(id, vm)
     const nodeType = depth === 0 ? 'page' : 'component'

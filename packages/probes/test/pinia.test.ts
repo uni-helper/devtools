@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { computed, reactive, ref } from 'vue'
-import { getPiniaState, getPiniaStores, updatePiniaState } from '../src/agent/pinia'
+import { getPiniaState, getPiniaStores, updatePiniaState } from '../src/runtime/pinia'
 
 function setupStores(stores: Record<string, any>) {
   ;(globalThis as any).getApp = () => ({

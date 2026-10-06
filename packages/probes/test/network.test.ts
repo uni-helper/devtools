@@ -11,7 +11,7 @@ import {
   installNetworkInterceptors,
   pushNetworkRecordsNow,
   resetNetworkPushState,
-} from '../src/agent/network.ts'
+} from '../src/runtime/network.ts'
 
 describe('network: 探针网络采集器', () => {
   let fakeUni: any
