@@ -372,6 +372,18 @@ export function getComponentState(id: string): ComponentStateResult {
   }
 }
 
+function previewEditValue(value: unknown): string {
+  try {
+    const text = typeof value === 'string' ? value : JSON.stringify(value)
+    if (text === undefined)
+      return String(value)
+    return text.length > 60 ? `${text.slice(0, 60)}…` : text
+  }
+  catch {
+    return '<unprintable>'
+  }
+}
+
 /**
  * 沿绑定链导航到目标父对象（逐段解 ref）。
  * setupState（proxyRefs）读值天然解包；捕获绑定里的裸 ref 需显式 .value 下钻。
@@ -384,11 +396,70 @@ function navigateToParent(root: any, segments: string[], id: string): { parent: 
       cur = cur.value
     if (cur === null || typeof cur !== 'object') {
       const walked = segments.slice(0, i + 1).join('.')
-      throw new Error(`[updateComponentState] Path "${walked}" is not navigable on component "${id}" (got ${cur === null ? 'null' : typeof cur})`)
+      const at = segments.slice(0, i).join('.') || '<root>'
+      const siblings = parent && typeof parent === 'object'
+        ? Object.keys(parent).slice(0, 12).join(',')
+        : '-'
+      // 路径与对象形状不一致时，只报 typeof 无法定位；一并带出取值与同级键辅助排查。
+      throw new Error(
+        `[updateComponentState] Path "${walked}" is not navigable on component "${id}"`
+        + ` (got ${cur === null ? 'null' : typeof cur}: ${previewEditValue(cur)};`
+        + ` keys of "${at}": ${siblings})`,
+      )
     }
     parent = cur
   }
   return { parent, last: segments[segments.length - 1]! }
+}
+
+/**
+ * mp 运行时下把 props 写进宿主小程序的 `properties`。
+ *
+ * 为什么不能只写 Vue 侧：mp-vue 的 setData 载荷（`cloneWithData`）不含 props，
+ * 所以写 `vm.$props` 后即使重渲染也到不了视图；而且宿主 properties 的 observer
+ * 会在父组件更新时把 `vm._props` 覆写回去，编辑静默丢失。
+ *
+ * 写宿主侧则两头都通：`setData` 直接驱动视图，observer 再回流到 `vm._props`。
+ *
+ * 一律按**顶层 prop 整值替换**写入。宿主对 `properties` 子路径的 setData 语义不明确
+ * （实测 `setData({'item.done': v})` 会把整个 `item` 写坏成字符串）；整值写入走的是
+ * 已验证可用的顶层链路。嵌套值在探针侧先应用到浅拷贝链上，再整体下发。
+ *
+ * @returns 是否已写入宿主；false 表示非 mp 运行时，调用方按原路径处理
+ */
+function setPropOnMpHost(vm: any, props: any, path: string[], value: unknown): boolean {
+  const scope = vm?.$scope
+  if (!scope || typeof scope.setData !== 'function' || path.length === 0) {
+    return false
+  }
+
+  const key = path[0]!
+  let next: unknown
+  try {
+    next = path.length === 1 ? value : applyPathValue(props?.[key], path.slice(1), value)
+  }
+  catch {
+    return false
+  }
+
+  try {
+    scope.setData({ [key]: next })
+    return true
+  }
+  catch {
+    // 宿主拒收时退回纯 Vue 侧写入，至少保证面板读数一致
+    return false
+  }
+}
+
+function applyPathValue(root: any, segments: string[], value: unknown): unknown {
+  if (segments.length === 0) {
+    return value
+  }
+  const [head, ...rest] = segments
+  const base: any = Array.isArray(root) ? root.slice() : { ...(root ?? {}) }
+  base[head!] = applyPathValue(root?.[head!], rest, value)
+  return base
 }
 
 function assignFinal(vm: any, target: { parent: any, last: string }, value: unknown, remove: boolean | undefined, id: string): void {
@@ -453,6 +524,11 @@ export function updateComponentState(
       if (!props || !(key in props)) {
         throw new Error(`[updateComponentState] Key "${key}" not found in props on component "${id}"`)
       }
+      // mp 下 props 真源在宿主 properties，只写 Vue 侧到不了视图（见 setPropOnMpHost）
+      if (!remove) {
+        setPropOnMpHost(vm, props, path, value)
+      }
+      // Vue 侧同步落地，保证面板紧接着重拉时读到新值（observer 随后会以同值再写一次）
       assignFinal(vm, navigateToParent(props, path, id), value, remove, id)
       updated = true
     }
