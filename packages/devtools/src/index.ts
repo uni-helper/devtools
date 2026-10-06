@@ -19,10 +19,10 @@ import { AgentRegistry } from '@uni-helper/devtools-core/relay'
 import { createUniDevtoolsDevframe } from '@uni-helper/devtools-core'
 
 export { AgentRegistry }
-export { createUniDevtoolsDevframe }
+export { createUniDevtoolsDevframe, createUniDevtoolsDevframe as UniDevtoolsDevframe }
 export type { CreateUniDevtoolsDevframeOptions } from '@uni-helper/devtools-core'
 
-export { UniDevtoolsPlugin, UniDevtoolsDevframe } from '@uni-helper/devtools-vite'
+export { UniDevtoolsPlugin } from '@uni-helper/devtools-vite'
 export type { UniDevtoolsPluginOptions } from '@uni-helper/devtools-vite'
 
 export { uniDevtoolsWebpack, UniDevtoolsWebpack } from '@uni-helper/devtools-webpack'

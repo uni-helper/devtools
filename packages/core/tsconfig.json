@@ -1,17 +1,15 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ESNext",
     "lib": ["ESNext"],
-    "baseUrl": ".",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "skipLibCheck": true
+    "baseUrl": "."
   },
-  "include": ["src/**/*.ts", "scripts/**/*.mjs"]
+  "include": [
+    "src/**/*.ts",
+    "scripts/**/*.mjs",
+    "test/**/*.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["dist", "node_modules"]
 }

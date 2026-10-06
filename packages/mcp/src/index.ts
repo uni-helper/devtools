@@ -75,14 +75,15 @@ export async function serveUniDevtoolsMcpStdio(options: McpStdioOptions = {}): P
  */
 export function createUniDevtoolsMcpFetchHandler(
   ctx: Parameters<typeof createMcpFetchHandler>[0],
-  options: CreateMcpFetchHandlerOptions = {},
+  options: Partial<CreateMcpFetchHandlerOptions> = {},
 ): McpFetchHandler {
-  return createMcpFetchHandler(ctx, {
+  const mergedOptions: CreateMcpFetchHandlerOptions = {
     serverName: 'Uni DevTools',
     // 网络记录与组件树是 agent 最常读的共享状态，默认暴露
     exposeSharedState: true,
     ...options,
-  })
+  } as CreateMcpFetchHandlerOptions
+  return createMcpFetchHandler(ctx, mergedOptions)
 }
 
 export type { CreateMcpFetchHandlerOptions, CreateMcpServerOptions, McpFetchHandler, McpServerHandle } from 'devframe/adapters/mcp'

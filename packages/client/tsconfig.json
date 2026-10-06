@@ -1,16 +1,15 @@
 {
-  "extends": "../../tsconfig.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "module": "esnext",
-    "skipLibCheck": true,
+    "jsx": "preserve",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "rootDir": "src",
     "outDir": "dist",
     "paths": {
       "@components/*": ["./src/components/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
   "exclude": ["dist", "node_modules"]
 }

@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 
 // 插件启动日志（面板 URL / 探针地址）是 CLI 场景的核心输出，属合理 console 使用
 /* eslint-disable no-console */
-import type { Plugin, ResolvedConfig } from 'vite'
+import type { Alias, Plugin, ResolvedConfig } from 'vite'
 import Inspect from 'vite-plugin-inspect'
 import { createDevServer } from 'devframe/adapters/dev'
 import { createInteractiveAuth } from 'devframe/recipes/interactive-auth'
@@ -31,7 +31,7 @@ const AGENT_IMPORT_MARKER = '__UNI_DEVTOOLS_AGENT_INJECTED__'
  * node 解析会 realpath 穿透 pnpm 符号链接）找到 api 真正想要的 kit 落点并 alias，
  * 任何一步解析失败（如 mp 工程没有 vue-router）都不加 alias。
  */
-function resolveHostKitAlias(root: string): { find: string, replacement: string } | undefined {
+function resolveHostKitAlias(root: string): Alias | undefined {
   try {
     const req = createRequire(path.join(root, 'package.json'))
     const routerPkg = req.resolve('vue-router/package.json')
@@ -181,7 +181,10 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
           ],
         },
         resolve: {
-          alias: [resolveHostKitAlias(config.root ?? process.cwd())].filter(Boolean),
+          alias: (() => {
+            const hostKitAlias = resolveHostKitAlias(config.root ?? process.cwd())
+            return hostKitAlias ? [hostKitAlias] : []
+          })(),
         },
       }
     },

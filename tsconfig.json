@@ -1,18 +1,19 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "es2018",
-    "jsx": "preserve",
-    "lib": ["esnext", "dom"],
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "types": ["@dcloudio/types"],
-    "allowJs": true,
-    "strict": true,
-    "strictNullChecks": true,
-    "noImplicitAny": false,
-    "outDir": "dist",
-    "esModuleInterop": true
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "allowJs": true
   },
-  "exclude": ["playground", "packages"]
+  "include": ["alias.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "packages",
+    "playground",
+    "spike",
+    "devtools",
+    "devframe-docs",
+    "design"
+  ]
 }
