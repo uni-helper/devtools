@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mergeNetworkRecords } from '../src/shared/network-merge.ts'
+import { mergeNetworkRecords } from '../src/utils/network-merge.ts'
 import type { NetworkRecord } from '../src/types.ts'
 
 function makeRecord(overrides: Partial<NetworkRecord> & { id: number }): NetworkRecord {
