@@ -11,7 +11,8 @@
  * 禁浏览器 API（globalThis 在既有探针代码中已验证可用）。
  */
 
-import { schedulePushComponentTree } from './push.ts'
+import { scheduleNotifyComponentRendered, schedulePushComponentTree } from './push.ts'
+import { getComponentIdOfInstance } from './tree.ts'
 
 export function __uniDevtoolsNotifyRender(renderFn: any): any {
   if (typeof renderFn !== 'function')
@@ -24,6 +25,10 @@ export function __uniDevtoolsNotifyRender(renderFn: any): any {
   const wrapped = function wrappedRender(this: any, _ctx: unknown, _cache: unknown, ...rest: unknown[]) {
     try {
       schedulePushComponentTree(300)
+      // 树推送过不了「内容没变」那道门，值变了得单独上报，面板才知道要重拉状态。
+      // `this` 是组件 proxy（见 tree.ts 的 getComponentIdOfInstance）；未采过树的
+      // 实例（首次渲染早于首轮采集）解析不到 id，静默跳过。
+      scheduleNotifyComponentRendered(getComponentIdOfInstance(this))
     }
     catch {
       // 探针未初始化/推送异常绝不影响渲染

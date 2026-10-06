@@ -4,7 +4,7 @@
  * 约束：纯 JSON 可序列化、无循环引用（浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
 
-import { getInternal, getOptions, getUid, getVNode, isInstanceDestroyed } from './instance.ts'
+import { getInternal, getOptions, getProxy, getUid, getVNode, isInstanceDestroyed } from './instance.ts'
 
 export interface ComponentTreeNode {
   id: string
@@ -63,11 +63,40 @@ function getSyntheticUid(vm: any, depth: number): string {
   return `c_${depth}_${syntheticUidSeq}`
 }
 
+/**
+ * 实例 → 组件 id 反查（渲染钩子用）。
+ *
+ * 渲染钩子的 `this` 是**渲染代理**，而采树拿到的对象不一定是同一个：
+ * - Vue 3：`render.call(proxyToUse, ...)`，`proxyToUse = withProxy || proxy`
+ *   （uni-mp-vue 里 `withProxy` 恒为 null）→ `this` 是 `instance.proxy`；
+ *   但页面走 `page.$vm`、`$children` 里还可能是 `defineExpose` 的 exposeProxy。
+ * - Vue 2：dev 下 `vm._renderProxy = new Proxy(vm, handlers)`（原生 Proxy 可用时），
+ *   `render.call(vm._renderProxy, ...)` → `this` 是 `_renderProxy`，**不是** vm；
+ *   而 `getProxy()` 在 Vue 2 下只会退回 vm 本身，所以必须单独挂上。
+ *
+ * 故注册三种形态（去重）。WeakMap 不持有引用，组件卸载后自然回收。
+ */
+const componentIdByInstance: WeakMap<object, string> = new WeakMap()
+
+function registerComponentId(vm: any, id: string): void {
+  for (const key of [vm, getProxy(vm), vm?._renderProxy]) {
+    if (typeof key === 'object' && key !== null)
+      componentIdByInstance.set(key, id)
+  }
+}
+
+export function getComponentIdOfInstance(vm: any): string | undefined {
+  if (typeof vm !== 'object' || vm === null)
+    return undefined
+  return componentIdByInstance.get(vm)
+}
+
 export function clearInstanceRegistry(): void {
   instanceRegistry.clear()
   cachedVueVersion = undefined
   syntheticUidMap = new WeakMap()
   syntheticUidSeq = 0
+  // componentIdByInstance 是 WeakMap：旧实例不可达后自行回收，无需（也无法）清空
 }
 
 /**
@@ -253,6 +282,7 @@ export function extractComponentNode(
     const uid = getUid(vm) ?? getSyntheticUid(vm, depth)
     const id = idPrefix ? `${idPrefix}#${uid}` : String(uid)
     instanceRegistry.set(id, vm)
+    registerComponentId(vm, id)
     const nodeType = depth === 0 ? 'page' : 'component'
     const filePath = typeObj.__file || typeObj.filePath || undefined
 

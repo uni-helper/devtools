@@ -85,6 +85,60 @@ export function cancelScheduledPush(): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 重渲染上报（与树推送分开：树推送有内容门，setup 值变化过不了那道门）
+// ---------------------------------------------------------------------------
+
+let renderNotifyTimer: any = null
+const pendingRenderedIds = new Set<string>()
+
+/**
+ * 登记「组件 id 刚渲染过」，窗口到期合并上报给 node。
+ *
+ * 是**合并窗口**而非防抖：定时器只在空闲时启动、不随新渲染重置，否则动画/倒计时
+ * 这类持续重渲染的组件会把定时器一直顶回去，永远不发声。窗口内同一组件多次渲染
+ * 只记一次（Set 去重）。
+ *
+ * id 由调用方（render-hook）在渲染时解析——那时才拿得到组件实例。
+ */
+export function scheduleNotifyComponentRendered(id: string | undefined, delay = 300): void {
+  if (!id)
+    return
+  pendingRenderedIds.add(id)
+  if (renderNotifyTimer !== null)
+    return
+  renderNotifyTimer = setTimeout(() => {
+    renderNotifyTimer = null
+    const ids = [...pendingRenderedIds]
+    pendingRenderedIds.clear()
+    notifyComponentRenderedNow(ids).catch(() => {})
+  }, delay)
+}
+
+async function notifyComponentRenderedNow(ids: string[]): Promise<void> {
+  if (ids.length === 0)
+    return
+  const instance = deps?.getActiveInstance()
+  if (!instance || !instance.socketHandle.isConnected()) {
+    return
+  }
+  try {
+    await instance.rpc.$call(NODE_RPC.notifyComponentRendered, { ids })
+  }
+  catch {
+    // 与树推送同语义：网络未就绪或方法未注册时静默跳过
+  }
+}
+
+/** 取消待发的重渲染上报并丢弃待发集合（disposeAgent 用） */
+export function cancelScheduledRenderNotify(): void {
+  if (renderNotifyTimer !== null) {
+    clearTimeout(renderNotifyTimer)
+    renderNotifyTimer = null
+  }
+  pendingRenderedIds.clear()
+}
+
 /** 探针重建实例时重置内容比对门（见 initAgent 内调用处的注释） */
 export function resetPushGate(): void {
   lastPushedTreeJson = ''
