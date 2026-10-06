@@ -5,6 +5,24 @@
       "style": {
         "navigationBarTitleText": "spike"
       }
+    },
+    {
+      "path": "pages/state/state",
+      "style": {
+        "navigationBarTitleText": "① 数据捕捉压测"
+      }
+    },
+    {
+      "path": "pages/state/edge",
+      "style": {
+        "navigationBarTitleText": "② 序列化边界压测"
+      }
+    },
+    {
+      "path": "pages/reactivity/reactivity",
+      "style": {
+        "navigationBarTitleText": "③ 依赖关系 + 响应式压测"
+      }
     }
   ],
   "globalStyle": {

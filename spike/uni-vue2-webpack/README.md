@@ -58,6 +58,12 @@ npm run dev:mp-weixin    # 产出 dist/dev/mp-weixin
 - **node 16 / 18 / 20**（webpack 4 在 node ≥ 22 上会崩，`setup.sh` 会拦）
 - 本项目只验证了 **CLI 工程**；HBuilderX 内置构建链未验证（讨论记录里的 S4）
 
+> **实测补充（2026-10-06）**：`setup.sh` 的 node ≥ 22 拦截在当前依赖版本下**偏保守**。
+> node **22.21.1** 上 dev 与 production 构建均能成功（webpack 4 没崩）。
+> 反倒是 **node 20.9.0 会失败**——`vue.config.js` 走 CJS，而 `devframe@1.1.0` 是 ESM-only，
+> 报 `ERR_REQUIRE_ESM: require() of ES Module devframe/dist/index.mjs not supported`；
+> node ≥ 22.12 支持 `require(esm)` 才过得去。两边都撞墙时，**node 22.21.1 是目前唯一验证可用的版本**。
+
 ## 探针自检页
 
 首页有一个「探针自检」按钮，点一下会列出 devframe Vue 2 探针依赖的运行时字段。
@@ -108,9 +114,110 @@ npm run dev:mp-weixin    # 产出 dist/dev/mp-weixin
 uni 自带的 `@dcloudio/vue-cli-plugin-uni/packages/mp-vue@2.6.10`（插件把 `vue` 别名到它），
 即真正的 **Vue 2.6 线**，无 Composition API。
 
+## 复杂使用场景（压依赖收集 / 数据捕捉）
+
+首页「复杂使用场景」三个按钮进入。这三页**不是功能演示，是采集能力的压力测试**：
+用尽可能刁钻的数据形状和组件结构，看探针能不能完整、稳定地把状态搬到面板上。
+
+### ① 数据捕捉压测（`pages/state/state`）
+
+| 场景 | 压的是什么 | 期望 |
+| --- | --- | --- |
+| 三层嵌套对象 `profile.address.geo.meta` | 递归序列化 | 面板能看到全部层级 |
+| DeepA → DeepB → DeepC 三层组件链 | 组件树深度 + props 链 | 三层都出现在树里；`DeepC` 匿名，靠 `__file` 兜底命名 |
+| `todos` 对象数组 + `v-for` 复用同一匿名组件 | 同组件多实例的 id 区分 | 每个实例有独立 id（来自 `_uid`） |
+| `Vue.set` / `Vue.delete` 动态键 | 新增/删除键的响应式 | 面板刷新后键跟着增减 |
+| mixin（`mixinCount` / `mixinDoubled`） | `resolveMergedOptions` 的合并链 | mixin 的 data 与 computed 都要出现 |
+| computed 链 `total → doneCount → progress` | computed 求值 | 三个值都正确 |
+
+**面板里可以试着就地编辑**：`profile.address.geo.lat`（嵌套路径）、`todos` 数组元素
+（Vue 2 数组下标赋值走 `splice`，见 `instance.ts` 的 `setReactive`）、以及用 `$set` 建出来的动态键。
+
+### ② 序列化边界压测（`pages/state/edge`）
+
+把 `toSafeJsonValue`（`serialize.ts`）的每条分支都点一遍：
+
+| 输入 | 期望降级 |
+| --- | --- |
+| `Date` | ISO 字符串 |
+| `RegExp` | `toString()` |
+| `BigInt` | 字符串 |
+| `NaN` / `Infinity` | `null`（JSON 本身的限制） |
+| `undefined` | 键消失（对象）/ `null`（数组元素） |
+| `Error` | `{ name, message }` |
+| 数组里的函数 | 被跳过 |
+| 顶层函数值键 / 嵌套函数值键 | 整个键不出现 |
+| 嵌套层 `_` / `$` 前缀键 | 被丢弃（`toSafeJsonValue` 的键过滤） |
+| 循环引用 | `"<circular-reference>"` |
+| 深度 > 6 | `"<max-depth-reached>"` |
+
+### ③ 依赖关系 + 响应式压测（`pages/reactivity/reactivity`）
+
+| 场景 | 期望 |
+| --- | --- |
+| computed 链 `base → doubled → quadrupled` | 值正确；**但看不到「谁依赖谁」**，见下节 |
+| 带 setter 的 computed `editableTotal` | 面板应把 `editable` 标为 true |
+| `v-for` + 子组件直接改 props 对象（`PriceRow`） | 父数组元素被子组件改动后，父组件状态同步更新 |
+| `deep: true` 的 watcher | `watchHits` / `watchLog` 递增 |
+| `v-if` / `v-else` 切换 `PanelA` / `PanelB` | 切走的实例应从组件树里消失 |
+| 默认 / 具名 / 作用域插槽 | 插槽内容正常渲染 |
+| 1 秒定时器改 `tick` | 面板能在无事件可听时靠快照轮询（2s 间隔）跟上变化 |
+
+两个 **uni-app mp 的写法约束**（踩过一次）：
+
+- **不支持 `<component :is>`**，所以「动态组件」用 `v-if` / `v-else` 分支切换替代。
+- **作用域插槽必须用 `v-slot` 解构写法**（`v-slot:row="{ label, index }"`）。
+  用旧的 `slot-scope="props"` 会在模板编译期直接报
+  `Currently only supports destructuring slot props`。
+
+### props 编辑：mp 下改走宿主 setData
+
+在面板里改 props 曾经是「面板显示成功、视图纹丝不动」。根因与修法：
+
+- 官方 Vue DevTools（Vue 2 的 7.x 与 Vue 3 的 9.x）和探针原本都是**直接写组件实例的
+  props 对象**（`instance.props` / `vm.$props`），这在浏览器里生效。
+- 但 mp 下 props 的**渲染真源是宿主组件的 `properties`**（由父组件 WXML 绑定控制），
+  Vue 侧那份只是镜像。mp-vue 构造 setData 载荷的 `cloneWithData` 只收 `$data` 与
+  computed——**不含 props**，所以写 Vue 侧即使触发了重渲染也到不了视图。
+- 更糟的是宿主 `properties` 的 observer（`this.$vm[name] = newVal`）会在父组件更新时
+  把 `vm._props` 覆写回去，编辑被静默丢掉；而面板重拉状态读的正是 `vm.$props`，
+  于是出现「面板显示新值 → 视图没变 → 过一会又变回去」的三态不一致。
+- **修复**：探针检测到 mp 运行时（`vm.$scope` 存在）时，改为写宿主
+  `setData({ [prop]: value })`；嵌套路径用宿主支持的 `a.b[0].c` 写法。视图直接更新，
+  再经 observer 回流到 `vm._props`。H5 / 浏览器保持原路径不变。
+
+**怎么测**：在面板里改一个 prop，视图应当立刻跟着变。可用的样本：
+
+| 组件 | prop | 类型 | 路径形态 |
+| --- | --- | --- | --- |
+| `AnonChild`（首页） | `from` | String | 顶层，整值替换 |
+| `DeepA`（场景①） | `payload` | Object | 嵌套，如 `payload.name` |
+| `ListRow`（场景①） | `item` | Object | 嵌套，如 `item.done` |
+| `PriceRow`（场景③） | `item` | Object | 嵌套，如 `item.qty` |
+
+顶层 prop（`from`）走的是「整值 setData → 触发宿主 observer → 回流 `vm._props`」这条完整链路，
+最能验证修复是否生效。
+
+### Vue 2 线拿不到依赖图（已知差异，非本 spike 的 bug）
+
+`getComponentState` 返回的 `reactivityGraph` 字段在 Vue 2 线上**不会出现**，原因是结构性的：
+
+1. `reactivity-graph.ts` 沿 Vue 3.5+ 的响应式双向链表遍历（`deps`/`nextDep`、`subs`/`nextSub`，
+   link 节点带 `.dep`/`.sub`）。Vue 2.6 是 `Dep`/`Watcher` + `dep.subs` 数组，属性名对不上。
+2. `resolveSetupSource`（`state.ts`）在 Vue 2.6 下拿不到 setup state（Options API 没有
+   `setupState` / `_setupState`），回退读的 `internal.render[BINDINGS_PROP]` 又依赖**编译期插桩**，
+   而插桩只存在于 Vite/Vue 3 线的 `plugin.ts`——webpack 线零插桩（见上文 S1）。
+3. 于是 `buildReactivityGraph(undefined)` 返回空，`state.ts` 里 `nodes.length > 0` 不成立，
+   整个字段被省略。
+
+**结论：「依赖收集」在 Vue 2 线上是缺失的，「数据捕捉」（props / computed / $data）是完整的。**
+③ 页就是这条差异的对照组——那里能看到 computed 的**值**，但看不到 computed 的**依赖**。
+
 ## 未覆盖
 
 - **S4**：HBuilderX 工作流（无可编程 webpack 配置）未验证
-- Vuex / Pinia 采集、页面栈、网络采集均未在本 spike 验证
-- 生产构建（`NODE_ENV=production`）：`__file` 只在 `!isProduction` 写入，
-  devtools 本身 dev-only，与「生产零残留」约束天然一致
+- **网络采集**（`getNetworkRecords` / `clearNetworkRecords`）：探针支持这两个 RPC，
+  但本 spike 没造 `uni.request` 场景——需要真机配好合法域名或关掉域名校验才有意义
+- **Vuex 采集**：Vue 2 线的 `pinia.ts` 不注册（Pinia 依赖 Vue 3 Composition API），Vuex 也没有对应实现
+- 生产构建（`NODE_ENV=production`）：`webpack.ts` 在该模式下直接跳过探针注入，
+  所以纯净度验证必须用 **dev 构建**（`bash scripts/build.sh`）才有意义

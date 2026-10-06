@@ -6,6 +6,24 @@
     <button class="btn" @click="runSelfCheck">
       探针自检
     </button>
+
+    <view class="nav">
+      <text class="nav-title">复杂使用场景（压依赖收集 / 数据捕捉）</text>
+      <button size="mini" @click="go('/pages/state/state')">
+        ① 数据捕捉压测
+      </button>
+      <button size="mini" @click="go('/pages/state/edge')">
+        ② 序列化边界压测
+      </button>
+      <button size="mini" @click="go('/pages/reactivity/reactivity')">
+        ③ 依赖关系 + 响应式压测
+      </button>
+      <text class="line">页面栈深度 = {{ stackDepth }}</text>
+      <button size="mini" @click="refreshStack">
+        刷新页面栈深度
+      </button>
+    </view>
+
     <view class="report">
       <text v-for="(line, i) in report" :key="i" class="line">{{ line }}</text>
     </view>
@@ -29,9 +47,26 @@ export default {
     return {
       title: 'uni-app Vue2 探针自检',
       report: [],
+      stackDepth: 0,
     }
   },
+  onShow() {
+    this.refreshStack()
+  },
   methods: {
+    // 走 uni.navigateTo 而非 wx 原生：同时压探针的 navigate / getRouterInfo 两个 RPC
+    go(path) {
+      uni.navigateTo({
+        url: path,
+        fail: (err) => {
+          this.report = [`navigateTo ${path} 失败: ${err && err.errMsg}`]
+        },
+      })
+    },
+    refreshStack() {
+      const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+      this.stackDepth = pages.length
+    },
     runSelfCheck() {
       const lines = []
       const push = (k, v) => lines.push(`${k}: ${v}`)
@@ -89,6 +124,16 @@ export default {
 }
 .btn {
   margin: 24rpx 0;
+}
+.nav {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24rpx;
+}
+.nav-title {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 8rpx;
 }
 .report {
   display: flex;
