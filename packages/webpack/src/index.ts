@@ -1,12 +1,13 @@
 import nodeCrypto from 'node:crypto'
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { AGENT_CLIENT_MARKER, AgentRegistry } from './relay.ts'
-import { createUniDevtoolsDevframe, resolveClientAssets } from './devframe.ts'
-import { createInspectApp } from './inspect-serve.ts'
+import { AGENT_CLIENT_MARKER, AgentRegistry } from '@uni-helper/devtools-core/relay'
+import { createUniDevtoolsDevframe, resolveClientAssets } from '@uni-helper/devtools-core'
+import { createInspectApp } from '@uni-helper/devtools-core/inspect-serve'
 
 // 延迟加载 devframe ESM 依赖（支持 CJS 环境动态 import）
 let devframeModules: {
@@ -130,22 +131,34 @@ function resolveEntryLoader(): string {
     ? __dirname
     : path.dirname(fileURLToPath(import.meta.url))
 
-  // dist/webpack.cjs 或 src/webpack.ts 下，上一层的 webpack 目录
-  const candidate = path.resolve(here, '../webpack/entry-loader.cjs')
-  if (fs.existsSync(candidate))
-    return candidate
-  return path.resolve(here, './entry-loader.cjs')
+  const candidates = [
+    path.resolve(here, '../entry-loader.cjs'),
+    path.resolve(here, './entry-loader.cjs'),
+  ]
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate))
+      return candidate
+  }
+  return candidates[0]
 }
 
 function resolveAgentVue2(): string {
-  const here = typeof __dirname !== 'undefined'
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url))
+  const req = typeof require !== 'undefined'
+    ? require
+    : createRequire(import.meta.url)
 
-  const candidate = path.resolve(here, '../dist/agent-vue2.mjs')
-  if (fs.existsSync(candidate))
-    return candidate
-  return path.resolve(here, './agent-vue2.mjs')
+  try {
+    return req.resolve('@uni-helper/devtools-probes/vue2')
+  }
+  catch {
+    // 兼容 exports 仅声明 import 条件或包尚未构建的情况
+    const pkgJson = req.resolve('@uni-helper/devtools-probes/package.json')
+    const pkgDir = path.dirname(pkgJson)
+    const target = path.resolve(pkgDir, 'dist/agent-vue2.mjs')
+    if (fs.existsSync(target))
+      return target
+    return path.resolve(pkgDir, 'src/vue2/index.ts')
+  }
 }
 
 export interface UniDevtoolsWebpackOptions {
@@ -185,12 +198,15 @@ async function startSidecar(options: UniDevtoolsWebpackOptions = {}, cliContext:
   const panelDir = resolveClientAssets(options.clientAssets)
   const def = createUniDevtoolsDevframe(registry, { clientAssets: panelDir })
 
-  const host = options.host ?? resolveHost()
+  // 「绑定地址」与「对外地址」分开，理由同 vite 插件的同名注释：
+  // 绑 0.0.0.0 才能让 MCP 路由的 loopback peer 检查通过；对外仍用真机可达的
+  // LAN IP（devframe 会把 0.0.0.0 规范成 localhost，故 URL 自己拼）。
+  const advertisedHost = options.host ?? resolveHost()
   const port = options.port ?? (process.env.UNI_DEVTOOLS_PORT ? Number(process.env.UNI_DEVTOOLS_PORT) : undefined)
 
   // 预写初始配置模块，防止构建过早读取
   const initialPort = port ?? 9999
-  const initialWsUrl = `ws://${host}:${initialPort}${BASE}__ws`
+  const initialWsUrl = `ws://${advertisedHost}:${initialPort}${BASE}__ws`
   writeAgentConfig(cliContext, {
     wsUrl: initialWsUrl,
     token: devToken,
@@ -200,12 +216,13 @@ async function startSidecar(options: UniDevtoolsWebpackOptions = {}, cliContext:
 
   /* eslint-disable no-console */
   const ready = createDevServer(def, {
-    host,
+    host: '0.0.0.0',
     port,
     basePath: BASE,
     distDir: panelDir,
     app: createInspectApp(),
-    mcp: false,
+    // 'auto'：同 vite 插件，装上 @devframes/agentic 后自动挂 `${BASE}__mcp`
+    mcp: 'auto',
     openBrowser: false,
     allowedOrigins: false,
     auth: ((ctx: any) => createInteractiveAuth(ctx, {
@@ -216,8 +233,9 @@ async function startSidecar(options: UniDevtoolsWebpackOptions = {}, cliContext:
     onPeerDisconnect: registry.disconnect,
   }).then((started) => {
     registry.bind(started.rpcGroup as any)
-    const wsUrl = `${started.origin.replace(/^http/, 'ws')}${BASE}__ws`
-    const panelUrl = `${started.origin}${BASE}?devframe_auth_token=${devToken}`
+    const advertisedOrigin = `http://${advertisedHost}:${started.port}`
+    const wsUrl = `${advertisedOrigin.replace(/^http/, 'ws')}${BASE}__ws`
+    const panelUrl = `${advertisedOrigin}${BASE}?devframe_auth_token=${devToken}`
     console.log(`\n  Uni DevTools 面板 (带鉴权 token，浏览器打开):`)
     console.log(`  ${panelUrl}`)
     console.log(`  探针 WebSocket:            ${wsUrl}\n`)
@@ -266,7 +284,7 @@ export function uniDevtoolsWebpack(chainableConfig: any, options: UniDevtoolsWeb
 
   chainableConfig.resolve.alias
     .set('virtual:uni-devtools-agent', agentConfigFile)
-    .set('@uni-helper/devtools-devframe/agent/vue2', agentVue2Dist)
+    .set('@uni-helper/devtools-probes/vue2', agentVue2Dist)
 
   // 2. 注入 main.js 探针初始化 loader
   const inputDir = process.env.UNI_INPUT_DIR
@@ -286,7 +304,7 @@ export function uniDevtoolsWebpack(chainableConfig: any, options: UniDevtoolsWeb
     class UniDevtoolsWaitReadyPlugin {
       apply(compiler: any) {
         if (compiler.hooks?.beforeCompile?.tapPromise) {
-          compiler.hooks.beforeCompile.tapPromise('UniDevtoolsDevframe', async () => {
+          compiler.hooks.beforeCompile.tapPromise('UniDevtoolsWebpack', async () => {
             const state = await statePromise
             await state.ready
           })

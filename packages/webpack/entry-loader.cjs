@@ -1,5 +1,5 @@
 const INJECT_MARKER = '__UNI_DEVTOOLS_AGENT_VUE2_INJECTED__'
-const INJECT_CODE = `/* ${INJECT_MARKER} */\nimport { initAgent } from '@uni-helper/devtools-devframe/agent/vue2';\ntry { if (typeof globalThis !== 'undefined' && !globalThis.uni) { globalThis.uni = uni; } } catch (e) {}\ninitAgent();\n`
+const INJECT_CODE = `/* ${INJECT_MARKER} */\nimport { initAgent } from '@uni-helper/devtools-probes/vue2';\ntry { if (typeof globalThis !== 'undefined' && !globalThis.uni) { globalThis.uni = uni; } } catch (e) {}\ninitAgent();\n`
 
 /**
  * uni-app Vue 2（webpack 4）入口注入 loader：
@@ -16,7 +16,7 @@ module.exports = function (source, map) {
     this.cacheable()
   }
 
-  if (this.resourceQuery || source.includes(INJECT_MARKER) || source.includes('@uni-helper/devtools-devframe/agent/vue2')) {
+  if (this.resourceQuery || source.includes(INJECT_MARKER) || source.includes('@uni-helper/devtools-probes/vue2')) {
     return this.callback(null, source, map)
   }
 
