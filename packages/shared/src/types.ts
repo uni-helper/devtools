@@ -306,3 +306,26 @@ export interface NetworkSharedState {
   latestId: number
   updatedAt: number
 }
+
+/** 探针上报的重渲染组件集合（`NODE_RPC.notifyComponentRendered` 载荷） */
+export interface NotifyComponentRenderedParams {
+  /** 本窗口内重渲染过的组件 id（去重） */
+  ids: string[]
+}
+
+/**
+ * sharedState('rendered-components') 的值形状。
+ *
+ * node 侧把探针上报的重渲染组件 id **原样转发**（它不知道面板在看哪个组件）；
+ * adapter 订阅后按「面板当前选中的组件」过滤，命中才转成官方的
+ * `components:stateInvalidated` 事件（面板据此重拉状态）。
+ *
+ * `seq` 单调递增：同一批 id 连续上报时 Immer 靠它判定值有变（只比 `updatedAt`
+ * 会在同一毫秒内被 `nextState === state` 拦掉），订阅方也靠它识别新事件。
+ */
+export interface RenderedComponentsSharedState {
+  /** 最近一个上报窗口内重渲染过的组件 id */
+  ids: string[]
+  seq: number
+  updatedAt: number
+}

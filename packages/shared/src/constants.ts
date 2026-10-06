@@ -53,4 +53,12 @@ export const AGENT_RPC_VUE3 = {
 export const NODE_RPC = {
   pushComponentTree: 'uni-helper-devtools:push-component-tree',
   pushNetworkRecords: 'uni-helper-devtools:push-network-records',
+  /**
+   * 渲染钩子上报「哪些组件重渲染了」。
+   *
+   * 树推送有内容门，setup 值变化不改树结构、会被门挡住——面板因此看不到端上的
+   * 改动。这条通道不比对内容，只报 id，node 侧原样转发；「是否面板正在看的
+   * 组件」由 adapter 判断（只有它知道面板选中态，探针与 node 都不知道）。
+   */
+  notifyComponentRendered: 'uni-helper-devtools:notify-component-rendered',
 } as const
