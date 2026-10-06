@@ -141,6 +141,8 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
   const connectionHandlers = new Set<(status: ConnectionStatus) => void>()
   /** 按组件计数的 state version（官方防陈旧循环以组件为维度比较）。 */
   const stateVersionByComponent = new Map<string, number>()
+  /** 面板当前在看的组件（由 components:stateSnapshot 更新，见该分支注释）。 */
+  let inspectedComponentId: string | undefined
   /** Pinia inspector 按 store nodeId 计数的 state version（同上防陈旧语义）。 */
   const inspectorVersionByNode = new Map<string, number>()
 
@@ -150,6 +152,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
   let ready: Promise<void> | undefined
   let unsubSharedState: (() => void) | undefined
   let unsubNetworkSharedState: (() => void) | undefined
+  let unsubRenderedComponents: (() => void) | undefined
   let unsubConnectionStatus: (() => void) | undefined
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
@@ -211,6 +214,36 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
     flat = next
   }
 
+  /**
+   * 端上改值 → 面板重拉：node 侧转发「哪些组件重渲染了」，这里判断面板正在看的
+   * 那个是否在其中，命中才转成官方 `components:stateInvalidated`。
+   *
+   * 过滤放在本层而不是 node 侧：node 的 `get-component-state` 是面板与 MCP/Coding
+   * Agent 共用的入口，拿它推「面板选中态」会被 agent 调用污染；而
+   * `components:stateSnapshot`（见 handleQuery）是面板专有入口，只有这里知道得准。
+   *
+   * version 由本层按组件递增（与 components:editState 共用同一张表）：面板拿事件里的
+   * version 当 minimumVersion 去查询，而 `components:stateSnapshot` 返回的也是这张表的
+   * 计数——两边同源，面板才不会把刚推来的失效当成陈旧快照丢掉。
+   */
+  function applyRenderedComponents(snapshot: unknown): void {
+    const componentId = inspectedComponentId
+    if (!componentId)
+      return
+    const ids = (snapshot as { ids?: unknown } | null)?.ids
+    if (!Array.isArray(ids) || !ids.includes(componentId))
+      return
+    const version = (stateVersionByComponent.get(componentId) ?? 0) + 1
+    stateVersionByComponent.set(componentId, version)
+    emit({
+      type: 'components:stateInvalidated',
+      appId: appIdOf(componentId),
+      componentId,
+      version,
+      reason: 'update',
+    })
+  }
+
   /** 首次（尚无 sharedState 推送）主动拉一次树，之后 sharedState 是唯一数据源。若已推快照但缺版本号，主动重拉一次补齐。 */
   async function pullTreeOnce(): Promise<void> {
     if (flat !== EMPTY_TREE && flat.apps.some(app => !!app.version))
@@ -268,6 +301,11 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
     unsubSharedState = undefined
     unsubNetworkSharedState?.()
     unsubNetworkSharedState = undefined
+    unsubRenderedComponents?.()
+    unsubRenderedComponents = undefined
+    // 面板选中态随连接作废：重连后由面板重新查询状态时再建立，避免拿旧选中项
+    // 过滤重渲染上报。
+    inspectedComponentId = undefined
     // 关键：重连后的首个 treeSnapshot 必须重拉，否则引用守卫失效、
     // 面板会一直展示断开前的陈旧树。
     flat = EMPTY_TREE
@@ -319,6 +357,19 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
       catch (error) {
         // 订阅失败不致命：连接仍在，树走 get-component-tree 主动拉取路径。
         console.warn('[uni-devtools] sharedState 订阅失败，树更新退化为手动/首拉模式:', error)
+      }
+      try {
+        const renderedSub = backend.subscribe('rendered-components', applyRenderedComponents)
+        await renderedSub.ready
+        if (disposed) {
+          renderedSub.unsubscribe()
+          return
+        }
+        unsubRenderedComponents = renderedSub.unsubscribe
+      }
+      catch (error) {
+        // 订阅失败不致命：面板仍能靠选中切换/编辑后重拉拿到新状态。
+        console.warn('[uni-devtools] 重渲染上报通道订阅失败，端上改值不会自动刷新面板:', error)
       }
       try {
         const netSub = backend.subscribe('network-records', (snapshot) => {
@@ -463,6 +514,10 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         await ensureReady()
         const { componentId } = request.payload as { componentId: string }
         const state = await callUni<ComponentStateResult>('get-component-state', { id: componentId })
+        // 面板选中即查询一次状态——这是「面板当前在看哪个组件」的唯一可靠来源
+        // （MCP/Coding Agent 也调 node 的 get-component-state，但那不经过本层）。
+        // 只有面板在看的组件重渲染才值得发失效事件（见 applyRenderedComponents）。
+        inspectedComponentId = componentId
         return toStateSnapshot(state, stateVersionByComponent.get(componentId) ?? 0)
       }
 
@@ -785,6 +840,8 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
       unsubSharedState = undefined
       unsubNetworkSharedState?.()
       unsubNetworkSharedState = undefined
+      unsubRenderedComponents?.()
+      unsubRenderedComponents = undefined
       networkListeners.clear()
       if (activeUniNetwork === uniNetwork)
         activeUniNetwork = undefined

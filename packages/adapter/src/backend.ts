@@ -28,7 +28,7 @@ export type ProbeMethod =
   | 'recompute-component-state'
 
 /** push 通道 key，与 node 侧 sharedState key 对应 */
-export type ProbePushKey = 'component-tree' | 'network-records'
+export type ProbePushKey = 'component-tree' | 'network-records' | 'rendered-components'
 
 export type ProbeConnectionStatus = 'connected' | 'closed'
 

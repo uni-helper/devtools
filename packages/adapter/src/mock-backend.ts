@@ -124,6 +124,10 @@ export function createMockBackend(options: MockBackendOptions = {}): ProbeBacken
         cb(mockComponentTree())
         return { ready: Promise.resolve(), unsubscribe: () => {} }
       }
+      if (key === 'rendered-components') {
+        // fixtures 是静态数据，没有「端上改值」可模拟——订阅成功但永不推送
+        return { ready: Promise.resolve(), unsubscribe: () => {} }
+      }
       networkListeners.add(cb)
       if (!tickTimer && !disposed)
         tickTimer = setInterval(pushNetworkSnapshot, tickInterval)

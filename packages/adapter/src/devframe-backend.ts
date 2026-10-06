@@ -25,6 +25,18 @@ interface ScopedCtx {
   }
 }
 
+/**
+ * 各 push 通道的 sharedState 初值。
+ *
+ * node 侧 `sharedState(key, { initialValue })` 只在首次创建时取初值，两端必须一致，
+ * 否则先连上的一方会把形状写歪（后续订阅方读到的字段是 undefined）。
+ */
+const INITIAL_VALUE_BY_KEY: Record<ProbePushKey, object> = {
+  'component-tree': { fetchedAt: 0, pages: [] },
+  'network-records': { records: [], latestId: 0, updatedAt: 0 },
+  'rendered-components': { ids: [], seq: 0, updatedAt: 0 },
+}
+
 /** standalone 直连时 token 附在面板 URL 上；hub iframe 场景为空。 */
 export function readAuthTokenFromUrl(): string | undefined {
   if (typeof window === 'undefined')
@@ -110,9 +122,7 @@ export function createDevframeBackend(): ProbeBackend {
         if (!scoped)
           throw new Error('uni-devtools RPC 尚未连接')
         const shared = await scoped.rpc.sharedState(key, {
-          initialValue: key === 'component-tree'
-            ? { fetchedAt: 0, pages: [] }
-            : { records: [], latestId: 0, updatedAt: 0 },
+          initialValue: INITIAL_VALUE_BY_KEY[key],
         })
         if (cancelled || disposed)
           return
