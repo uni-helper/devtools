@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "module": "esnext",
     "skipLibCheck": true,
     "rootDir": "src",

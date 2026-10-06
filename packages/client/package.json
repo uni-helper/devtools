@@ -1,19 +1,19 @@
 {
-  "name": "@uni-helper/devtools-panel",
+  "name": "@uni-helper/devtools-client",
   "type": "module",
   "version": "0.2.0",
   "private": true,
-  "description": "Uni DevTools 面板 SPA（官方 Vue Devtools client 移植 + devframe 数据层适配），构建产物即 devframe clientAssets",
+  "description": "Uni DevTools 面板 SPA（官方 Vue Devtools client 移植），构建产物即 devframe clientAssets",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fontsource/dm-mono": "^5.2.5",
     "@fontsource/dm-sans": "^5.2.5",
-    "@uni-helper/devtools-devframe": "workspace:*",
+    "@uni-helper/devtools-adapter": "workspace:*",
+    "@uni-helper/devtools-shared": "workspace:*",
     "@vue/devtools-kit": "9.0.0-beta.0",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",

@@ -53,6 +53,11 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     { pending: number; refresh: boolean; minimumVersion: number }
   >()
 
+  const MAX_VERSION_DRIFT = 50
+  const MAX_REFRESH_ATTEMPTS = 10
+  const componentMountIds = new Map<string, string>()
+  const componentSessionIds = new Map<string, string>()
+
   watch([runtimeVersion, selectedAppId, selectedComponentId], resetComponentStateRequests, {
     flush: 'sync',
   })
@@ -65,6 +70,12 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     return `${stateContextVersion}:${selectedAppId.value}:${componentId}`
   }
 
+  function cancelPendingStateRequests() {
+    stateRequestSeed++
+    pendingStateRequest = undefined
+    componentStateLoading.value = false
+  }
+
   function resetComponentStateRequests() {
     stateContextVersion++
     stateRequestSeed++
@@ -74,30 +85,60 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     componentStateMaxEntries.value = undefined
     componentStateLoading.value = false
     clearExpandedValues()
+    componentMountIds.clear()
+    componentSessionIds.clear()
   }
 
-  async function fetchComponentState(componentId: string, minimumVersion = 0): Promise<void> {
+  async function fetchComponentState(
+    componentId: string,
+    minimumVersion = 0,
+    options?: { mountId?: string; sessionId?: string },
+  ): Promise<void> {
     const client = getRpcClient()
     if (!client) return
+
+    const isNewMountOrSession = Boolean(
+      (options?.mountId && componentMountIds.get(componentId) && options.mountId !== componentMountIds.get(componentId)) ||
+      (options?.sessionId && componentSessionIds.get(componentId) && options.sessionId !== componentSessionIds.get(componentId)),
+    )
+
+    if (options?.mountId)
+      componentMountIds.set(componentId, options.mountId)
+    if (options?.sessionId)
+      componentSessionIds.set(componentId, options.sessionId)
+
     const appId = selectedAppId.value
     const key = componentStateRequestKey(componentId)
     const mutation = stateMutations.get(key)
     if (mutation) {
       mutation.refresh = true
-      mutation.minimumVersion = Math.max(mutation.minimumVersion, minimumVersion)
+      if (mutation.minimumVersion === 0 || minimumVersion - mutation.minimumVersion <= MAX_VERSION_DRIFT) {
+        mutation.minimumVersion = Math.max(mutation.minimumVersion, minimumVersion)
+      }
       return
     }
+
     if (
+      !isNewMountOrSession &&
       minimumVersion &&
-      componentState.value?.componentId === componentId &&
-      componentState.value.version >= minimumVersion
-    )
-      return
+      componentState.value?.componentId === componentId
+    ) {
+      if (componentState.value.version >= minimumVersion)
+        return
+      if (minimumVersion - componentState.value.version > MAX_VERSION_DRIFT)
+        return
+    }
 
     if (
       pendingStateRequest?.key === key &&
       pendingStateRequest.maxEntries === componentStateMaxEntries.value
     ) {
+      if (
+        pendingStateRequest.minimumVersion > 0 &&
+        minimumVersion - pendingStateRequest.minimumVersion > MAX_VERSION_DRIFT
+      ) {
+        return pendingStateRequest.promise
+      }
       pendingStateRequest.minimumVersion = Math.max(
         pendingStateRequest.minimumVersion,
         minimumVersion,
@@ -119,7 +160,8 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
 
     async function refresh() {
       try {
-        while (true) {
+        let attempts = 0
+        while (attempts++ < MAX_REFRESH_ATTEMPTS) {
           const requestedVersion = request.minimumVersion
           const snapshot = await client!.query({
             type: 'components:stateSnapshot',
@@ -132,13 +174,46 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
             componentId !== selectedComponentId.value
           )
             return
-          // An invalidation received during this request may describe newer state.
-          if (
+
+          const snapshotMountId = (snapshot as any)?.mountId
+          const snapshotSessionId = (snapshot as any)?.sessionId
+          const prevMountId = componentMountIds.get(componentId)
+          const prevSessionId = componentSessionIds.get(componentId)
+
+          const isMountOrSessionChanged = Boolean(
+            (snapshotMountId && prevMountId && snapshotMountId !== prevMountId) ||
+            (snapshotSessionId && prevSessionId && snapshotSessionId !== prevSessionId),
+          )
+
+          const isVersionReset = Boolean(
+            snapshot && (
+              isMountOrSessionChanged ||
+              (requestedVersion > 0 && snapshot.version < requestedVersion) ||
+              (componentState.value?.componentId === componentId &&
+                snapshot.version < componentState.value.version) ||
+              (request.minimumVersion - snapshot.version > MAX_VERSION_DRIFT)
+            ),
+          )
+
+          if (snapshotMountId) componentMountIds.set(componentId, snapshotMountId)
+          if (snapshotSessionId) componentSessionIds.set(componentId, snapshotSessionId)
+
+          if (isVersionReset && snapshot) {
+            request.minimumVersion = snapshot.version
+            if (pendingStateRequest === request)
+              pendingStateRequest.minimumVersion = snapshot.version
+            const currentMutation = stateMutations.get(key)
+            if (currentMutation && currentMutation.minimumVersion > snapshot.version)
+              currentMutation.minimumVersion = snapshot.version
+          }
+          else if (
             snapshot &&
             snapshot.version < request.minimumVersion &&
             request.minimumVersion > requestedVersion
-          )
+          ) {
             continue
+          }
+
           clearExpandedValues()
           componentState.value = snapshot
           return
@@ -599,6 +674,7 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     expandedValues,
     inspectorInvalidations,
     fetchComponentState,
+    cancelPendingStateRequests,
     resetComponentStateRequests,
     fetchInspectorState,
     selectInspectorNode,

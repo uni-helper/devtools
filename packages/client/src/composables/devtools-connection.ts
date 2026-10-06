@@ -1,7 +1,8 @@
 // uni-devtools 移植：主连接换成适配器（devframe WS RPC ↔ kit 协议），
 // Vite RPC（仅 openInEditor 用）以 stub 摘除——capabilities.openInEditor=false
-// 使官方 UI 自动隐藏该入口。见 src/adapter/uni-devtools-rpc.ts。
-import { connectUniRpcClient } from '../adapter/uni-devtools-rpc'
+// 使官方 UI 自动隐藏该入口。见 @uni-helper/devtools-adapter 的 uni-devtools-rpc.ts。
+import { connectUniRpcClient } from '@uni-helper/devtools-adapter'
+import { isMockPanelUrl } from '@uni-helper/devtools-shared/utils/mock-flag'
 import type {
   DevtoolsExtensionFrameController,
   DevtoolsExtensionFrameDescriptor,
@@ -39,7 +40,7 @@ export function createDevtoolsConnection(options: DevtoolsConnectionOptions) {
     if (rpcClient) return rpcClient
 
     try {
-      rpcClient = connectUniRpcClient()
+      rpcClient = connectUniRpcClient({ mock: isMockPanelUrl() })
       attachFrameController(rpcClient)
       if (rpcClient.onConnectionChanged) {
         let hasEverConnected = false

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Pane, Splitpanes } from 'splitpanes'
 import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from 'vue'
-import { getUniNetworkApi } from '../adapter/uni-devtools-rpc'
+import { getUniNetworkApi } from '@uni-helper/devtools-adapter'
 import { useDevtoolsClient } from '../composables/devtools-client'
-import type { NetworkRecord, UniNetworkApi } from '../types/network'
+import type { NetworkRecord } from '@uni-helper/devtools-shared'
+import type { UniNetworkApi } from '@uni-helper/devtools-adapter'
 
 const { connected } = useDevtoolsClient()
 const devtoolsClient = useDevtoolsClient() as any
