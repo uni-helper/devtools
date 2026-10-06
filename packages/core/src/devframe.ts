@@ -5,10 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { defineDevframe, defineRpcFunction } from 'devframe'
 import { launchEditor } from 'devframe/utils/launch-editor'
 import type { DevframeDockDefaults } from 'devframe/types'
-import type { AgentRegistry } from './relay.ts'
-import { isInspectAvailable } from './inspect-serve.ts'
 import { mergeNetworkRecords } from '@uni-helper/devtools-shared/utils/network-merge'
-import { AGENT_RPC } from './rpc-names.ts'
 import type {
   ClearNetworkRecordsResult,
   ComponentStateResult,
@@ -23,6 +20,7 @@ import type {
   NavigateParams,
   NavigateResult,
   NetworkSharedState,
+  NotifyComponentRenderedParams,
   OpenInEditorParams,
   OpenInEditorResult,
   PingResult,
@@ -32,12 +30,16 @@ import type {
   RecomputeComponentStateParams,
   RecomputeComponentStateResult,
   RegisteredRouteRecord,
+  RenderedComponentsSharedState,
   RouterInfoResult,
   UpdateComponentStateParams,
   UpdateComponentStateResult,
   UpdatePiniaStateParams,
   UpdatePiniaStateResult,
 } from '@uni-helper/devtools-shared'
+import type { AgentRegistry } from './relay.ts'
+import { isInspectAvailable } from './inspect-serve.ts'
+import { AGENT_RPC } from './rpc-names.ts'
 
 export interface CreateUniDevtoolsDevframeOptions {
   /**
@@ -230,6 +232,15 @@ export function createUniDevtoolsDevframe(
         initialValue: { records: [], latestId: 0, updatedAt: 0 } as NetworkSharedState,
       })
 
+      // 「端上改值 → 面板刷新」的中转站：探针上报重渲染的组件 id，这里**原样转发**，
+      // 不做过滤——`get-component-state` 是面板与 MCP agent 共用的入口，拿它当
+      // 「面板选中态」会被 agent 调用污染。过滤交给 adapter 的
+      // components:stateSnapshot（面板专有入口）。
+      const renderedComponentsSharedState = await uni.rpc.sharedState('rendered-components', {
+        initialValue: { ids: [], seq: 0, updatedAt: 0 } as RenderedComponentsSharedState,
+      })
+      let renderedSeq = 0
+
       uni.rpc.register(defineRpcFunction({
         name: 'push-component-tree',
         type: 'action',
@@ -308,6 +319,26 @@ export function createUniDevtoolsDevframe(
         setup: () => ({
           handler: async (args: { id: string }): Promise<ComponentStateResult> => {
             return await registry.callAgent<ComponentStateResult>(AGENT_RPC.getComponentState, args)
+          },
+        }),
+      }))
+
+      uni.rpc.register(defineRpcFunction({
+        name: 'notify-component-rendered',
+        type: 'action',
+        jsonSerializable: true,
+        agent: { description: 'Receive component ids that re-rendered in the mini-program (relayed to the panel, which decides whether the inspected component changed).' },
+        setup: () => ({
+          handler: async (args: NotifyComponentRenderedParams): Promise<{ ok: boolean }> => {
+            const ids = args?.ids
+            if (Array.isArray(ids) && ids.length > 0) {
+              renderedComponentsSharedState.mutate((draft) => {
+                draft.ids = ids
+                draft.seq = ++renderedSeq
+                draft.updatedAt = Date.now()
+              })
+            }
+            return { ok: true }
           },
         }),
       }))
