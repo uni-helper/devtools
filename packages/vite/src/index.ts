@@ -1,21 +1,52 @@
+import os from 'node:os'
+import path from 'node:path'
 import process from 'node:process'
+import { createRequire } from 'node:module'
 
 // 插件启动日志（面板 URL / 探针地址）是 CLI 场景的核心输出，属合理 console 使用
 /* eslint-disable no-console */
-import os from 'node:os'
 import type { Plugin, ResolvedConfig } from 'vite'
 import Inspect from 'vite-plugin-inspect'
 import { createDevServer } from 'devframe/adapters/dev'
 import { createInteractiveAuth } from 'devframe/recipes/interactive-auth'
 import { randomToken } from 'devframe/utils/crypto-token'
-import { AGENT_CLIENT_MARKER, AgentRegistry } from './relay.ts'
-import { createUniDevtoolsDevframe, resolveClientAssets } from './devframe.ts'
-import { INSPECT_OUTPUT_DIR, createInspectApp } from './inspect-serve.ts'
+import { AGENT_CLIENT_MARKER, AgentRegistry } from '@uni-helper/devtools-core/relay'
+import { createUniDevtoolsDevframe, resolveClientAssets } from '@uni-helper/devtools-core'
+import { INSPECT_OUTPUT_DIR, createInspectApp } from '@uni-helper/devtools-core/inspect-serve'
 import { injectEntryFileGuard, injectPlainRenderHook, injectSetupBindings, resolveVirtualEntryFile } from './instrument.ts'
 
 const BASE = '/__uni-devtools/'
 const VIRTUAL_AGENT_MODULE = 'virtual:uni-devtools-agent'
 const AGENT_IMPORT_MARKER = '__UNI_DEVTOOLS_AGENT_INJECTED__'
+
+/**
+ * 解析 uni-app H5 运行时链（uni-h5 → vue-router → @vue/devtools-api）实际需要的
+ * @vue/devtools-kit 版本目录。
+ *
+ * 背景：宿主工程若与本 monorepo 同源（workspace/shamefully-hoist），根部可能被
+ * hoist 出一个更高版本的 kit（如 9.x beta）；而 vue-router 的 devtools-api@8 声明
+ * ^8.x 且按具名导入新版 API。被依赖预构建收编时 kit 从 .vite/deps 目录向上解析会
+ * 命中根部错误版本，页面直接黑屏（"does not provide an export named
+ * 'addCustomCommand'"）。这里沿 node 自身解析链（vue-router → devtools-api → kit，
+ * node 解析会 realpath 穿透 pnpm 符号链接）找到 api 真正想要的 kit 落点并 alias，
+ * 任何一步解析失败（如 mp 工程没有 vue-router）都不加 alias。
+ */
+function resolveHostKitAlias(root: string): { find: string, replacement: string } | undefined {
+  try {
+    const req = createRequire(path.join(root, 'package.json'))
+    const routerPkg = req.resolve('vue-router/package.json')
+    // 注意不能 resolve('<pkg>/package.json')：部分包（@vue/devtools-api）的
+    // exports 不暴露 ./package.json 子路径。解析主入口再取包根目录，
+    // node 的解析自带 realpath，能穿透 pnpm 的符号链接落到位。
+    const apiEntry = createRequire(routerPkg).resolve('@vue/devtools-api')
+    const kitEntry = createRequire(apiEntry).resolve('@vue/devtools-kit')
+    const kitRoot = path.dirname(path.dirname(kitEntry))
+    return { find: /^@vue\/devtools-kit$/, replacement: kitRoot }
+  }
+  catch {
+    return undefined
+  }
+}
 
 /**
  * 地址解析顺序：环境变量 → 局域网 IP → localhost。
@@ -72,7 +103,15 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
     const panelDir = resolveClientAssets(options.clientAssets)
     const def = createUniDevtoolsDevframe(registry, { clientAssets: panelDir })
 
-    const host = options.host ?? resolveHost()
+    // 「绑定地址」与「对外地址」必须分开：
+    // - 绑定必须覆盖全部接口（0.0.0.0）。只绑 LAN IP 时，MCP 路由的
+    //   loopback peer 检查永远失败——server 收不到 loopback 对端，任何
+    //   MCP 请求都 403（实测：非 loopback Origin / loopback Origin / 无 Origin
+    //   三种全拒）。绑 0.0.0.0 后本机 agent 走 127.0.0.1 即通过。
+    // - 对外必须用真机可达的 LAN IP：探针跑在手机上的小程序沙箱里，
+    //   `ws://localhost` 指向设备自身。devframe 会把 0.0.0.0 规范成 localhost，
+    //   所以这里的 URL 自己拼，不取 started.origin。
+    const advertisedHost = options.host ?? resolveHost()
     const port = options.port ?? (process.env.UNI_DEVTOOLS_PORT ? Number(process.env.UNI_DEVTOOLS_PORT) : undefined)
 
     // Vite Inspect 静态托管：把 vite-plugin-inspect 的 build 产物目录（自包含
@@ -83,12 +122,14 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
     // auth 的函数形态（(ctx) => handler）在类型上未声明，但 dev 适配器与
     // instance-shell 的 resolveAuth 运行时均支持，用 as any 绕过类型
     state.ready = createDevServer(def, {
-      host,
+      host: '0.0.0.0',
       port,
       basePath: BASE,
       distDir: panelDir,
       app: createInspectApp(),
-      mcp: false,
+      // 'auto'：agent surface 恒非空（18 个 RPC 都带 agent 元数据），装上可选 peer
+      // @devframes/agentic 后 MCP 路由自动挂到 `${BASE}__mcp`
+      mcp: 'auto',
       openBrowser: false,
       // 小程序 connectSocket 不发 Origin 头，默认 loopback-only 检查会拒绝升级；
       // token 鉴权仍守门
@@ -101,8 +142,9 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
       onPeerDisconnect: registry.disconnect,
     }).then((started) => {
       registry.bind(started.rpcGroup as any)
-      const wsUrl = `${started.origin.replace(/^http/, 'ws')}${BASE}__ws`
-      const panelUrl = `${started.origin}${BASE}?devframe_auth_token=${devToken}`
+      const advertisedOrigin = `http://${advertisedHost}:${started.port}`
+      const wsUrl = `${advertisedOrigin.replace(/^http/, 'ws')}${BASE}__ws`
+      const panelUrl = `${advertisedOrigin}${BASE}?devframe_auth_token=${devToken}`
       console.log(`\n  Uni DevTools 面板 (带鉴权 token，浏览器打开):`)
       console.log(`  ${panelUrl}`)
       console.log(`  探针 WebSocket:            ${wsUrl}\n`)
@@ -114,7 +156,35 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
   }
 
   const corePlugin: Plugin = {
-    name: 'uni-devtools-devframe',
+    name: 'uni-devtools-vite',
+
+    config(config) {
+      if (!isDev)
+        return
+      // 探针包以源码形式被宿主工程引用，且内部 import 了本插件的虚拟模块
+      // virtual:uni-devtools-agent——一旦被 esbuild 依赖预构建收进 bundle，
+      // 虚拟模块无法解析直接编译失败，必须排除走插件管线。
+      // vite 的 exclude 按完整导入说明符精确匹配（pkgId 含子路径），包名与
+      // 子路径都要列。
+      // vue-router/@vue/devtools-api 也必须排除：预构建产物从 .vite/deps 目录
+      // 向上解析裸导入，会命中 monorepo 根部被 shamefully-hoist 的高版本
+      // @vue/devtools-kit，与 vue-router 的 devtools-api@8 声明的 ^8.x 不匹配
+      // （缺 addCustomCommand 等导出）——排除后走正常解析，命中它自己的嵌套版本。
+      return {
+        optimizeDeps: {
+          exclude: [
+            '@uni-helper/devtools-probes',
+            '@uni-helper/devtools-probes/vue3',
+            '@uni-helper/devtools-probes/vue2',
+            'vue-router',
+            '@vue/devtools-api',
+          ],
+        },
+        resolve: {
+          alias: [resolveHostKitAlias(config.root ?? process.cwd())].filter(Boolean),
+        },
+      }
+    },
 
     configResolved(config) {
       if (!isDev)
@@ -138,7 +208,7 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
       const info = await state.ready
       const wsUrl = info?.wsUrl ?? ''
       return [
-        `// generated by uni-devtools devframe plugin`,
+        `// generated by uni-devtools vite plugin`,
         `export const config = ${JSON.stringify({
           wsUrl,
           token: wsUrl ? state.devToken : '',
@@ -153,7 +223,7 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
       if (!/\/src\/main\.[jt]s$/.test(id) || code.includes(AGENT_IMPORT_MARKER))
         return null
       return {
-        code: `/* ${AGENT_IMPORT_MARKER} */\nimport { initAgent } from '@uni-helper/devtools-devframe/agent';\ninitAgent();\n${code}`,
+        code: `/* ${AGENT_IMPORT_MARKER} */\nimport { initAgent } from '@uni-helper/devtools-probes/vue3';\ninitAgent();\n${code}`,
         map: null,
       }
     },
@@ -214,5 +284,5 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
   ]
 }
 
-export const UniDevtoolsDevframe = UniDevtoolsPlugin
+export const UniDevtoolsVite = UniDevtoolsPlugin
 export default UniDevtoolsPlugin

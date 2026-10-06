@@ -21,14 +21,14 @@
  *    每次 setup 调用生成新 render 函数 → 每个实例各自一份绑定，互不串扰
  *
  * 冻结契约：
- * - 属性名 `__uni_devtools_bindings__` 单点定义于 shared/contracts.ts，写读两端同一导入
+ * - 属性名 `__uni_devtools_bindings__` 单点定义于 @uni-helper/devtools-shared，写读两端同一导入
  * - `__file` 的兜底命名与 `agent/tree.ts` 的 getComponentDisplayName 一致
  */
 import { Buffer } from 'node:buffer'
 import path from 'node:path'
 import process from 'node:process'
 
-import { BINDINGS_PROP } from './shared/contracts.ts'
+import { BINDINGS_PROP } from '@uni-helper/devtools-shared'
 
 export { BINDINGS_PROP }
 
@@ -36,7 +36,7 @@ const FILE_MARKER = '__uni_devtools_file__'
 const UNI_COMPONENT_PREFIX = 'uniComponent://'
 const UNI_PAGE_PREFIX = 'uniPage://'
 /** agent 侧渲染钩子（子路径导出，package.json exports 同步） */
-const RENDER_HOOK_IMPORT = '@uni-helper/devtools-devframe/agent/render-hook'
+const RENDER_HOOK_IMPORT = '@uni-helper/devtools-probes/render-hook'
 const RENDER_HOOK_FN = '__uni_devtools_notify_render'
 const RENDER_HOOK_IMPORT_LINE = `import { __uniDevtoolsNotifyRender as ${RENDER_HOOK_FN} } from '${RENDER_HOOK_IMPORT}'`
 
