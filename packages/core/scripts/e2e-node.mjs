@@ -1,5 +1,5 @@
 /**
- * E2E Node Verification for @uni-helper/devtools-devframe
+ * E2E Node Verification for @uni-helper/devtools-core
  *
  * Verifies:
  * 1. Harness startup (createDevServer / devframe instance)
@@ -300,7 +300,7 @@ try {
   }
   console.log('✓ [5.4/5] network RPC (push 幂等 merge / get 全量+增量 / clear 双向) 全链路验证通过')
   console.log('\n======================================================')
-  console.log('  E2E 验收通过：packages/devframe 全链路端到端正常！')
+  console.log('  E2E 验收通过：packages/core 全链路端到端正常！')
   console.log('======================================================\n')
 
   if (harness) {

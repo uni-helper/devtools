@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AgentRegistry } from '../src/relay'
-import { createUniSocketChannel } from '../src/agent/socket'
+import { AgentRegistry } from '../src/relay.ts'
+import { createUniSocketChannel } from '@uni-helper/devtools-probes/socket'
 
 /**
  * 探针错误穿越 WebSocket 的链路。

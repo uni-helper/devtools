@@ -1,7 +1,7 @@
 import process from 'node:process'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { getRegisteredRoutesFromFs, parsePagesJsonRoutes } from '../src/devframe'
+import { getRegisteredRoutesFromFs, parsePagesJsonRoutes } from '../src/devframe.ts'
 
 describe('parsePagesJsonRoutes', () => {
   it('解析基础 pages 列表', () => {

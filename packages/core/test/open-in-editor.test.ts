@@ -1,7 +1,7 @@
 import process from 'node:process'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { getProjectRoot, isInsideProjectRoot } from '../src/devframe'
+import { getProjectRoot, isInsideProjectRoot } from '../src/devframe.ts'
 
 describe('getProjectRoot & isInsideProjectRoot', () => {
   const originalEnv = { ...process.env }

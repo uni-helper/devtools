@@ -7,7 +7,8 @@ import { launchEditor } from 'devframe/utils/launch-editor'
 import type { DevframeDockDefaults } from 'devframe/types'
 import type { AgentRegistry } from './relay.ts'
 import { isInspectAvailable } from './inspect-serve.ts'
-import { mergeNetworkRecords } from './shared/network-merge.ts'
+import { mergeNetworkRecords } from '@uni-helper/devtools-shared/utils/network-merge'
+import { AGENT_RPC } from './rpc-names.ts'
 import type {
   ClearNetworkRecordsResult,
   ComponentStateResult,
@@ -36,12 +37,12 @@ import type {
   UpdateComponentStateResult,
   UpdatePiniaStateParams,
   UpdatePiniaStateResult,
-} from './types.ts'
+} from '@uni-helper/devtools-shared'
 
 export interface CreateUniDevtoolsDevframeOptions {
   /**
    * Override panel SPA directory.
-   * Defaults to `packages/panel/dist` if it exists, otherwise falls back to `stub-panel`.
+   * Defaults to `packages/client/dist` if it exists, otherwise falls back to the vendored stub.
    */
   clientAssets?: string
   /**
@@ -58,11 +59,14 @@ export function resolveClientAssets(explicitAssets?: string): string {
     return process.env.UNI_DEVTOOLS_PANEL_DIR
 
   const here = fileURLToPath(new URL('.', import.meta.url))
-  const realPanelDist = resolve(here, '../../panel/dist')
+  // 本模块会被 esbuild 内联进 vite/dist 与 webpack/dist，`import.meta.url` 的落点
+  // 因此可能是 core/src、core/dist、vite/dist 或 webpack/dist —— 四者都在
+  // packages/ 下两层，所以这两条相对路径对任意落点都指向同一个包。
+  const realPanelDist = resolve(here, '../../client/dist')
   if (existsSync(realPanelDist))
     return realPanelDist
 
-  const fallbackAssets = resolve(here, '../assets/panel')
+  const fallbackAssets = resolve(here, '../../core/assets/panel')
   if (existsSync(fallbackAssets))
     return fallbackAssets
 
@@ -71,17 +75,19 @@ export function resolveClientAssets(explicitAssets?: string): string {
 
 function getPackageMeta(): { name: string, version: string } {
   try {
-    const pkgPath = fileURLToPath(new URL('../package.json', import.meta.url))
+    // 同 resolveClientAssets：锚定 core 自己的 package.json，避免内联到
+    // vite/webpack 的 dist 后把宿主包的 name/version 报进 DevframeDefinition。
+    const pkgPath = fileURLToPath(new URL('../../core/package.json', import.meta.url))
     const raw = readFileSync(pkgPath, 'utf-8')
     const parsed = JSON.parse(raw)
     return {
-      name: parsed.name || '@uni-helper/devtools-devframe',
+      name: parsed.name || '@uni-helper/devtools-core',
       version: parsed.version || '0.0.1',
     }
   }
   catch {
     return {
-      name: '@uni-helper/devtools-devframe',
+      name: '@uni-helper/devtools-core',
       version: '0.0.1',
     }
   }
@@ -266,7 +272,7 @@ export function createUniDevtoolsDevframe(
         setup: () => ({
           handler: async (): Promise<ComponentTreeResult> => {
             try {
-              const tree = await registry.callAgent<any>('uni-devtools:agent:getComponentTree')
+              const tree = await registry.callAgent<any>(AGENT_RPC.getComponentTree)
               const result: ComponentTreeResult = {
                 fetchedAt: Date.now(),
                 pages: tree?.pages ?? tree ?? [],
@@ -301,7 +307,7 @@ export function createUniDevtoolsDevframe(
         agent: { description: 'Get the editable state (data and setup bindings) of one component by id.' },
         setup: () => ({
           handler: async (args: { id: string }): Promise<ComponentStateResult> => {
-            return await registry.callAgent<ComponentStateResult>('uni-devtools:agent:getComponentState', args)
+            return await registry.callAgent<ComponentStateResult>(AGENT_RPC.getComponentState, args)
           },
         }),
       }))
@@ -313,13 +319,13 @@ export function createUniDevtoolsDevframe(
         agent: { description: 'Trigger recomputation of a computed ref in component setup state.' },
         setup: () => ({
           handler: async (args: RecomputeComponentStateParams): Promise<RecomputeComponentStateResult> => {
-            return await registry.callAgent<RecomputeComponentStateResult>('uni-devtools:agent:recomputeComponentState', args)
+            return await registry.callAgent<RecomputeComponentStateResult>(AGENT_RPC.recomputeComponentState, args)
           },
         }),
       }))
 
       // 官方 components:getRenderCode 桥（探针取运行时
-      // render 函数源码并解插桩包装层，见 agent/render-code.ts）
+      // render 函数源码并解插桩包装层，见 probes 的 runtime/render-code.ts）
       uni.rpc.register(defineRpcFunction({
         name: 'get-component-render-code',
         type: 'query',
@@ -327,7 +333,7 @@ export function createUniDevtoolsDevframe(
         agent: { description: 'Get the runtime render function source of one component by id.' },
         setup: () => ({
           handler: async (args: GetComponentRenderCodeParams): Promise<GetComponentRenderCodeResult> => {
-            return await registry.callAgent<GetComponentRenderCodeResult>('uni-devtools:agent:getComponentRenderCode', args)
+            return await registry.callAgent<GetComponentRenderCodeResult>(AGENT_RPC.getComponentRenderCode, args)
           },
         }),
       }))
@@ -339,7 +345,7 @@ export function createUniDevtoolsDevframe(
         agent: { description: 'Update one top-level state binding of a component.' },
         setup: () => ({
           handler: async (args: UpdateComponentStateParams): Promise<UpdateComponentStateResult> => {
-            return await registry.callAgent<UpdateComponentStateResult>('uni-devtools:agent:updateComponentState', args)
+            return await registry.callAgent<UpdateComponentStateResult>(AGENT_RPC.updateComponentState, args)
           },
         }),
       }))
@@ -461,7 +467,7 @@ export function createUniDevtoolsDevframe(
             const sinceId = typeof args?.sinceId === 'number' ? args.sinceId : 0
             const limit = Math.min(Math.max(typeof args?.limit === 'number' ? args.limit : 200, 1), 500)
             try {
-              return await registry.callAgent<GetNetworkRecordsResult>('uni-devtools:agent:getNetworkRecords', { sinceId, limit })
+              return await registry.callAgent<GetNetworkRecordsResult>(AGENT_RPC.getNetworkRecords, { sinceId, limit })
             }
             catch {
               const snapshot = networkSharedState.value()
@@ -489,7 +495,7 @@ export function createUniDevtoolsDevframe(
               draft.updatedAt = Date.now()
             })
             try {
-              await registry.callAgent('uni-devtools:agent:clearNetworkRecords')
+              await registry.callAgent(AGENT_RPC.clearNetworkRecords)
             }
             catch {}
             return { ok: true }
@@ -518,7 +524,7 @@ export function createUniDevtoolsDevframe(
         setup: () => ({
           handler: async (): Promise<RouterInfoResult> => {
             try {
-              return await registry.callAgent<RouterInfoResult>('uni-devtools:agent:getRouterInfo')
+              return await registry.callAgent<RouterInfoResult>(AGENT_RPC.getRouterInfo)
             }
             catch {
               return {
@@ -538,7 +544,7 @@ export function createUniDevtoolsDevframe(
         setup: () => ({
           handler: async (): Promise<GetPiniaStoresResult> => {
             try {
-              return await registry.callAgent<GetPiniaStoresResult>('uni-devtools:agent:getPiniaStores')
+              return await registry.callAgent<GetPiniaStoresResult>(AGENT_RPC.getPiniaStores)
             }
             catch {
               return { stores: [] }
@@ -554,7 +560,7 @@ export function createUniDevtoolsDevframe(
         agent: { description: 'Get state and getters snapshot of one Pinia store by id.' },
         setup: () => ({
           handler: async (args: { id: string }): Promise<PiniaStateResult> => {
-            return await registry.callAgent<PiniaStateResult>('uni-devtools:agent:getPiniaState', args)
+            return await registry.callAgent<PiniaStateResult>(AGENT_RPC.getPiniaState, args)
           },
         }),
       }))
@@ -566,7 +572,7 @@ export function createUniDevtoolsDevframe(
         agent: { description: 'Edit one Pinia store state key (deep path supported).' },
         setup: () => ({
           handler: async (args: UpdatePiniaStateParams): Promise<UpdatePiniaStateResult> => {
-            return await registry.callAgent<UpdatePiniaStateResult>('uni-devtools:agent:updatePiniaState', args)
+            return await registry.callAgent<UpdatePiniaStateResult>(AGENT_RPC.updatePiniaState, args)
           },
         }),
       }))
@@ -585,7 +591,7 @@ export function createUniDevtoolsDevframe(
               return { ok: false, error: 'Uni-app agent probe is not connected' }
             }
             try {
-              return await registry.callAgent<NavigateResult>('uni-devtools:agent:navigate', args)
+              return await registry.callAgent<NavigateResult>(AGENT_RPC.navigate, args)
             }
             catch (err) {
               return { ok: false, error: err instanceof Error ? err.message : String(err) }

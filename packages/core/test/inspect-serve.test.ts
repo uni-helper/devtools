@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { INSPECT_MOUNT_PATH, INSPECT_OUTPUT_DIR, createInspectApp, isInspectAvailable } from '../src/inspect-serve'
+import { INSPECT_MOUNT_PATH, INSPECT_OUTPUT_DIR, createInspectApp, isInspectAvailable } from '../src/inspect-serve.ts'
 
 describe('inspect-serve: vite inspect 静态托管（devframe mountStaticHandler 接线）', () => {
   it('挂载前缀与落盘目录约定符合冻结契约', () => {

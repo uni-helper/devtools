@@ -40,7 +40,9 @@ export async function startDevServerHarness(options: HarnessOptions = {}) {
     port,
     basePath,
     app: createInspectApp(),
-    mcp: false,
+    // 'auto'：18 个 RPC 都带 agent 元数据，装上可选 peer @devframes/agentic 后
+    // MCP 路由会自动挂到 `<base>__mcp`（Streamable-HTTP，无状态）
+    mcp: 'auto',
     openBrowser: false,
     // Mini-program connectSocket does not set Origin header; disable loopback origin check
     allowedOrigins: false,
@@ -63,6 +65,7 @@ export async function startDevServerHarness(options: HarnessOptions = {}) {
     mode: 'standalone' as const,
     started,
     registry,
+    def,
     origin,
     port: started.port,
     token,
@@ -114,7 +117,7 @@ export async function startHubHarness(options: HarnessOptions = {}) {
     server,
     ui,
     auth: false,
-    mcp: false,
+    mcp: 'auto',
     allowedOrigins: false,
     devframes: [
       { devframe: def, dock: { category: 'devtools' } },

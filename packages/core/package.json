@@ -1,0 +1,31 @@
+{
+  "name": "@uni-helper/devtools-core",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Uni DevTools node 侧：DevframeDefinition（含 agent 元数据）+ WebSocket 中继 + Vite Inspect 托管",
+  "exports": {
+    ".": "./src/index.ts",
+    "./relay": "./src/relay.ts",
+    "./harness": "./src/harness.ts",
+    "./inspect-serve": "./src/inspect-serve.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "test": "vitest run",
+    "test:e2e": "node scripts/e2e-node.mjs"
+  },
+  "dependencies": {
+    "@uni-helper/devtools-shared": "workspace:*",
+    "birpc": "^4.2.0",
+    "devframe": "1.1.0"
+  },
+  "devDependencies": {
+    "@devframes/hub": "^1.1.0",
+    "@devframes/hub-ui": "^1.1.0",
+    "@types/node": "^20.14.2",
+    "h3": "^2.0.1-rc.32",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

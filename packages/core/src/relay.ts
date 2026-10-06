@@ -1,6 +1,7 @@
 import type { BirpcGroup, BirpcReturn } from 'birpc'
 import type { DevframeNodeRpcSession, DevframeNodeRpcSessionMeta, DevframeRpcConnection } from 'devframe/types'
-import type { ComponentTreeResult } from './types.ts'
+import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
+import { AGENT_RPC } from './rpc-names.ts'
 
 /** URL marker attached by the mini-program agent probe */
 export const AGENT_CLIENT_MARKER = 'client=uni-agent'
@@ -141,7 +142,7 @@ export class AgentRegistry {
 
     for (const client of clients) {
       try {
-        await withTimeout(client.$call('uni-devtools:agent:ping'), this.defaultTimeout)
+        await withTimeout(client.$call(AGENT_RPC.ping), this.defaultTimeout)
         this.agents.set(clients.indexOf(client), client)
       }
       catch {
