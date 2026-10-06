@@ -1,4 +1,4 @@
-const { uniDevtoolsWebpack } = require('@uni-helper/devtools-devframe/webpack')
+const { uniDevtoolsWebpack } = require('@uni-helper/devtools-webpack')
 
 module.exports = {
   chainWebpack: (config) => {

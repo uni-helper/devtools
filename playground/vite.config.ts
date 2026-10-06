@@ -4,7 +4,7 @@ import UniHelperManifest from '@uni-helper/vite-plugin-uni-manifest'
 import UniHelperPages from '@uni-helper/vite-plugin-uni-pages'
 import UniHelperLayouts from '@uni-helper/vite-plugin-uni-layouts'
 import UniHelperComponents from '@uni-helper/vite-plugin-uni-components'
-import { UniDevtoolsPlugin } from '@uni-helper/devtools-devframe/plugin'
+import { UniDevtoolsPlugin } from '@uni-helper/devtools-vite'
 import AutoImport from 'unplugin-auto-import/vite'
 
 // https://vitejs.dev/config/
