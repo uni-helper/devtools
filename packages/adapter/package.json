@@ -1,0 +1,22 @@
+{
+  "name": "@uni-helper/devtools-adapter",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Uni DevTools 协议适配器：把 devframe RPC 翻译成官方 Vue Devtools client（kit 协议）消费的形状",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@uni-helper/devtools-shared": "workspace:*",
+    "@vue/devtools-kit": "9.0.0-beta.0",
+    "devframe": "1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^1.6.0"
+  }
+}

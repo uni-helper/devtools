@@ -1,4 +1,4 @@
-import type { NetworkRecord } from '../../types/network'
+import type { NetworkRecord } from '@uni-helper/devtools-shared'
 
 export function mergeRecordsById(
   prev: NetworkRecord[],

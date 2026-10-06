@@ -1,6 +1,6 @@
-import type { PiniaStateResult } from '@uni-helper/devtools-devframe/types'
+import type { PiniaStateResult } from '@uni-helper/devtools-shared'
 import { describe, expect, it } from 'vitest'
-import { PINIA_ROOT_ID, PINIA_ROOT_LABEL, toPiniaRootSnapshot, toPiniaStateSnapshot } from '../../src/adapter/mapping/pinia'
+import { PINIA_ROOT_ID, PINIA_ROOT_LABEL, toPiniaRootSnapshot, toPiniaStateSnapshot } from '../src/mapping/pinia.ts'
 
 describe('Pinia store 快照', () => {
   it('按 State/Getters 分区并注入 inspector 元信息', () => {

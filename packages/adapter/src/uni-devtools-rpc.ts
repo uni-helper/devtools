@@ -8,8 +8,10 @@
  * 把官方的 `connectDevtoolsClient()`（host 发现）换成本文件的 `connectUniRpcClient()`。
  *
  * 数据结构 → kit 协议形状的映射在 `./mapping`（可观测行为由 test/mapping 冻结）；
- * 本文件只管 RPC 路由、连接生命周期与 mock 分支。kit 的反直觉约束（事件必须带
- * appId、失效事件名 ≠ command 名、version 按组件计数等）就地注释在各分支旁。
+ * 本文件只管 RPC 路由与连接生命周期。数据源由 `./backend` 的 ProbeBackend 抽象
+ * 注入：真实链路 = `devframe-backend`（devframe RPC），`?mock` 调试 = `mock-backend`
+ * （fixtures 内存分发，由调用方决定是否启用，本文件不读 URL）。kit 的反直觉约束
+ * （事件必须带 appId、失效事件名 ≠ command 名、version 按组件计数等）就地注释在各分支旁。
  *
  * 生命周期：全部状态收在 `connectUniRpcClient()` 工厂闭包内——官方连接层会在
  * 健康检查失败/stop 时 dispose 旧 client 并择机新建，模块级单例会让第二个
@@ -20,19 +22,24 @@ import type {
   DevtoolsRpcEvent,
   RouterRouteRecordSnapshot,
   RouterRouteSnapshot,
-  RouterSnapshotMessage,
 } from '@vue/devtools-kit'
 import type {
+  ClearNetworkRecordsResult,
   ComponentStateResult,
   ComponentTreeResult,
   GetComponentRenderCodeResult,
+  GetNetworkRecordsResult,
   GetPiniaStoresResult,
   GetRegisteredRoutesResult,
+  NetworkRecord,
+  NetworkSharedState,
   PiniaStateResult,
   RouterInfoResult,
-} from '@uni-helper/devtools-devframe/types'
-import { connectDevframe } from 'devframe/client'
-import type { FlatTree } from './mapping'
+} from '@uni-helper/devtools-shared'
+import type { ProbeBackend, ProbeMethod } from './backend.ts'
+import { probeNotSupported } from './backend.ts'
+import { createDevframeBackend, readAuthTokenFromUrl } from './devframe-backend.ts'
+import type { FlatTree } from './mapping/index.ts'
 import {
   appIdOf,
   buildFlatTree,
@@ -43,26 +50,16 @@ import {
   toPiniaRootSnapshot,
   toPiniaStateSnapshot,
   toStateSnapshot,
-} from './mapping'
-import type {
-  ClearNetworkRecordsResult,
-  GetNetworkRecordsResult,
-  NetworkRecord,
-  NetworkSharedState,
-  UniNetworkApi,
-} from '../types/network'
-import {
-  mockClearNetworkRecords,
-  mockComponentState,
-  mockComponentTree,
-  mockGetComponentRenderCode,
-  mockNetworkRecords,
-  mockPiniaState,
-  mockPiniaStores,
-  mockTickNetworkRecords,
-  mockUpdateComponentState,
-  mockUpdatePiniaState,
-} from './fixtures'
+} from './mapping/index.ts'
+
+export interface UniNetworkApi {
+  /** 缓存快照（按 id 升序） */
+  getRecords(): NetworkRecord[]
+  /** 清空请求记录（调用 node / 探针 clear-network-records） */
+  clear(): Promise<void>
+  /** 订阅记录变更（包含初始立即回调一次快照，返回退订函数） */
+  subscribe(cb: (records: NetworkRecord[]) => void): () => void
+}
 
 let activeUniNetwork: UniNetworkApi | undefined
 
@@ -70,10 +67,14 @@ export function getUniNetworkApi(): UniNetworkApi | undefined {
   return activeUniNetwork
 }
 
-/** 与 node 侧 `ctx.scope(NS)` 一致；改这里必须同步改 node 侧。 */
-const NAMESPACE = 'uni-helper-devtools'
-
-export const mockMode = new URLSearchParams(window.location.search).has('mock')
+export interface ConnectUniRpcClientOptions {
+  /** fixtures 假数据调试模式；URL `?mock` 的解析由调用方负责（shared 的 isMockPanelUrl），adapter 不读 URL */
+  mock?: boolean
+  /** 直接注入数据源（测试用）；优先于 mock */
+  backend?: ProbeBackend
+  /** standalone 直连 token；默认读面板 URL 的 devframe_auth_token */
+  authToken?: string
+}
 
 type ConnectionStatus = 'connecting' | 'connected' | 'closed'
 type QueryRequest = { type: string, appId?: string, payload?: any }
@@ -82,53 +83,59 @@ type CommandRequest = { type: string, appId?: string, payload?: any }
 // （vendored kit `runtime/runtime.ts` 的 `?? { status: 1 }` 与错误路径 `{ status: 0, error }`）。
 type CommandResult = { status: 0 | 1, error?: unknown }
 
-interface SharedStateLike<T> {
-  on: (event: 'updated', cb: (state: T) => void) => () => void
-}
-
-interface ScopedCtx {
-  rpc: {
-    call: (method: string, ...args: unknown[]) => Promise<unknown>
-    /** 正确入口是 scoped.rpc.sharedState(key, options)，与 node 侧对称；
-     *  scope 对象本身没有 sharedState 属性（曾想当然写成 sharedState.get）。 */
-    sharedState: <T extends object>(key: string, options?: { initialValue?: T }) => Promise<SharedStateLike<T>>
-  }
-}
-
 /** 哨兵引用：连接断开后重置回来，让下一次 treeSnapshot 主动重拉而不是吐陈旧树。 */
 const EMPTY_TREE: FlatTree = { apps: [], nodes: [] }
 
-function mockRouterSnapshot(): RouterSnapshotMessage {
-  return {
-    currentRoute: {
-      path: '/pages/index/index',
-      fullPath: '/pages/index/index',
-      name: 'pages/index/index',
-    },
-    routes: [
-      {
-        path: '/pages/index/index',
-        name: 'pages/index/index',
-        meta: { title: '首页', type: 'home' },
-      },
-      {
-        path: '/pages/settings/settings',
-        name: 'pages/settings/settings',
-        meta: { title: '设置', type: 'page' },
-      },
-    ],
+/**
+ * 校验 sharedState('network-records') 快照格式。
+ *
+ * 必须满足：
+ * 1. snapshot 为非空对象且非数组
+ * 2. records 字段必须为数组
+ * 3. 包含必需字段 latestId (number) 与 updatedAt (number)
+ */
+export function validateNetworkSnapshot(snapshot: unknown): { valid: true, snapshot: NetworkSharedState } | { valid: false, reason: string } {
+  if (typeof snapshot !== 'object' || snapshot === null || Array.isArray(snapshot)) {
+    return { valid: false, reason: '快照不是有效对象' }
+  }
+  const candidate = snapshot as Record<string, unknown>
+  if (!Array.isArray(candidate.records)) {
+    return { valid: false, reason: 'records 字段不是数组' }
+  }
+  if (typeof candidate.latestId !== 'number') {
+    return { valid: false, reason: '缺少必需字段 latestId 或类型不是 number' }
+  }
+  if (typeof candidate.updatedAt !== 'number') {
+    return { valid: false, reason: '缺少必需字段 updatedAt 或类型不是 number' }
+  }
+  return { valid: true, snapshot: candidate as unknown as NetworkSharedState }
+}
+
+/**
+ * 安全处理网络快照更新回调。
+ * 对畸形数据记录日志并跳过更新；捕获所有异常确保订阅回调不崩溃。
+ */
+export function handleNetworkSnapshot(
+  snapshot: unknown,
+  applyRecords: (records: NetworkRecord[]) => void,
+): boolean {
+  try {
+    const validated = validateNetworkSnapshot(snapshot)
+    if (!validated.valid) {
+      console.warn(`[uni-devtools] 收到畸形网络快照（${validated.reason}），跳过本次更新:`, snapshot)
+      return false
+    }
+    applyRecords(validated.snapshot.records)
+    return true
+  }
+  catch (error) {
+    console.error('[uni-devtools] 处理网络快照时发生未捕获异常:', error)
+    return false
   }
 }
 
-const NOT_SUPPORTED = (what: string): string => `uni-devtools 探针暂不支持：${what}`
-
-/** standalone 直连时 token 附在面板 URL 上；hub iframe 场景为空。 */
-function readAuthTokenFromUrl(): string | undefined {
-  return new URLSearchParams(window.location.search).get('devframe_auth_token') ?? undefined
-}
-
 /** 与 kit 的 `connectDevtoolsClient()` 同签名的同步工厂（连接在内部异步建立）。 */
-export function connectUniRpcClient(): DevtoolsRpcClient {
+export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): DevtoolsRpcClient {
   // ---- 实例状态（闭包内；原因见文件头生命周期说明） ----
   const eventHandlers = new Set<DevtoolsRpcEventHandler>()
   const connectionHandlers = new Set<(status: ConnectionStatus) => void>()
@@ -139,14 +146,12 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
 
   let flat: FlatTree = EMPTY_TREE
   let treeVersion = 0
-  let scoped: ScopedCtx | undefined
-  let client: Awaited<ReturnType<typeof connectDevframe>> | undefined
+  let backend: ProbeBackend | undefined
   let ready: Promise<void> | undefined
   let unsubSharedState: (() => void) | undefined
   let unsubNetworkSharedState: (() => void) | undefined
+  let unsubConnectionStatus: (() => void) | undefined
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
-  // mock 模式心跳：驱动在途演示记录超时结算（真实模式数据来自探针推送，无此需要）
-  let mockTickTimer: ReturnType<typeof setInterval> | undefined
   let disposed = false
 
   let cachedNetworkRecords: NetworkRecord[] = []
@@ -210,23 +215,17 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
   async function pullTreeOnce(): Promise<void> {
     if (flat !== EMPTY_TREE && flat.apps.some(app => !!app.version))
       return
-    const tree = mockMode
-      ? mockComponentTree()
-      : await callUni<ComponentTreeResult>('get-component-tree')
+    const tree = await callUni<ComponentTreeResult>('get-component-tree')
     applyTreeSnapshot(tree)
   }
 
-  async function callUni<T>(method: string, ...args: unknown[]): Promise<T> {
-    if (!scoped)
+  async function callUni<T>(method: ProbeMethod, ...args: unknown[]): Promise<T> {
+    if (!backend)
       throw new Error('uni-devtools RPC 尚未连接')
-    return await scoped.rpc.call(method, ...args) as T
+    return await backend.call(method, ...args) as T
   }
 
   async function pullNetworkOnce(): Promise<void> {
-    if (mockMode) {
-      applyNetworkRecords(mockNetworkRecords())
-      return
-    }
     try {
       const res = await callUni<GetNetworkRecordsResult>('get-network-records')
       if (res && Array.isArray(res.records))
@@ -242,12 +241,6 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       return [...cachedNetworkRecords]
     },
     async clear(): Promise<void> {
-      if (mockMode) {
-        mockClearNetworkRecords()
-        cachedNetworkRecords = []
-        notifyNetwork()
-        return
-      }
       await callUni<ClearNetworkRecordsResult>('clear-network-records')
       cachedNetworkRecords = []
       notifyNetwork()
@@ -268,15 +261,13 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
   activeUniNetwork = uniNetwork
 
   function resetConnectionState(): void {
-    scoped = undefined
+    ready = undefined
+    unsubConnectionStatus?.()
+    unsubConnectionStatus = undefined
     unsubSharedState?.()
     unsubSharedState = undefined
     unsubNetworkSharedState?.()
     unsubNetworkSharedState = undefined
-    if (mockTickTimer) {
-      clearInterval(mockTickTimer)
-      mockTickTimer = undefined
-    }
     // 关键：重连后的首个 treeSnapshot 必须重拉，否则引用守卫失效、
     // 面板会一直展示断开前的陈旧树。
     flat = EMPTY_TREE
@@ -285,71 +276,60 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
   }
 
   async function initConnection(): Promise<void> {
-    if (mockMode) {
-      applyTreeSnapshot(mockComponentTree())
-      applyNetworkRecords(mockNetworkRecords())
-      emitConnection('connected')
-      mockTickTimer = setInterval(() => {
-        applyNetworkRecords(mockTickNetworkRecords())
-      }, 1000)
-      return
-    }
-    emitConnection('connecting')
     try {
-      const connected = await connectDevframe({
-        authToken: readAuthTokenFromUrl(),
-        simpleAuth: false,
-      })
+      // mock 后端按需加载：fixtures 不进主 bundle（URL 无 ?mock 则该 chunk 永不加载）
+      backend = options.backend ?? (options.mock
+        ? (await import('./mock-backend.ts')).createMockBackend()
+        : createDevframeBackend())
+      await backend.connect(options.authToken ?? readAuthTokenFromUrl())
       if (disposed) {
-        connected.close?.()
+        backend.dispose()
+        backend = undefined
         return
       }
-      client = connected
-      scoped = client.scope(NAMESPACE) as unknown as ScopedCtx
-      // 注意：这里不提前上报 connected——connectDevframe resolve 时连接多半仍处于
-      // connecting，提前谎报会让官方层的 hasEverConnected 提前置位，等真实
-      // connected 事件再来时就走「重连」分支（onRuntimeChanged + 全量刷新），
-      // 双刷新的竞态最终把刚建立的连接拆掉。connected 只由下方真实事件上报。
-      client.events.on('connection:status', (status) => {
+
+      // 仅在 socket 真正连接后才发出连接就绪状态通知（mock 后端 connect 即就绪）
+      emitConnection('connected')
+
+      // 持续监听后续连接状态变更；断开即作废（无内建重连）：清态、内部重连、
+      // 成功后由 connection 层的 runtime-changed 语义触发全量刷新
+      unsubConnectionStatus = backend.onConnectionStatus((status) => {
         if (status === 'connected') {
           emitConnection('connected')
+          return
         }
-        else if (status === 'connecting') {
-          emitConnection('connecting')
-        }
-        else {
-          // devframe 客户端断开即作废（无内建重连）：清态、内部重连、成功后由
-          // connection 层的 runtime-changed 语义触发全量刷新。
-          resetConnectionState()
-          emitConnection('closed')
-          scheduleReconnect()
-        }
+        backend?.dispose()
+        backend = undefined
+        resetConnectionState()
+        emitConnection('closed')
+        scheduleReconnect()
       })
       try {
-        const shared = await scoped.rpc.sharedState<ComponentTreeResult>('component-tree', {
-          initialValue: { fetchedAt: 0, pages: [] },
+        const treeSub = backend.subscribe('component-tree', (snapshot) => {
+          if (snapshot && Array.isArray((snapshot as ComponentTreeResult).pages))
+            applyTreeSnapshot(snapshot as ComponentTreeResult)
         })
-        if (disposed)
+        await treeSub.ready
+        if (disposed) {
+          treeSub.unsubscribe()
           return
-        unsubSharedState = shared.on('updated', (snapshot) => {
-          if (snapshot && Array.isArray(snapshot.pages))
-            applyTreeSnapshot(snapshot)
-        })
+        }
+        unsubSharedState = treeSub.unsubscribe
       }
       catch (error) {
         // 订阅失败不致命：连接仍在，树走 get-component-tree 主动拉取路径。
         console.warn('[uni-devtools] sharedState 订阅失败，树更新退化为手动/首拉模式:', error)
       }
       try {
-        const networkShared = await scoped.rpc.sharedState<NetworkSharedState>('network-records', {
-          initialValue: { records: [], latestId: 0, updatedAt: 0 },
+        const netSub = backend.subscribe('network-records', (snapshot) => {
+          handleNetworkSnapshot(snapshot, applyNetworkRecords)
         })
-        if (disposed)
+        await netSub.ready
+        if (disposed) {
+          netSub.unsubscribe()
           return
-        unsubNetworkSharedState = networkShared.on('updated', (snapshot) => {
-          if (snapshot && Array.isArray(snapshot.records))
-            applyNetworkRecords(snapshot.records)
-        })
+        }
+        unsubNetworkSharedState = netSub.unsubscribe
         await pullNetworkOnce().catch(() => {})
       }
       catch (error) {
@@ -359,6 +339,8 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       }
     }
     catch (error) {
+      backend?.dispose()
+      backend = undefined
       resetConnectionState()
       emitConnection('closed')
       scheduleReconnect()
@@ -371,7 +353,8 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       return
     reconnectTimer = setTimeout(() => {
       reconnectTimer = undefined
-      ready = initConnection().catch(() => {})
+      ready = initConnection()
+      ready.catch(() => {})
     }, 1500)
   }
 
@@ -391,15 +374,13 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       }
 
       case 'devtools:capabilities': {
-        // openInEditor：真实模式支持，mock 模式无后端保持 false；分页树未实现。
-        // inspect：真实模式调 node 侧 get-inspect-status；mock 模式为 false（mock 无后端，tab 隐藏是预期行为）。
-        let inspect = false
-        if (!mockMode) {
-          await ensureReady()
-          inspect = !!(await callUni<{ available: boolean }>('get-inspect-status').catch(() => ({ available: false })))?.available
-        }
+        // openInEditor / inspect 由数据源声明（mock 后端两者皆 false，官方 UI
+        // 据此自动隐藏入口）；分页树未实现。
+        await ensureReady()
+        const source = backend
+        const inspect = !!(await callUni<{ available: boolean }>('get-inspect-status').catch(() => ({ available: false })))?.available
         return {
-          openInEditor: !mockMode,
+          openInEditor: source?.capabilities.openInEditor ?? false,
           pagedComponentTree: false,
           inspect,
         }
@@ -432,9 +413,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         const { inspectorId, filter } = (request.payload ?? {}) as { inspectorId?: string, filter?: string }
         if (inspectorId !== 'pinia')
           return { inspectorId: inspectorId ?? '', rootNodes: [] }
-        const res = mockMode
-          ? mockPiniaStores()
-          : await callUni<GetPiniaStoresResult>('get-pinia-stores')
+        const res = await callUni<GetPiniaStoresResult>('get-pinia-stores')
         // 官方 pinia 插件语义：「🍍 Pinia (root)」与各 store 平级（stores =
         // [pinia, ..._s.values()]，非父子嵌套）；store 节点无标签；过滤同时匹配
         // 根标签与 store id
@@ -456,25 +435,16 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
           return undefined
         // 聚合根：逐 store 拉取后按官方 _root 语义组装
         if (nodeId === PINIA_ROOT_ID) {
-          const res = mockMode
-            ? mockPiniaStores()
-            : await callUni<GetPiniaStoresResult>('get-pinia-stores')
+          const res = await callUni<GetPiniaStoresResult>('get-pinia-stores')
           const states: PiniaStateResult[] = []
-          for (const store of res?.stores ?? []) {
-            states.push(
-              mockMode
-                ? mockPiniaState(store.id)
-                : await callUni<PiniaStateResult>('get-pinia-state', { id: store.id }),
-            )
-          }
+          for (const store of res?.stores ?? [])
+            states.push(await callUni<PiniaStateResult>('get-pinia-state', { id: store.id }))
           return toPiniaRootSnapshot(states, inspectorVersionByNode.get(nodeId) ?? 0)
         }
         if (!nodeId?.startsWith('store:'))
           return undefined
         const storeId = nodeId.slice('store:'.length)
-        const state = mockMode
-          ? mockPiniaState(storeId)
-          : await callUni<PiniaStateResult>('get-pinia-state', { id: storeId })
+        const state = await callUni<PiniaStateResult>('get-pinia-state', { id: storeId })
         return toPiniaStateSnapshot(state, inspectorVersionByNode.get(nodeId) ?? 0)
       }
 
@@ -492,15 +462,11 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       case 'components:stateSnapshot': {
         await ensureReady()
         const { componentId } = request.payload as { componentId: string }
-        const state = mockMode
-          ? mockComponentState(componentId)
-          : await callUni<ComponentStateResult>('get-component-state', { id: componentId })
+        const state = await callUni<ComponentStateResult>('get-component-state', { id: componentId })
         return toStateSnapshot(state, stateVersionByComponent.get(componentId) ?? 0)
       }
 
       case 'router:snapshot': {
-        if (mockMode)
-          return mockRouterSnapshot()
         await ensureReady()
         let registeredRoutes: RouterRouteRecordSnapshot[] = []
         try {
@@ -557,22 +523,18 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       }
 
       case 'router:matchedRoutes': {
+        await ensureReady()
         const payload = request.payload as { path?: string }
         const inputPath = payload?.path || ''
         let allRoutes: RouterRouteRecordSnapshot[] = []
-        if (mockMode) {
-          allRoutes = mockRouterSnapshot().routes
+        try {
+          const res = await callUni<GetRegisteredRoutesResult>('get-registered-routes')
+          if (Array.isArray(res?.routes) && res.routes.length > 0)
+            allRoutes = res.routes
         }
-        else {
-          try {
-            const res = await callUni<GetRegisteredRoutesResult>('get-registered-routes')
-            if (Array.isArray(res?.routes) && res.routes.length > 0)
-              allRoutes = res.routes
-          }
-          catch {}
-          if (allRoutes.length === 0)
-            allRoutes = flat.apps.map(app => ({ path: `/${app.id}`, name: app.id }))
-        }
+        catch {}
+        if (allRoutes.length === 0)
+          allRoutes = flat.apps.map(app => ({ path: `/${app.id}`, name: app.id }))
 
         const matched = allRoutes.filter((r) => {
           if (!inputPath || inputPath === '/')
@@ -596,9 +558,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         const { componentId } = (request.payload ?? {}) as { componentId?: string }
         if (!componentId)
           return undefined
-        if (mockMode)
-          return mockGetComponentRenderCode(componentId)
-        // 探针侧失败如实回落 undefined（官方语义：无 render 可展示）
+        // 探针侧失败如实回落 undefined（官方语义：无 render 可展示）；mock 未知 id 同样返回 undefined
         const res = await callUni<GetComponentRenderCodeResult>('get-component-render-code', { id: componentId }).catch(() => undefined)
         return res?.code
       }
@@ -627,13 +587,10 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         if (path.length === 0)
           return { status: 0, error: '缺少编辑路径' }
         // 深路径全量透传探针（section/path/remove 官方语义，探针侧逐段解 ref 下钻）；
-        // mock 数据是平铺顶层键，深路径在 mock 下如实报不支持
-        if (mockMode) {
-          if (path.length !== 1 || payload.remove)
-            return { status: 0, error: NOT_SUPPORTED('mock 平铺数据的嵌套路径/删除') }
-          mockUpdateComponentState({ id: payload.componentId, key: path[0]!, value: payload.value })
-        }
-        else {
+        // mock 数据是平铺顶层键，深路径在 mock 后端内如实报不支持。
+        // 错误统一转 { status: 0 }（kit runtime 不捕获 handler 抛错，面板
+        // mutateComponentState 只对 resolve 的 status:0 亮错误横幅，见方案 §5.1）。
+        try {
           await callUni('update-component-state', {
             id: payload.componentId,
             section: payload.sectionId,
@@ -641,6 +598,9 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
             value: payload.value,
             remove: payload.remove,
           })
+        }
+        catch (error) {
+          return { status: 0, error: error instanceof Error ? error.message : String(error) }
         }
         // 官方刷新语义：带递增 version 的失效事件 → 检查器重拉（防陈旧覆盖）。
         // version 按组件计数；appId 必填（事件入口按 appId+componentId 双重校验）。
@@ -658,7 +618,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       }
 
       case 'components:addState':
-        return { status: 0, error: NOT_SUPPORTED('新增状态键') }
+        return { status: 0, error: probeNotSupported('新增状态键') }
 
       case 'inspectors:editState': {
         await ensureReady()
@@ -666,7 +626,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
           inspectorId?: string, nodeId?: string, sectionId?: string, path?: string[], value?: unknown, remove?: boolean
         }
         if (payload.inspectorId !== 'pinia')
-          return { status: 0, error: NOT_SUPPORTED('该 inspector 的状态编辑') }
+          return { status: 0, error: probeNotSupported('该 inspector 的状态编辑') }
         // 聚合根编辑（官方插件 `path.unshift('state')` 的逆向）：面板 path 已去
         // sectionId，形如 [storeId, key, ...嵌套]，翻译回目标 store 的键路径
         let storeId: string
@@ -681,21 +641,13 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
           storeId = payload.nodeId.slice('store:'.length)
         }
         else {
-          return { status: 0, error: NOT_SUPPORTED('该 inspector 的状态编辑') }
+          return { status: 0, error: probeNotSupported('该 inspector 的状态编辑') }
         }
         if (path.length === 0)
           return { status: 0, error: '缺少编辑路径' }
-        if (mockMode) {
-          if (path.length !== 1 || payload.remove)
-            return { status: 0, error: NOT_SUPPORTED('mock 平铺数据的嵌套路径/删除') }
-          try {
-            mockUpdatePiniaState({ id: storeId, key: path[0]!, value: payload.value })
-          }
-          catch (error) {
-            return { status: 0, error: error instanceof Error ? error.message : String(error) }
-          }
-        }
-        else {
+        // 错误统一转 { status: 0 }（同 components:editState，探针/mock 的
+        // "键不存在"抛错都在这里落为面板可见的错误文案）
+        try {
           await callUni('update-pinia-state', {
             id: storeId,
             key: path[0]!,
@@ -703,6 +655,9 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
             value: payload.value,
             remove: payload.remove,
           })
+        }
+        catch (error) {
+          return { status: 0, error: error instanceof Error ? error.message : String(error) }
         }
         // 官方刷新语义：inspector 以 nodeId 为维度递增 version（聚合根编辑按
         // 发起视图的 nodeId 失效——当前选中即根视图，刷新它）
@@ -728,8 +683,6 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         return { status: 1 }
 
       case 'components:openInEditor': {
-        if (mockMode)
-          return { status: 0, error: NOT_SUPPORTED('mock 模式不支持在编辑器中打开') }
         await ensureReady()
         const payload = request.payload as { file?: string }
         if (!payload?.file)
@@ -744,8 +697,6 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       }
 
       case 'router:navigate': {
-        if (mockMode)
-          return { status: 1 }
         await ensureReady()
         const payload = request.payload as { path?: string }
         if (!payload?.path)
@@ -769,13 +720,11 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         if (!payload?.componentId)
           return { status: 0, error: '缺少 componentId' }
         try {
-          if (!mockMode) {
-            await callUni('recompute-component-state', {
-              id: payload.componentId,
-              section: payload.sectionId,
-              path: payload.path,
-            })
-          }
+          await callUni('recompute-component-state', {
+            id: payload.componentId,
+            section: payload.sectionId,
+            path: payload.path,
+          })
           const componentId = payload.componentId
           const version = (stateVersionByComponent.get(componentId) ?? 0) + 1
           stateVersionByComponent.set(componentId, version)
@@ -794,7 +743,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       }
 
       case 'values:customAction':
-        return { status: 0, error: NOT_SUPPORTED('自定义值动作') }
+        return { status: 0, error: probeNotSupported('自定义值动作') }
 
       default:
         // highlight / scrollTo / inspectDom / expandTreeNode / timeline:* / inspectors:* 等
@@ -803,8 +752,7 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
     }
   }
 
-  if (!mockMode)
-    void ensureReady().catch(() => {})
+  void ensureReady().catch(() => {})
 
   const query = async (request: QueryRequest) => handleQuery(request)
   const command = async (request: CommandRequest) => handleCommand(request)
@@ -833,10 +781,6 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
         clearTimeout(reconnectTimer)
         reconnectTimer = undefined
       }
-      if (mockTickTimer) {
-        clearInterval(mockTickTimer)
-        mockTickTimer = undefined
-      }
       unsubSharedState?.()
       unsubSharedState = undefined
       unsubNetworkSharedState?.()
@@ -845,8 +789,8 @@ export function connectUniRpcClient(): DevtoolsRpcClient {
       if (activeUniNetwork === uniNetwork)
         activeUniNetwork = undefined
       resetConnectionState()
-      client?.close?.()
-      client = undefined
+      backend?.dispose()
+      backend = undefined
       eventHandlers.clear()
       connectionHandlers.clear()
     },

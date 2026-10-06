@@ -1,4 +1,4 @@
-import type { ComponentStateEntry, ComponentStateResult } from '@uni-helper/devtools-devframe/types'
+import type { ComponentStateEntry, ComponentStateResult } from '@uni-helper/devtools-shared'
 import type { ComponentStateSnapshotMessage, EncodedValue, StateEntry } from '@vue/devtools-kit'
 import { encodeValue } from '@vue/devtools-kit'
 
@@ -23,7 +23,10 @@ export function toStateEntry(
   }
 
   let editable: boolean
-  if (typeof entry.editable === 'boolean') {
+  if (entry.readonly === true) {
+    editable = false
+  }
+  else if (typeof entry.editable === 'boolean') {
     editable = entry.editable
   }
   else if (sectionId === 'props' || sectionId === 'data' || sectionId === 'state') {

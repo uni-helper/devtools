@@ -1,4 +1,4 @@
-import type { ComponentTreeResult } from '@uni-helper/devtools-devframe/types'
+import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
 import type { AppSnapshot, ComponentTreeNodeSnapshot, ComponentTreePatch } from '@vue/devtools-kit'
 
 export interface FlatTree {

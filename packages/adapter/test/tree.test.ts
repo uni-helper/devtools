@@ -1,7 +1,64 @@
-import type { ComponentTreeResult } from '@uni-helper/devtools-devframe/types'
+import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
 import type { AppSnapshot, ComponentTreeNodeSnapshot } from '@vue/devtools-kit'
-import { describe, expect, it } from 'vitest'
-import { appIdOf, buildFlatTree, computeTreeDiff, sameAppSet } from '../../src/adapter/mapping/tree'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { appIdOf, buildFlatTree, computeTreeDiff, sameAppSet } from '../src/mapping/tree.ts'
+import { connectUniRpcClient } from '../src/uni-devtools-rpc.ts'
+
+type ConnectionStatusListener = (status: string) => void
+
+let mockSocketStatus = 'connecting'
+const statusListeners = new Set<ConnectionStatusListener>()
+const callUniMock = vi.fn(async (method: string) => {
+  if (mockSocketStatus !== 'connected') {
+    throw new Error('RPC not connected')
+  }
+  if (method === 'get-component-tree') {
+    return {
+      fetchedAt: 1000,
+      vueVersion: '3.5.13',
+      pages: [
+        {
+          route: 'pages/index/index',
+          components: {
+            id: 'pages/index/index#1',
+            name: 'IndexPage',
+            type: 'page',
+            children: [],
+          },
+        },
+      ],
+    }
+  }
+  return {}
+})
+
+const mockDevframeClient = {
+  get status() {
+    return mockSocketStatus
+  },
+  events: {
+    on: vi.fn((event: string, handler: ConnectionStatusListener) => {
+      if (event === 'connection:status') {
+        statusListeners.add(handler)
+        return () => statusListeners.delete(handler)
+      }
+      return () => {}
+    }),
+  },
+  scope: vi.fn(() => ({
+    rpc: {
+      call: callUniMock,
+      sharedState: vi.fn(async () => ({
+        on: vi.fn(() => () => {}),
+      })),
+    },
+  })),
+  close: vi.fn(),
+}
+
+vi.mock('devframe/client', () => ({
+  connectDevframe: vi.fn(async () => mockDevframeClient),
+}))
 
 type PageTree = ComponentTreeResult['pages'][number]
 
@@ -127,3 +184,77 @@ describe('组件树增量差异', () => {
     expect(sameAppSet([appSnap('a')], [appSnap('a'), appSnap('b')])).toBe(false)
   })
 })
+
+describe('RPC 连接状态竞态与就绪时机 (connectUniRpcClient)', () => {
+  beforeEach(() => {
+    mockSocketStatus = 'connecting'
+    statusListeners.clear()
+    callUniMock.mockClear()
+  })
+
+  it('socket 处于 connecting 时不提前上报 connected，等待真正连接后才就绪', async () => {
+    const receivedStatuses: string[] = []
+    const client = connectUniRpcClient()
+    client.onConnectionChanged?.((status) => {
+      receivedStatuses.push(status)
+    })
+
+    // 连接建立前，不应过早通知 connected 状态
+    expect(receivedStatuses).not.toContain('connected')
+
+    // 发起组件树请求，此时 socket 尚未真正 connected，请求应等待而非抛出 'RPC not connected'
+    let resolved = false
+    let queryError: unknown
+    const queryPromise = client.query({ type: 'apps:snapshot' })
+      .then((res) => {
+        resolved = true
+        return res
+      })
+      .catch((err) => {
+        queryError = err
+      })
+
+    // 等待微任务与定时器执行，确认仍在等待中且没有提前报错
+    await new Promise(r => setTimeout(r, 20))
+    expect(resolved).toBe(false)
+    expect(queryError).toBeUndefined()
+
+    // 模拟底层 socket 握手成功触发 connected 事件
+    mockSocketStatus = 'connected'
+    for (const listener of statusListeners) {
+      listener('connected')
+    }
+
+    const res = await queryPromise as any
+    expect(resolved).toBe(true)
+    expect(queryError).toBeUndefined()
+    expect(receivedStatuses).toContain('connected')
+    expect(res.apps).toBeDefined()
+    expect(callUniMock).toHaveBeenCalledWith('get-component-tree')
+
+    client.dispose()
+  })
+
+  it('连接异常断开时发出 closed 状态并重置内部连接', async () => {
+    mockSocketStatus = 'connected'
+    const client = connectUniRpcClient()
+    const receivedStatuses: string[] = []
+    client.onConnectionChanged?.((status) => {
+      receivedStatuses.push(status)
+    })
+
+    // 等待初始化连接异步完成
+    await new Promise(r => setTimeout(r, 10))
+    expect(receivedStatuses).toContain('connected')
+
+    // 触发底层断开
+    mockSocketStatus = 'disconnected'
+    for (const listener of statusListeners) {
+      listener('disconnected')
+    }
+
+    expect(receivedStatuses).toContain('closed')
+    client.dispose()
+  })
+})
+

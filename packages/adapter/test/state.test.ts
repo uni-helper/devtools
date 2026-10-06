@@ -1,6 +1,6 @@
-import type { ComponentStateResult } from '@uni-helper/devtools-devframe/types'
+import type { ComponentStateResult } from '@uni-helper/devtools-shared'
 import { describe, expect, it } from 'vitest'
-import { toStateEntry, toStateSnapshot } from '../../src/adapter/mapping/state'
+import { toStateEntry, toStateSnapshot } from '../src/mapping/state.ts'
 
 describe('组件状态映射', () => {
   it('按官方分组输出 section，只保留非空分组且顺序固定', () => {

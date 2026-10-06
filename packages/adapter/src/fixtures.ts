@@ -1,5 +1,4 @@
-import type { ComponentStateResult, ComponentTreeResult, GetPiniaStoresResult, PiniaStateResult } from '@uni-helper/devtools-devframe/types'
-import type { NetworkRecord } from '../types/network'
+import type { ComponentStateResult, ComponentTreeResult, GetPiniaStoresResult, PiniaStateResult, NetworkRecord } from '@uni-helper/devtools-shared'
 
 /**
  * 面板的假数据，只在显式 mock 模式（URL 带 `?mock`）下使用。
