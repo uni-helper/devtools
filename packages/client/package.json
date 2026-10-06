@@ -6,6 +6,7 @@
   "description": "Uni DevTools 面板 SPA（官方 Vue Devtools client 移植），构建产物即 devframe clientAssets",
   "scripts": {
     "dev": "vite",
+    "stub": "vite build --watch",
     "build": "vite build",
     "typecheck": "tsc --noEmit"
   },

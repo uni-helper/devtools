@@ -26,7 +26,7 @@
   ],
   "scripts": {
     "dev": "turbo stub",
-    "play": "nodemon",
+    "play": "concurrently -n panel,mp -c cyan,green \"pnpm --filter @uni-helper/devtools-client stub\" \"nodemon\"",
     "build": "turbo build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
