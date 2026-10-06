@@ -10,6 +10,17 @@ import { structuredCloneParse } from 'devframe/utils/structured-clone'
 const STRUCTURED_CLONE_PREFIX = 's:'
 
 /**
+ * Error 的 `message` / `stack` 不可枚举，`JSON.stringify(new Error('x'))` 得到 `{}`。
+ * 探针抛的错若原样走 JSON 出口，到 relay 只剩空对象，调用方只能看到 `[object Object]`。
+ * 这里显式摊平成可序列化对象，让错误文案能穿到面板。
+ */
+function wireReplacer(_key: string, value: unknown): unknown {
+  if (value instanceof Error)
+    return { name: value.name, message: value.message }
+  return value
+}
+
+/**
  * devframe wire codec（wire-codec）：入站帧可能是严格 JSON 或
  * `s:` 前缀的 structured-clone 编码（探针函数不在服务端 definitions
  * 注册表内时，node 侧发起的请求帧会走 s: 编码），此处统一解码。
@@ -206,7 +217,7 @@ export function createUniSocketChannel(
   }
 
   function doSend(data: any) {
-    const rawData = typeof data === 'string' ? data : JSON.stringify(data)
+    const rawData = typeof data === 'string' ? data : JSON.stringify(data, wireReplacer)
     if (socketTask && typeof socketTask.send === 'function') {
       socketTask.send({
         data: rawData,

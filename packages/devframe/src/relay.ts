@@ -11,6 +11,32 @@ export type BirpcGroupResolver = BirpcGroup<any, any, false> | (() => BirpcGroup
 
 const DEFAULT_CALL_TIMEOUT = 5_000
 
+/** 「所有 agent 都没调通」的哨兵值：与合法的 undefined 返回值区分开 */
+const AGENT_CALL_MISS = Symbol('agent-call-miss')
+
+/**
+ * 取出跨进程传来的错误文案。
+ *
+ * 探针抛的 Error 经 JSON 出口被摊平成 `{ name, message }`（见 socket.ts 的 wireReplacer），
+ * 不再是 Error 实例；这里要认这种形态，否则错误文案退化成 `[object Object]`。
+ */
+function describeAgentError(err: unknown): string {
+  if (err instanceof Error)
+    return err.message
+  if (err && typeof err === 'object') {
+    const message = (err as { message?: unknown }).message
+    if (typeof message === 'string' && message)
+      return message
+    try {
+      return JSON.stringify(err)
+    }
+    catch {
+      return String(err)
+    }
+  }
+  return String(err)
+}
+
 /**
  * AgentRegistry
  *
@@ -71,29 +97,37 @@ export class AgentRegistry {
    * to discover/refresh agent handles, then retries.
    */
   async callAgent<T = any>(method: string, ...args: any[]): Promise<T> {
-    if (this.agents.size > 0) {
+    // 收集每次尝试的失败原因：agent 在线但方法本身抛错时，裸报「未连接」会把
+    // 真实错误（组件不在注册表、路径不可导航……）藏起来，调用方无法排查。
+    const failures: string[] = []
+
+    const tryAllAgents = async (): Promise<T | typeof AGENT_CALL_MISS> => {
       for (const client of this.agents.values()) {
         try {
           return (await withTimeout(client.$call(method, ...args), this.defaultTimeout)) as T
         }
-        catch {
-          // Try next agent
+        catch (err) {
+          failures.push(describeAgentError(err))
         }
       }
+      return AGENT_CALL_MISS
     }
+
+    const direct = await tryAllAgents()
+    if (direct !== AGENT_CALL_MISS)
+      return direct
 
     await this.refreshByPing()
 
-    for (const client of this.agents.values()) {
-      try {
-        return (await withTimeout(client.$call(method, ...args), this.defaultTimeout)) as T
-      }
-      catch {
-        // Try next agent
-      }
+    const afterPing = await tryAllAgents()
+    if (afterPing !== AGENT_CALL_MISS)
+      return afterPing
+
+    if (this.agents.size === 0) {
+      throw new Error('No uni-devtools agent connected. Please ensure the uni-app is running and the devtools agent is injected.')
     }
 
-    throw new Error('No uni-devtools agent connected. Please ensure the uni-app is running and the devtools agent is injected.')
+    throw new Error(`uni-devtools agent call "${method}" failed: ${failures.join(' | ')}`)
   }
 
   /**
