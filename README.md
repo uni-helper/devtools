@@ -196,7 +196,9 @@ packages/
 ├── panel/            # 官方 Vue DevTools client 移植版 SPA 面板
 │   ├── src/adapter/  # 核心协议转换桥（uni-devtools-rpc.ts 及 mapping 转换纯函数）
 │   └── src/pages/    # Components, Pinia, Pages, Graph, Network, Inspect 等页面
-playground/           # uni-app 小程序示例项目，集成全场景测试用例
+playground/
+├── vue3-vite/        # uni-app Vue3 + Vite 小程序示例项目，集成全场景测试用例
+└── vue2-webpack/     # uni-app Vue2 + webpack4 示例
 docs/                 # 核心架构与演进文档
 ```
 
@@ -229,8 +231,8 @@ pnpm --filter @uni-helper/devtools-panel build
 
 # 启动小程序示例测试（监控模式）
 pnpm play
-# 或进入 playground 独立运行：
-# cd playground && pnpm dev:mp-weixin
+# 或进入 playground/vue3-vite 独立运行：
+# cd playground/vue3-vite && pnpm dev:mp-weixin
 
 # 独立启动面板开发服务器（支持无需后端的 Mock 模式：访问 http://localhost:5173/?mock）
 pnpm --filter @uni-helper/devtools-panel dev

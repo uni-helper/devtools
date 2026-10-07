@@ -1,11 +1,8 @@
-# Spike：uni-app Vue 2（webpack）mp 构建的探针可行性
+# uni-app Vue 2（webpack）小程序示例
 
-验证「devframe 框架下支持 webpack + Vue 2」这条路线里唯一的阻塞项 **S1**，
-并为 **S2** 提供真机自检入口。
+验证与调试 uni-app Vue 2 + webpack 4 探针与构建链能力。
 
-讨论记录（R1–R3 + spike 双线取证）：`~/.seedmux/team/discussions/D-20261005-webpack-vue2/`
-
-## 结论（S1 已关闭）
+## 结论（S1 已闭环）
 
 **uni-app Vue 2 的 mp 构建保留 `__file` 与组件名，零编译期插桩（Zero-Instrument）成立。**
 
@@ -24,9 +21,9 @@ common/main.js:67            component.options.__file = "App.vue"
 写入点是 DCloud 打过补丁的 vue-loader：
 `@dcloudio/vue-cli-plugin-uni/packages/vue-loader/lib/index.js:234-237`（开发态无条件写入）。
 uni-app 自己运行时的命名兜底链（`common/vendor.js` 的 `formatComponentName`）与现有探针
-`packages/devframe/src/agent/tree.ts:116` 的 `getComponentDisplayName` 是同一套策略。
+`packages/probes/src/runtime/tree.ts:177` 的 `getComponentDisplayName` 是同一套策略。
 
-**对实现的影响**：`packages/devframe/src/instrument.ts` 整层（`__file` 注入 + 闭包绑定捕获 +
+**对实现的影响**：`packages/vite/src/instrument.ts` 整层（`__file` 注入 + 闭包绑定捕获 +
 render 钩子包装）在 Vue 2 线**全部不需要**；webpack 插件收敛为「入口注入 `initAgent()` +
 启动 sidecar」。
 
@@ -37,7 +34,7 @@ render 钩子包装）在 Vue 2 线**全部不需要**；webpack 插件收敛为
 ## 怎么跑
 
 ```bash
-cd spike/uni-vue2-webpack
+cd playground/vue2-webpack
 npm run setup            # 装依赖 + 修一处解析遮蔽
 npm run dev:mp-weixin    # 产出 dist/dev/mp-weixin
 ```
@@ -55,14 +52,13 @@ npm run dev:mp-weixin    # 产出 dist/dev/mp-weixin
 
 ### 环境要求
 
-- **node 16 / 18 / 20**（webpack 4 在 node ≥ 22 上会崩，`setup.sh` 会拦）
-- 本项目只验证了 **CLI 工程**；HBuilderX 内置构建链未验证（讨论记录里的 S4）
+- **node ≥ 20.19（或 ≥ 22.12）**，`setup.sh` 会拦。原因：`vue.config.js` 是 CJS，用 `require()`
+  加载 ESM-only 的 `@uni-helper/devtools-webpack`，依赖 node 的 `require(esm)`——它在
+  node 20.19+ / 22.12+ 默认开启。低版本报 `ERR_REQUIRE_ESM`（实测 node 20.9.0 失败）。
+- 本项目只验证了 **CLI 工程**；HBuilderX 内置构建链未验证（S4）
 
-> **实测补充（2026-10-06）**：`setup.sh` 的 node ≥ 22 拦截在当前依赖版本下**偏保守**。
-> node **22.21.1** 上 dev 与 production 构建均能成功（webpack 4 没崩）。
-> 反倒是 **node 20.9.0 会失败**——`vue.config.js` 走 CJS，而 `devframe@1.1.0` 是 ESM-only，
-> 报 `ERR_REQUIRE_ESM: require() of ES Module devframe/dist/index.mjs not supported`；
-> node ≥ 22.12 支持 `require(esm)` 才过得去。两边都撞墙时，**node 22.21.1 是目前唯一验证可用的版本**。
+> 早期版本（CJS 产物形态）在 node ≥ 22 上会崩，因此曾限制在 16/18/20；现在插件改为 ESM-only
+> 后实测 node **22.22.0** dev 构建通过，拦截条件已相应改为「必须支持 `require(esm)`」。
 
 ## 探针自检页
 
@@ -74,7 +70,7 @@ npm run dev:mp-weixin    # 产出 dist/dev/mp-weixin
 | `page.$vm 存在` | `true`（object） | ✅ S2 关闭：页面实例可拿到 Vue 实例 |
 | `vm.$options.__file` | `pages/index/index.vue` | ✅ 命名兜底可用 |
 | `vm._uid` | `1` | ✅ Vue 2 用 `_uid`（Vue 3 是 `uid`） |
-| `vm.$children 是数组` | `true`，length 2 | ✅ `tree.ts:154` 首选路径直接可用 |
+| `vm.$children 是数组` | `true`，length 2 | ✅ `tree.ts:215` 首选路径直接可用 |
 | `vm._isDestroyed` | `false` | ✅ Vue 2 用 `_isDestroyed`（Vue 3 是 `isUnmounted`） |
 | `$children[0]`（匿名组件） | `name=(空)` → `兜底名=AnonChild` | ✅ 匿名命名链路走通 |
 | `$children[1]`（具名） | `name=NamedChild` | ✅ `$options.name` 可用 |
@@ -92,7 +88,7 @@ npm run dev:mp-weixin    # 产出 dist/dev/mp-weixin
 | `internal.isUnmounted` | `vm._isDestroyed` |
 | `internal.setupState` | 无（2.6）；2.7 为 `vm._setupState` |
 
-`findChildVMs`（`tree.ts:154-174`）与 `getComponentDisplayName`（`tree.ts:116-123`）
+`findChildVMs`（`tree.ts:215-238`）与 `getComponentDisplayName`（`tree.ts:177-181`）
 **均无需改动**——前者已优先走 `vm.$children`，后者只要 `typeObj` 传 `vm.$options` 即可
 （`name → __file basename` 兜底链与 uni 运行时的 `formatComponentName` 同构）。
 
@@ -102,7 +98,7 @@ npm run dev:mp-weixin    # 产出 dist/dev/mp-weixin
 | --- | --- | --- |
 | `UNI_CLI_CONTEXT` 未设 | `ERR_INVALID_ARG_TYPE: The "path" argument must be of type string. Received undefined` | uni 自身的时序 bug：`lib/env.js:90` 调 `plugin.init()` 读该变量，却到 `:194` 才赋值。`build.sh` 显式导出。**对实现有影响**：webpack 插件若依赖用户自己跑 `uni-build`，得替他们把变量设上 |
 | core-js polyfill 注入 | **构建成功但小程序白屏**：`TypeError: Cannot read property 'prototype' of undefined` @ `vendor.js`（`$DOMException.prototype = NativeDOMException.prototype`） | `@vue/app` preset 默认 `useBuiltIns: 'usage'`，把 npm 解析到的 `core-js@3.50` 按需注入；其 DOMException polyfill 在小程序沙箱（无 `globalThis.DOMException`）直接崩。`babel.config.js` 设 `useBuiltIns: false`——小程序 JSCore 本身支持 ES2015+，不需要 polyfill。**对实现有影响**：webpack 线的模板/文档必须交代这一条 |
-| Node 版本 | node 22 下 webpack 4 崩 | 用 node 16/18/20（`setup.sh` 拦截） |
+| Node 版本 | 旧 CJS 产物形态下 node 22 会崩；ESM-only 后 node < 20.19 报 `ERR_REQUIRE_ESM` | 用 node ≥ 20.19（或 ≥ 22.12），`setup.sh` 拦截 |
 | `/tmp` 符号链接 | `getModuleId` 报 `reading 'id'`，`uniModule` 找不到 | macOS `/tmp` → `/private/tmp`：`require.resolve` 返回 realpath 而 webpack 的 `module.resource` 不是，路径比对失败。`build.sh` 用 `pwd -P` 取 realpath |
 | 缺 peer 依赖 | 依次报 `uni-cli-i18n` / `uni-i18n` / `regenerator-runtime` 缺失 | uni 未把它们声明为依赖，`package.json` 里显式列出 |
 | 模板编译 | `Export 'recyclableRender' is not defined` | `packages/vue-loader` 依赖 uni 补丁版 `@vue/component-compiler-utils@3.1.0`，被根目录 vanilla 3.3.0 遮蔽。`setup.sh` 软链修正 |
@@ -198,7 +194,7 @@ uni 自带的 `@dcloudio/vue-cli-plugin-uni/packages/mp-vue@2.6.10`（插件把 
 顶层 prop（`from`）走的是「整值 setData → 触发宿主 observer → 回流 `vm._props`」这条完整链路，
 最能验证修复是否生效。
 
-### Vue 2 线拿不到依赖图（已知差异，非本 spike 的 bug）
+### Vue 2 线拿不到依赖图（已知差异，非本示例的 bug）
 
 `getComponentState` 返回的 `reactivityGraph` 字段在 Vue 2 线上**不会出现**，原因是结构性的：
 
@@ -217,7 +213,7 @@ uni 自带的 `@dcloudio/vue-cli-plugin-uni/packages/mp-vue@2.6.10`（插件把 
 
 - **S4**：HBuilderX 工作流（无可编程 webpack 配置）未验证
 - **网络采集**（`getNetworkRecords` / `clearNetworkRecords`）：探针支持这两个 RPC，
-  但本 spike 没造 `uni.request` 场景——需要真机配好合法域名或关掉域名校验才有意义
+  但本示例没造 `uni.request` 场景——需要真机配好合法域名或关掉域名校验才有意义
 - **Vuex 采集**：Vue 2 线的 `pinia.ts` 不注册（Pinia 依赖 Vue 3 Composition API），Vuex 也没有对应实现
-- 生产构建（`NODE_ENV=production`）：`webpack.ts` 在该模式下直接跳过探针注入，
+- 生产构建（`NODE_ENV=production`）：`packages/webpack/src/index.ts:273` 在该模式下直接跳过探针注入，
   所以纯净度验证必须用 **dev 构建**（`bash scripts/build.sh`）才有意义

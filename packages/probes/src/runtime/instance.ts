@@ -10,7 +10,7 @@
  * | 所在 vnode | `internal.vnode` | `vm.$vnode` |
  * | 已销毁 | `internal.isUnmounted` | `vm._isDestroyed` |
  *
- * Vue 2 字段的可用性由真机实测确认（`spike/uni-vue2-webpack` 的「探针自检」页）。
+ * Vue 2 字段的可用性由真机实测确认（`playground/vue2-webpack` 的「探针自检」页）。
  * 这里按字段探测而非全局版本号判断，避免依赖版本字符串解析。
  *
  * 约束：纯 JSON 可序列化无关；本模块只读实例字段，不产生副作用。

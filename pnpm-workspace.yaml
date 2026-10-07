@@ -1,6 +1,5 @@
 packages:
-  - playground
+  - playground/*
   - packages/*
-  - spike/*
-  # npm 管理的独立 spike（uni-app Vue2 + webpack4 工具链，与 pnpm 工作区不兼容）
-  - '!spike/uni-vue2-webpack'
+  # npm 管理的独立示例（uni-app Vue2 + webpack4 工具链，与 pnpm 工作区不兼容）
+  - '!playground/vue2-webpack'

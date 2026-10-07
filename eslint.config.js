@@ -5,15 +5,13 @@ export default antfu(
     unocss: false,
     formatters: true,
     ignores: [
-    // uni-devtools 移植包（官方源码）不参与本仓 lint
+      // uni-devtools 移植包（官方源码）不参与本仓 lint
       'packages/client/**',
       // 协议适配器：与移植包同批从 panel 拆出，同样暂不纳入 lint
       // （启用会一次性引入存量告警，属独立决定，见批次 B-20261006-pkg-split 记录）
       'packages/adapter/**',
       // core 内的 vendored 兜底面板产物（dist 形态，非手写源码）
       'packages/core/assets/**',
-      // devframe POC 留底（结论已抽到 FINDINGS.md）
-      'spike/**',
       '**/node_modules/**',
       'playground/**',
     ],

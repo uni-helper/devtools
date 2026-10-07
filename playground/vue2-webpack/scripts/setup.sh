@@ -6,10 +6,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PROJECT_DIR="$(pwd -P)" # realpath，见 build.sh 的说明
 
-NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-if [ "$NODE_MAJOR" -ge 22 ]; then
-  echo "!! webpack 4 在 node >= 22 上会崩（Cannot read properties of undefined）" >&2
-  echo "!! 请切到 node 16 / 18 / 20 后重试，例如：nvm use 16" >&2
+# vue.config.js 是 CJS，用 require() 加载 ESM-only 的 @uni-helper/devtools-webpack，
+# 依赖 node 的 require(esm)（node 20.19+ / 22.12+ 默认开启）。低版本会报 ERR_REQUIRE_ESM。
+NODE_OK="$(node -p 'const [a, b] = process.versions.node.split(".").map(Number); (a === 20 && b >= 19) || a > 22 || (a === 22 && b >= 12) ? "yes" : "no"')"
+if [ "$NODE_OK" != "yes" ]; then
+  echo "!! 需要 node >= 20.19（或 >= 22.12）：vue.config.js 用 require() 加载 ESM-only 插件，依赖 require(esm)" >&2
+  echo "!! 当前 $(node -v)，请切换后重试，例如：nvm use 22" >&2
   exit 1
 fi
 

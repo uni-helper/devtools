@@ -3,7 +3,7 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "spike"
+        "navigationBarTitleText": "uni-vue2-webpack"
       }
     },
     {
@@ -26,6 +26,6 @@
     }
   ],
   "globalStyle": {
-    "navigationBarTitleText": "uni-vue2-spike"
+    "navigationBarTitleText": "uni-vue2-webpack"
   }
 }

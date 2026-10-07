@@ -368,7 +368,7 @@ importers:
         specifier: ^5.4.5
         version: 5.7.2
 
-  playground:
+  playground/vue3-vite:
     dependencies:
       '@dcloudio/uni-app':
         specifier: 3.0.0-4020920240930001
@@ -527,19 +527,6 @@ importers:
       vue-tsc:
         specifier: ^1.8.27
         version: 1.8.27(typescript@5.7.2)
-
-  spike/devframe-poc:
-    dependencies:
-      birpc:
-        specifier: ^4.2.0
-        version: 4.2.0
-      devframe:
-        specifier: 1.1.0
-        version: 1.1.0(@devframes/agentic@1.1.0)(cac@7.0.0)(srvx@1.0.5)
-    devDependencies:
-      esbuild:
-        specifier: ^0.20.2
-        version: 0.20.2
 
 packages:
 

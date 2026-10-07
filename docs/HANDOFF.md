@@ -2,7 +2,7 @@
 
 > **给接手者**：本文档让你在零上下文的新会话里接手本项目，读完即可继续开发。
 > 配套阅读（按优先级）：`docs/HUB_UI_SPECIFICATION.md`（设计契约）→
-> `docs/DEVFRAME_MIGRATION_PLAN.md`（架构方案）→ `spike/devframe-poc/FINDINGS.md`（POC 踩坑）。
+> `docs/DEVFRAME_MIGRATION_PLAN.md`（架构方案）。
 > 分支 `refactor/devfra`，三个批次（B-panel-0930 面板移植 / B-features-1002 功能批次 /
 > B-graph-1002 Reactivity Graph）全部工作已提交并过 CR。
 
