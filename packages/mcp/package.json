@@ -6,14 +6,12 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "default": "./dist/index.mjs"
     }
   },
   "scripts": {
-    "build": "pnpm run build:esm && pnpm run build:cjs",
-    "build:esm": "esbuild src/index.ts --bundle --platform=node --format=esm --external:devframe --external:devframe/* --outfile=dist/index.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\"",
-    "build:cjs": "esbuild src/index.ts --bundle --platform=node --format=cjs --external:devframe --external:devframe/* --define:import.meta.url=__uniImportMetaUrl --banner:js=\"const __uniImportMetaUrl = require('node:url').pathToFileURL(__filename).href;\" --outfile=dist/index.cjs"
+    "build": "pnpm run build:esm",
+    "build:esm": "esbuild src/index.ts --bundle --platform=node --format=esm --external:devframe --external:devframe/* --outfile=dist/index.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\""
   },
   "dependencies": {
     "@devframes/agentic": "1.1.0",

@@ -7,10 +7,11 @@
     "./vue3": "./src/vue3/index.ts",
     "./vue2": {
       "types": "./src/vue2/index.ts",
-      "import": "./dist/agent-vue2.mjs"
+      "default": "./dist/agent-vue2.mjs"
     },
     "./render-hook": "./src/runtime/render-hook.ts",
-    "./socket": "./src/socket/index.ts"
+    "./socket": "./src/socket/index.ts",
+    "./package.json": "./package.json"
   },
   "scripts": {
     "build": "pnpm run build:agent-vue2",
