@@ -107,8 +107,7 @@ export function createDevtoolsConnection(options: DevtoolsConnectionOptions) {
       call: async (name: string, ...args: unknown[]) => {
         if (name === 'vite:core:open-in-editor') {
           const client = getRpcClient()
-          if (!client)
-            throw new Error('Devtools RPC client is not connected')
+          if (!client) throw new Error('Devtools RPC client is not connected')
           const [file] = args
           if (typeof file !== 'string')
             throw new Error('vite:core:open-in-editor requires a file path')
@@ -117,7 +116,12 @@ export function createDevtoolsConnection(options: DevtoolsConnectionOptions) {
             payload: { file },
           })
           if (result && (result as { status?: number }).status === 0)
-            throw new Error(String((result as { error?: unknown }).error || 'Failed to open in editor'))
+            throw new Error(
+              String(
+                (result as { error?: unknown }).error ||
+                  'Failed to open in editor',
+              ),
+            )
           return result
         }
         throw new Error(`Unsupported Vite RPC: ${name}`)
@@ -135,7 +139,8 @@ export function createDevtoolsConnection(options: DevtoolsConnectionOptions) {
   }
 
   function scheduleConnectionHealthCheck() {
-    if (!started || connectionHealthTimer || rpcClient?.onConnectionChanged) return
+    if (!started || connectionHealthTimer || rpcClient?.onConnectionChanged)
+      return
     connectionHealthTimer = setTimeout(() => {
       connectionHealthTimer = undefined
       void checkConnectionHealth()
@@ -196,7 +201,10 @@ export function createDevtoolsConnection(options: DevtoolsConnectionOptions) {
     clearConnectionHealthTimer()
   }
 
-  function listenRuntimeEvents(client: DevtoolsRpcClient, handler: DevtoolsRpcEventHandler) {
+  function listenRuntimeEvents(
+    client: DevtoolsRpcClient,
+    handler: DevtoolsRpcEventHandler,
+  ) {
     eventDisposer ??= client.onEvent(handler)
   }
 

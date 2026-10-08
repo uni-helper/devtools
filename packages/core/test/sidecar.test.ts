@@ -1,20 +1,20 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { BASE, resolveAdvertisedHost, startUniDevtoolsServer } from '../src/sidecar.ts'
+import {
+  BASE,
+  resolveAdvertisedHost,
+  startUniDevtoolsServer,
+} from '../src/sidecar.ts'
 
 describe('sidecar: sidecar 启动收敛与参数解析', () => {
   const originalHost = process.env.UNI_DEVTOOLS_HOST
   const originalPort = process.env.UNI_DEVTOOLS_PORT
 
   afterEach(() => {
-    if (originalHost !== undefined)
-      process.env.UNI_DEVTOOLS_HOST = originalHost
-    else
-      delete process.env.UNI_DEVTOOLS_HOST
+    if (originalHost !== undefined) process.env.UNI_DEVTOOLS_HOST = originalHost
+    else delete process.env.UNI_DEVTOOLS_HOST
 
-    if (originalPort !== undefined)
-      process.env.UNI_DEVTOOLS_PORT = originalPort
-    else
-      delete process.env.UNI_DEVTOOLS_PORT
+    if (originalPort !== undefined) process.env.UNI_DEVTOOLS_PORT = originalPort
+    else delete process.env.UNI_DEVTOOLS_PORT
   })
 
   it('导出的 BASE 常量符合规范', () => {
@@ -58,7 +58,6 @@ describe('sidecar: sidecar 启动收敛与参数解析', () => {
     expect(startedInfo.wsUrl).toBe(result?.wsUrl)
     expect(startedInfo.panelUrl).toBe(result?.panelUrl)
 
-    if (server.close)
-      await server.close()
+    if (server.close) await server.close()
   })
 })

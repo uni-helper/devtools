@@ -26,20 +26,37 @@ import {
 import { select } from 'd3-selection'
 import { type ZoomBehavior, zoom, zoomIdentity } from 'd3-zoom'
 
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch, toRef } from 'vue'
-import { TYPE_LEGEND_TYPES, typeColor, nodeTypeLabel } from '../../utils/reactivity-graph-display'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+  watch,
+  toRef,
+} from 'vue'
+import {
+  TYPE_LEGEND_TYPES,
+  typeColor,
+  nodeTypeLabel,
+} from '../../utils/reactivity-graph-display'
 const props = defineProps<{
   graph: ReactivityGraphSnapshot
   path?: RelationshipPathResult
   pathSelectorOpen: boolean
 }>()
 const selectedNodeId = defineModel<string>('selectedNodeId')
-const dependencyDepth = defineModel<number>('dependencyDepth', { required: true })
+const dependencyDepth = defineModel<number>('dependencyDepth', {
+  required: true,
+})
 const emit = defineEmits<{ select: [nodeId: string] }>()
 const filteredGraph = toRef(props, 'graph')
 const pathSelectorOpen = toRef(props, 'pathSelectorOpen')
 const pathModeActive = computed(() => !!props.path)
-const selectedRelationshipPath = computed(() => props.path ?? emptyRelationshipPath())
+const selectedRelationshipPath = computed(
+  () => props.path ?? emptyRelationshipPath(),
+)
 function selectGraphNode(nodeId: string) {
   emit('select', nodeId)
 }
@@ -98,7 +115,9 @@ const tick = ref(0)
 const forceNodes = shallowRef<ForceNode[]>([])
 
 const forceLinks = shallowRef<ForceLink[]>([])
-const nodeById = computed(() => new Map(forceNodes.value.map((node) => [node.id, node])))
+const nodeById = computed(
+  () => new Map(forceNodes.value.map((node) => [node.id, node])),
+)
 
 const graphGroups = shallowRef<GraphGroup[]>([])
 
@@ -112,9 +131,14 @@ let draggedNodeId: string | undefined
 
 const graphSignature = computed(() =>
   [
-    filteredGraph.value.nodes.map((node) => `${node.id}:${node.type}:${node.label}`).join('|'),
+    filteredGraph.value.nodes
+      .map((node) => `${node.id}:${node.type}:${node.label}`)
+      .join('|'),
     filteredGraph.value.relationships
-      .map((relationship) => `${relationship.id}:${relationship.from}:${relationship.to}`)
+      .map(
+        (relationship) =>
+          `${relationship.id}:${relationship.from}:${relationship.to}`,
+      )
       .join('|'),
   ].join('::'),
 )
@@ -128,13 +152,22 @@ const renderGraph = computed(() => ({
 const highlightedPathRelationships = computed(() => {
   if (!pathModeActive.value) return []
   const relationshipIds = selectedRelationshipPath.value.relationshipIds
-  return renderGraph.value.links.filter((relationship) => relationshipIds.has(relationship.id))
+  return renderGraph.value.links.filter((relationship) =>
+    relationshipIds.has(relationship.id),
+  )
 })
 
 const groupRegions = computed<GroupRegion[]>(() => {
-  const centers = buildGroupCenters(graphGroups.value, width.value, height.value)
+  const centers = buildGroupCenters(
+    graphGroups.value,
+    width.value,
+    height.value,
+  )
   return graphGroups.value.map((group) => {
-    const center = centers.get(group.id) ?? { x: width.value / 2, y: height.value / 2 }
+    const center = centers.get(group.id) ?? {
+      x: width.value / 2,
+      y: height.value / 2,
+    }
     return {
       ...group,
       color: groupColor(group.id),
@@ -146,7 +179,8 @@ const groupRegions = computed<GroupRegion[]>(() => {
 })
 
 const graphTransform = computed(
-  () => `translate(${zoomState.value.x} ${zoomState.value.y}) scale(${zoomState.value.k})`,
+  () =>
+    `translate(${zoomState.value.x} ${zoomState.value.y}) scale(${zoomState.value.k})`,
 )
 
 const zoomLabel = computed(() => `${Math.round(zoomState.value.k * 100)}%`)
@@ -174,18 +208,26 @@ const relationshipContext = computed<RelationshipContext>(() => {
     'subscribers',
     dependencyDepth.value,
   )
-  const nodeIds = new Set([selectedNodeId.value, ...dependencies.nodeIds, ...subscribers.nodeIds])
+  const nodeIds = new Set([
+    selectedNodeId.value,
+    ...dependencies.nodeIds,
+    ...subscribers.nodeIds,
+  ])
 
   return {
     dependencyNodeIds: dependencies.nodeIds,
     nodeIds,
-    relationshipIds: new Set([...dependencies.relationshipIds, ...subscribers.relationshipIds]),
+    relationshipIds: new Set([
+      ...dependencies.relationshipIds,
+      ...subscribers.relationshipIds,
+    ]),
     subscriberNodeIds: subscribers.nodeIds,
   }
 })
 
 const highlightedRelationshipIds = computed(() => {
-  if (pathModeActive.value) return selectedRelationshipPath.value.relationshipIds
+  if (pathModeActive.value)
+    return selectedRelationshipPath.value.relationshipIds
   return relationshipContext.value.relationshipIds
 })
 
@@ -217,8 +259,10 @@ function collectRelatedNodes(
     const nextFrontier = new Set<string>()
 
     for (const relationship of forceLinks.value) {
-      const sourceId = direction === 'dependencies' ? relationship.from : relationship.to
-      const targetId = direction === 'dependencies' ? relationship.to : relationship.from
+      const sourceId =
+        direction === 'dependencies' ? relationship.from : relationship.to
+      const targetId =
+        direction === 'dependencies' ? relationship.to : relationship.from
 
       if (!frontier.has(targetId)) continue
 
@@ -248,17 +292,28 @@ function adjustDependencyDepth(offset: number) {
 function restartSimulation() {
   simulation?.stop()
 
-  const forceGraph = buildForceGraph(filteredGraph.value, width.value, height.value)
+  const forceGraph = buildForceGraph(
+    filteredGraph.value,
+    width.value,
+    height.value,
+  )
   forceNodes.value = forceGraph.nodes
   forceLinks.value = forceGraph.links
   graphGroups.value = forceGraph.groups
   tick.value += 1
 
-  if (selectedNodeId.value && !forceGraph.nodes.some((node) => node.id === selectedNodeId.value)) {
+  if (
+    selectedNodeId.value &&
+    !forceGraph.nodes.some((node) => node.id === selectedNodeId.value)
+  ) {
     selectedNodeId.value = undefined
   }
 
-  if (!selectedNodeId.value && !pathSelectorOpen.value && !pathModeActive.value) {
+  if (
+    !selectedNodeId.value &&
+    !pathSelectorOpen.value &&
+    !pathModeActive.value
+  ) {
     selectedNodeId.value = pickDefaultNode(forceGraph.nodes)?.id
   }
 
@@ -267,7 +322,11 @@ function restartSimulation() {
     return
   }
 
-  const centers = buildGroupCenters(forceGraph.groups, width.value, height.value)
+  const centers = buildGroupCenters(
+    forceGraph.groups,
+    width.value,
+    height.value,
+  )
   simulation = forceSimulation<ForceNode, ForceLink>(forceGraph.nodes)
     .force(
       'link',
@@ -282,15 +341,21 @@ function restartSimulation() {
     )
     .force(
       'collide',
-      forceCollide<ForceNode>().radius((node) => node.radius + labelCollisionRadius(node)),
+      forceCollide<ForceNode>().radius(
+        (node) => node.radius + labelCollisionRadius(node),
+      ),
     )
     .force(
       'x',
-      forceX<ForceNode>((node) => centers.get(node.group)?.x ?? width.value / 2).strength(0.085),
+      forceX<ForceNode>(
+        (node) => centers.get(node.group)?.x ?? width.value / 2,
+      ).strength(0.085),
     )
     .force(
       'y',
-      forceY<ForceNode>((node) => centers.get(node.group)?.y ?? height.value / 2).strength(0.085),
+      forceY<ForceNode>(
+        (node) => centers.get(node.group)?.y ?? height.value / 2,
+      ).strength(0.085),
     )
     .alpha(0.95)
     .alphaDecay(0.022)
@@ -305,7 +370,9 @@ function refreshContextForces() {
   simulation
     .force(
       'collide',
-      forceCollide<ForceNode>().radius((node) => node.radius + labelCollisionRadius(node)),
+      forceCollide<ForceNode>().radius(
+        (node) => node.radius + labelCollisionRadius(node),
+      ),
     )
     .alpha(0.32)
     .restart()
@@ -318,7 +385,8 @@ function attachZoom() {
     .scaleExtent([0.32, 2.6])
     .filter((event) => {
       const target = event.target as Element | null
-      if (event.type === 'mousedown' && target?.closest('[data-graph-node]')) return false
+      if (event.type === 'mousedown' && target?.closest('[data-graph-node]'))
+        return false
       return (!event.ctrlKey || event.type === 'wheel') && !event.button
     })
     .on('zoom', (event) => {
@@ -346,7 +414,13 @@ function fitGraph() {
   const boundsHeight = Math.max(1, bounds.maxY - bounds.minY)
   const scale = Math.min(
     1.45,
-    Math.max(0.42, Math.min((width.value - 96) / boundsWidth, (height.value - 96) / boundsHeight)),
+    Math.max(
+      0.42,
+      Math.min(
+        (width.value - 96) / boundsWidth,
+        (height.value - 96) / boundsHeight,
+      ),
+    ),
   )
   const centerX = (bounds.minX + bounds.maxX) / 2
   const centerY = (bounds.minY + bounds.maxY) / 2
@@ -422,7 +496,9 @@ function getGraphPoint(event: PointerEvent) {
   point.x = event.clientX
   point.y = event.clientY
   const screenMatrix = svg.value.getScreenCTM()
-  const svgPoint = screenMatrix ? point.matrixTransform(screenMatrix.inverse()) : point
+  const svgPoint = screenMatrix
+    ? point.matrixTransform(screenMatrix.inverse())
+    : point
   return {
     x: (svgPoint.x - zoomState.value.x) / zoomState.value.k,
     y: (svgPoint.y - zoomState.value.y) / zoomState.value.k,
@@ -490,8 +566,12 @@ function linkEndpoint(link: ForceLink, endpoint: 'source' | 'target') {
 }
 
 function isRelationshipHighlighted(relationship: ForceLink) {
-  if (pathModeActive.value) return highlightedRelationshipIds.value.has(relationship.id)
-  return !selectedNodeId.value || highlightedRelationshipIds.value.has(relationship.id)
+  if (pathModeActive.value)
+    return highlightedRelationshipIds.value.has(relationship.id)
+  return (
+    !selectedNodeId.value ||
+    highlightedRelationshipIds.value.has(relationship.id)
+  )
 }
 
 function isNodeHighlighted(node: ForceNode) {
@@ -524,7 +604,9 @@ function labelX(node: ForceNode) {
 }
 
 function labelAnchorX(node: ForceNode) {
-  return labelSide(node) === 'left' ? labelX(node) + node.labelWidth - 10 : labelX(node) + 10
+  return labelSide(node) === 'left'
+    ? labelX(node) + node.labelWidth - 10
+    : labelX(node) + 10
 }
 
 function labelTextAnchor(node: ForceNode) {
@@ -532,13 +614,19 @@ function labelTextAnchor(node: ForceNode) {
 }
 
 function pickDefaultNode(nodes: ForceNode[]) {
-  return [...nodes].sort((a, b) => defaultNodeScore(b) - defaultNodeScore(a)).at(0)
+  return [...nodes]
+    .sort((a, b) => defaultNodeScore(b) - defaultNodeScore(a))
+    .at(0)
 }
 
 function defaultNodeScore(node: ForceNode) {
   const bridgeScore = Math.min(node.incoming, node.outgoing) * 2
   const typeScore =
-    node.type === 'computed' ? 2 : node.type === 'watch' || node.type === 'effect' ? 1 : 0
+    node.type === 'computed'
+      ? 2
+      : node.type === 'watch' || node.type === 'effect'
+        ? 1
+        : 0
   return node.incoming + node.outgoing + bridgeScore + typeScore
 }
 
@@ -548,26 +636,33 @@ function groupColor(group: number) {
 
 function edgeColor(relationship: ForceLink) {
   if (pathModeActive.value) {
-    return isRelationshipHighlighted(relationship) ? groupColor(relationship.group) : '#888888'
+    return isRelationshipHighlighted(relationship)
+      ? groupColor(relationship.group)
+      : '#888888'
   }
   if (!selectedNodeId.value) return groupColor(relationship.group)
-  return isRelationshipHighlighted(relationship) ? groupColor(relationship.group) : '#888888'
+  return isRelationshipHighlighted(relationship)
+    ? groupColor(relationship.group)
+    : '#888888'
 }
 
 function edgeOpacity(relationship: ForceLink) {
-  if (pathModeActive.value) return isRelationshipHighlighted(relationship) ? 0.9 : 0.08
+  if (pathModeActive.value)
+    return isRelationshipHighlighted(relationship) ? 0.9 : 0.08
   if (!selectedNodeId.value) return 0.42
   return isRelationshipHighlighted(relationship) ? 0.72 : 0.12
 }
 
 function edgeWidth(relationship: ForceLink) {
-  if (pathModeActive.value) return isRelationshipHighlighted(relationship) ? 2.8 : 1
+  if (pathModeActive.value)
+    return isRelationshipHighlighted(relationship) ? 2.8 : 1
   return isRelationshipHighlighted(relationship) ? 1.8 : 1.1
 }
 
 function edgeMarkerUrl(relationship: ForceLink) {
   const markerId =
-    (selectedNodeId.value || pathModeActive.value) && !isRelationshipHighlighted(relationship)
+    (selectedNodeId.value || pathModeActive.value) &&
+    !isRelationshipHighlighted(relationship)
       ? 'reactivity-arrow-muted'
       : `reactivity-arrow-${relationship.group % GROUP_COLORS.length}`
   return `url(#${markerId})`
@@ -666,7 +761,11 @@ onUnmounted(() => {
           refY="0"
           viewBox="0 -5 10 10"
         >
-          <path d="M 0 -4 L 9 0 L 0 4 z" :fill="groupColor(index)" opacity="0.82" />
+          <path
+            d="M 0 -4 L 9 0 L 0 4 z"
+            :fill="groupColor(index)"
+            opacity="0.82"
+          />
         </marker>
       </defs>
 
@@ -677,10 +776,14 @@ onUnmounted(() => {
           :cx="group.x"
           :cy="group.y"
           :fill="group.color"
-          :fill-opacity="selectedGroup && selectedGroup.id !== group.id ? 0.025 : 0.07"
+          :fill-opacity="
+            selectedGroup && selectedGroup.id !== group.id ? 0.025 : 0.07
+          "
           :r="group.radius"
           :stroke="group.color"
-          :stroke-opacity="selectedGroup && selectedGroup.id !== group.id ? 0.08 : 0.18"
+          :stroke-opacity="
+            selectedGroup && selectedGroup.id !== group.id ? 0.08 : 0.18
+          "
           stroke-dasharray="5 6"
           stroke-width="1"
         />
@@ -773,7 +876,9 @@ onUnmounted(() => {
               {{ nodeTypeLabel(node.type) }}
             </text>
           </g>
-          <title>{{ displayNodeLabel(node) }} - {{ nodeTypeLabel(node.type) }}</title>
+          <title>
+            {{ displayNodeLabel(node) }} - {{ nodeTypeLabel(node.type) }}
+          </title>
         </g>
       </g>
     </svg>
@@ -786,7 +891,10 @@ onUnmounted(() => {
         :key="type"
         class="font-state-field min-w-23 flex items-center gap-1.5 color-base text-3.5"
       >
-        <span class="h-2.3 w-2.3 shrink-0 rounded-full" :style="{ background: typeColor(type) }" />
+        <span
+          class="h-2.3 w-2.3 shrink-0 rounded-full"
+          :style="{ background: typeColor(type) }"
+        />
         <span class="truncate">{{ nodeTypeLabel(type) }}</span>
       </div>
     </div>

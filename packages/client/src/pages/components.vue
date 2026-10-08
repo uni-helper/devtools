@@ -65,7 +65,9 @@ let restoredSelectionScope = ''
 
 const componentRoutePath = computed(
   () =>
-    routerSnapshot.value.currentRoute?.path ?? routerSnapshot.value.currentRoute?.fullPath ?? '/',
+    routerSnapshot.value.currentRoute?.path ??
+    routerSnapshot.value.currentRoute?.fullPath ??
+    '/',
 )
 const componentSelectionScope = computed(
   () =>
@@ -93,7 +95,9 @@ const selectedComponentNode = computed(() =>
 const componentTreeActions = computed<ComponentPageAction[]>(() => [
   {
     icon:
-      filterComponentName.value.trim() === 'is:favorite' ? 'i-carbon-star-filled' : 'i-carbon-star',
+      filterComponentName.value.trim() === 'is:favorite'
+        ? 'i-carbon-star-filled'
+        : 'i-carbon-star',
     tooltip:
       filterComponentName.value.trim() === 'is:favorite'
         ? 'Show all components'
@@ -123,7 +127,9 @@ watch(
     if (!app || !nodes.length) return
     const appScope = `${app.id}:${app.name}`
     const scope = `${appScope}:${routePath}`
-    const selectedExists = nodes.some((component) => component.id === selectedComponentId.value)
+    const selectedExists = nodes.some(
+      (component) => component.id === selectedComponentId.value,
+    )
     if (scope === restoredSelectionScope && selectedExists) return
 
     favoriteComponentKeys.value = readFavoriteComponentKeys(appScope)
@@ -132,7 +138,8 @@ watch(
       readStoredComponentSelection(appScope, routePath),
     )
     restoredSelectionScope = scope
-    if (preferred && preferred.id !== selectedComponentId.value) setSelectedComponent(preferred.id)
+    if (preferred && preferred.id !== selectedComponentId.value)
+      setSelectedComponent(preferred.id)
   },
   { immediate: true },
 )
@@ -208,14 +215,21 @@ function toggleComponentFavorite(componentId: string) {
   const app = selectedApp.value
   const component = components.value.find((item) => item.id === componentId)
   if (!app || !component) return
-  favoriteComponentKeys.value = toggleFavoriteComponent(`${app.id}:${app.name}`, component)
+  favoriteComponentKeys.value = toggleFavoriteComponent(
+    `${app.id}:${app.name}`,
+    component,
+  )
 }
 
 function persistSelectedComponent(componentId: string) {
   const app = selectedApp.value
   const component = components.value.find((item) => item.id === componentId)
   if (!app || !component) return
-  persistComponentSelection(`${app.id}:${app.name}`, componentRoutePath.value, component)
+  persistComponentSelection(
+    `${app.id}:${app.name}`,
+    componentRoutePath.value,
+    component,
+  )
 }
 
 async function scrollToComponent() {
@@ -294,7 +308,12 @@ onUnmounted(() => {
 <template>
   <section ref="container" class="h-full min-h-0">
     <Splitpanes class="h-full min-h-0 overflow-hidden" :horizontal="horizontal">
-      <Pane v-if="apps.length > 1" class="h-full min-h-0" min-size="12" size="18">
+      <Pane
+        v-if="apps.length > 1"
+        class="h-full min-h-0"
+        min-size="12"
+        size="18"
+      >
         <AppList />
       </Pane>
 

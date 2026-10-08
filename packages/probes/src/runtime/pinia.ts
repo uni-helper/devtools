@@ -52,11 +52,12 @@ export function findPinia(): any | undefined {
     const app = typeof getApp === 'function' ? getApp() : undefined
     const vm = app?.$vm ?? app
     const internal = vm?.$ || vm
-    return internal?.appContext?.config?.globalProperties?.$pinia
-      ?? vm?.$pinia
-      ?? undefined
-  }
-  catch {
+    return (
+      internal?.appContext?.config?.globalProperties?.$pinia ??
+      vm?.$pinia ??
+      undefined
+    )
+  } catch {
     return undefined
   }
 }
@@ -64,11 +65,9 @@ export function findPinia(): any | undefined {
 function iterateStores(cb: (store: any, id: string) => void): void {
   const pinia = findPinia()
   const storesMap = pinia?._s
-  if (!storesMap || typeof storesMap.forEach !== 'function')
-    return
+  if (!storesMap || typeof storesMap.forEach !== 'function') return
   storesMap.forEach((store: any, id: string) => {
-    if (store)
-      cb(store, id)
+    if (store) cb(store, id)
   })
 }
 
@@ -87,38 +86,35 @@ function collectGetterKeys(store: any, stateKeys: Set<string>): string[] {
   for (const key of Object.keys(store)) {
     if (key.startsWith('$') || key.startsWith('_') || stateKeys.has(key))
       continue
-    if (typeof store[key] === 'function')
-      continue
+    if (typeof store[key] === 'function') continue
     out.push(key)
   }
   return out
 }
 
 export function getPiniaState(id: string): PiniaStateResult {
-  if (!id)
-    throw new Error('[getPiniaState] Missing store id')
+  if (!id) throw new Error('[getPiniaState] Missing store id')
 
   let found: any
   iterateStores((store, storeId) => {
-    if (storeId === id)
-      found = store
+    if (storeId === id) found = store
   })
   if (!found)
-    throw new Error(`[getPiniaState] Store "${id}" not found (registered stores may not be created yet)`)
+    throw new Error(
+      `[getPiniaState] Store "${id}" not found (registered stores may not be created yet)`,
+    )
 
   const state: Record<string, unknown> = {}
   const rawState = found.$state ?? {}
   const stateKeys = new Set(Object.keys(rawState))
   for (const key of stateKeys) {
-    if (key.startsWith('_') || key.startsWith('$'))
-      continue
+    if (key.startsWith('_') || key.startsWith('$')) continue
     try {
       // 防御性解 ref：真实 pinia 的 $state 经 reactive 代理天然解包，这里兜住
       // 非常规形态（如裸 ref 集合）
       const val = rawState[key]
       state[key] = toSafeJsonValue(checkIsRef(val) ? val.value : val)
-    }
-    catch {
+    } catch {
       state[key] = '<unserializable>'
     }
   }
@@ -127,11 +123,9 @@ export function getPiniaState(id: string): PiniaStateResult {
   for (const key of collectGetterKeys(found, stateKeys)) {
     try {
       const val = found[key]
-      if (typeof val === 'function')
-        continue
+      if (typeof val === 'function') continue
       getters[key] = toSafeJsonValue(checkIsRef(val) ? val.value : val)
-    }
-    catch {
+    } catch {
       getters[key] = '<unserializable>'
     }
   }
@@ -143,41 +137,43 @@ export function getPiniaState(id: string): PiniaStateResult {
  * 修改 store 状态：优先 $state 定位（保持响应式代理），ref 解包后深路径赋值。
  * store 是 reactive 实例，属性赋值即触发订阅者与视图更新。
  */
-export function updatePiniaState(params: UpdatePiniaStateParams): UpdatePiniaStateResult {
+export function updatePiniaState(
+  params: UpdatePiniaStateParams,
+): UpdatePiniaStateResult {
   const { id, remove } = params || {}
-  const path = Array.isArray(params?.path) && params.path.length > 0
-    ? params.path.map(String)
-    : params?.key
-      ? [String(params.key)]
-      : []
+  const path =
+    Array.isArray(params?.path) && params.path.length > 0
+      ? params.path.map(String)
+      : params?.key
+        ? [String(params.key)]
+        : []
   const value = params?.value
 
-  if (!id)
-    throw new Error('[updatePiniaState] Missing store id')
-  if (path.length === 0)
-    throw new Error('[updatePiniaState] Missing state key')
+  if (!id) throw new Error('[updatePiniaState] Missing store id')
+  if (path.length === 0) throw new Error('[updatePiniaState] Missing state key')
 
   let found: any
   iterateStores((store, storeId) => {
-    if (storeId === id)
-      found = store
+    if (storeId === id) found = store
   })
-  if (!found)
-    throw new Error(`[updatePiniaState] Store "${id}" not found`)
+  if (!found) throw new Error(`[updatePiniaState] Store "${id}" not found`)
 
   const key = path[0]!
   const target = found.$state ?? found
 
   if (!(key in target))
-    throw new Error(`[updatePiniaState] Key "${key}" not found on store "${id}"`)
+    throw new Error(
+      `[updatePiniaState] Key "${key}" not found on store "${id}"`,
+    )
 
   let parent = target
   for (let i = 0; i < path.length - 1; i++) {
     let cur = parent[path[i]!]
-    if (checkIsRef(cur))
-      cur = cur.value
+    if (checkIsRef(cur)) cur = cur.value
     if (cur === null || typeof cur !== 'object')
-      throw new Error(`[updatePiniaState] Path "${path.slice(0, i + 1).join('.')}" is not navigable on store "${id}"`)
+      throw new Error(
+        `[updatePiniaState] Path "${path.slice(0, i + 1).join('.')}" is not navigable on store "${id}"`,
+      )
     parent = cur
   }
   const last = path[path.length - 1]!
@@ -185,19 +181,17 @@ export function updatePiniaState(params: UpdatePiniaStateParams): UpdatePiniaSta
   const current = parent[last]
   if (checkIsRef(current)) {
     if (remove)
-      throw new Error(`[updatePiniaState] Cannot remove ref key "${key}" on store "${id}"`)
+      throw new Error(
+        `[updatePiniaState] Cannot remove ref key "${key}" on store "${id}"`,
+      )
     current.value = value
-  }
-  else if (remove) {
+  } else if (remove) {
     if (Array.isArray(parent) && /^\d+$/.test(last))
       parent.splice(Number(last), 1)
-    else
-      delete parent[last]
-  }
-  else if (Array.isArray(parent) && /^\d+$/.test(last)) {
+    else delete parent[last]
+  } else if (Array.isArray(parent) && /^\d+$/.test(last)) {
     parent[Number(last)] = value
-  }
-  else {
+  } else {
     parent[last] = value
   }
 

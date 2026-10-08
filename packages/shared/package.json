@@ -1,15 +1,15 @@
 {
   "name": "@uni-helper/devtools-shared",
-  "type": "module",
   "version": "0.0.1",
   "description": "Uni DevTools 跨端共享：协议类型、冻结契约常量、纯函数工具",
+  "type": "module",
   "sideEffects": false,
+  "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
     "./utils/network-merge": "./src/utils/network-merge.ts",
     "./utils/mock-flag": "./src/utils/mock-flag.ts"
   },
-  "types": "./src/index.ts",
   "scripts": {
     "test": "vitest run"
   },

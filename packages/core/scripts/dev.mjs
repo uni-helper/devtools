@@ -4,9 +4,12 @@ import { startHarness } from '../src/harness.ts'
 
 const mode = process.argv.includes('--hub') ? 'hub' : 'standalone'
 const portArgIndex = process.argv.indexOf('--port')
-const port = portArgIndex !== -1
-  ? Number(process.argv[portArgIndex + 1])
-  : (mode === 'hub' ? 58018 : 9999)
+const port =
+  portArgIndex !== -1
+    ? Number(process.argv[portArgIndex + 1])
+    : mode === 'hub'
+      ? 58018
+      : 9999
 
 console.log(`[uni-devtools] 启动开发 harness (模式: ${mode}, 端口: ${port})...`)
 

@@ -46,10 +46,11 @@ export async function startDevServerHarness(options: HarnessOptions = {}) {
     openBrowser: false,
     // Mini-program connectSocket does not set Origin header; disable loopback origin check
     allowedOrigins: false,
-    auth: ((ctx: any) => createInteractiveAuth(ctx, {
-      clientAuthTokens: [token],
-      banner: () => {},
-    })) as any,
+    auth: ((ctx: any) =>
+      createInteractiveAuth(ctx, {
+        clientAuthTokens: [token],
+        banner: () => {},
+      })) as any,
     onPeerConnect: registry.connect,
     onPeerDisconnect: registry.disconnect,
   })
@@ -94,10 +95,8 @@ export async function startHubHarness(options: HarnessOptions = {}) {
   let ui: any
   try {
     const hubUi = await import('@devframes/hub-ui')
-    if (typeof hubUi.createUi === 'function')
-      ui = hubUi.createUi()
-  }
-  catch {
+    if (typeof hubUi.createUi === 'function') ui = hubUi.createUi()
+  } catch {
     // Headless fallback
   }
 
@@ -119,9 +118,7 @@ export async function startHubHarness(options: HarnessOptions = {}) {
     auth: false,
     mcp: 'auto',
     allowedOrigins: false,
-    devframes: [
-      { devframe: def, dock: { category: 'devtools' } },
-    ],
+    devframes: [{ devframe: def, dock: { category: 'devtools' } }],
     configure: (ctx) => {
       hubContext = ctx
       registry.bind(() => (ctx.rpc as any)?._rpcGroup)
@@ -158,7 +155,7 @@ export async function startHubHarness(options: HarnessOptions = {}) {
     connectionJsonUrl,
     close: async () => {
       await hub.close().catch(() => {})
-      await new Promise<void>(resolve => server.close(() => resolve()))
+      await new Promise<void>((resolve) => server.close(() => resolve()))
     },
   }
 }
@@ -168,7 +165,6 @@ export async function startHubHarness(options: HarnessOptions = {}) {
  * or 'hub' when requested.
  */
 export async function startHarness(options: HarnessOptions = {}) {
-  if (options.mode === 'hub')
-    return startHubHarness(options)
+  if (options.mode === 'hub') return startHubHarness(options)
   return startDevServerHarness(options)
 }

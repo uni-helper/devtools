@@ -43,7 +43,10 @@ const model = defineModel<boolean>({ required: true })
       ]"
       aria-hidden="true"
     >
-      <span class="i-carbon-checkmark" :class="size === 'sm' ? 'text-3' : 'text-3.5'" />
+      <span
+        class="i-carbon-checkmark"
+        :class="size === 'sm' ? 'text-3' : 'text-3.5'"
+      />
     </span>
     <slot />
   </label>

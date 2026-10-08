@@ -1,8 +1,8 @@
 {
   "name": "@uni-helper/devtools-mcp",
-  "type": "module",
   "version": "0.0.1",
   "description": "Uni DevTools 的 MCP 暴露面：把 DevframeDefinition 的 agent surface 接成 stdio / fetch 端点（协议实现来自 devframe + @devframes/agentic）",
+  "type": "module",
   "exports": {
     ".": {
       "types": "./src/index.ts",

@@ -26,8 +26,11 @@ const activeTab = computed<DevtoolsTabId>(() => {
   if (route.name === 'custom-inspector') {
     const inspectorId = route.params.inspectorId
     if (inspectorId === 'pinia') return 'pinia'
-    if (typeof inspectorId === 'string' && isRouterInspectorId(inspectorId)) return 'router'
-    return typeof inspectorId === 'string' ? `inspector:${inspectorId}` : 'components'
+    if (typeof inspectorId === 'string' && isRouterInspectorId(inspectorId))
+      return 'router'
+    return typeof inspectorId === 'string'
+      ? `inspector:${inspectorId}`
+      : 'components'
   }
 
   const tabId = route.meta.tabId
@@ -47,7 +50,10 @@ onUnmounted(() => {
 
 watchEffect(() => {
   document.documentElement.style.fontSize = `${settings.scale * 15}px`
-  document.documentElement.classList.toggle('reduce-motion', settings.reduceMotion)
+  document.documentElement.classList.toggle(
+    'reduce-motion',
+    settings.reduceMotion,
+  )
 })
 </script>
 

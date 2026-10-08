@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { EncodedValue, ValueEntry } from '@vue/devtools-kit'
-import type { TimelineEntry, TimelineLayerEntry } from '../composables/devtools-client'
+import type {
+  TimelineEntry,
+  TimelineLayerEntry,
+} from '../composables/devtools-client'
 import AppList from '@components/components/AppList.vue'
 import { Pane, Splitpanes } from 'splitpanes'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -63,7 +66,10 @@ let observer: ResizeObserver | undefined
 
 const currentAppEvents = computed(() =>
   timeline.value.filter(
-    (event) => !event.appId || !selectedAppId.value || event.appId === selectedAppId.value,
+    (event) =>
+      !event.appId ||
+      !selectedAppId.value ||
+      event.appId === selectedAppId.value,
   ),
 )
 
@@ -73,13 +79,21 @@ const layerOptions = computed<TimelineLayerEntry[]>(() => {
   for (const layer of BUILTIN_LAYERS) layers.set(layer.id, layer)
 
   for (const layer of timelineLayers.value) {
-    if (layer.appId && selectedAppId.value && layer.appId !== selectedAppId.value) continue
+    if (
+      layer.appId &&
+      selectedAppId.value &&
+      layer.appId !== selectedAppId.value
+    )
+      continue
     layers.set(layer.id, layer)
   }
 
   for (const event of currentAppEvents.value) {
     if (!event.layerId || layers.has(event.layerId)) continue
-    layers.set(event.layerId, { id: event.layerId, label: formatLayerLabel(event.layerId) })
+    layers.set(event.layerId, {
+      id: event.layerId,
+      label: formatLayerLabel(event.layerId),
+    })
   }
 
   return [...layers.values()]
@@ -99,7 +113,8 @@ const eventRows = computed<TimelineEventRow[]>(() => {
   let currentGroupId = 0
 
   return selectedLayerEvents.value.map((event) => {
-    if (event.type === 'timeline:eventsLimited') return { ...event, color: '#a17646' }
+    if (event.type === 'timeline:eventsLimited')
+      return { ...event, color: '#a17646' }
     if (event.groupId !== currentGroupId || colorIndex === -1)
       colorIndex = (colorIndex + 1) % EVENT_COLORS.length
 
@@ -123,10 +138,12 @@ const infoSections = computed<InfoSection[]>(() => {
 
   const sections: InfoSection[] = []
   const eventRows = createEventInfoRows(event)
-  if (eventRows.length) sections.push({ id: 'event', label: 'Event Info', rows: eventRows })
+  if (eventRows.length)
+    sections.push({ id: 'event', label: 'Event Info', rows: eventRows })
 
   const groupRows = createGroupInfoRows(event)
-  if (groupRows.length) sections.push({ id: 'group', label: 'Group Info', rows: groupRows })
+  if (groupRows.length)
+    sections.push({ id: 'group', label: 'Group Info', rows: groupRows })
 
   return sections
 })
@@ -186,7 +203,11 @@ function createEventInfoRows(event: TimelineEntry): InfoRow[] {
 
   if (event.data) rows.push(...createEncodedValueRows(event.data))
   if (event.meta)
-    rows.push({ key: 'meta', value: formatValue(event.meta), children: previewRows(event.meta) })
+    rows.push({
+      key: 'meta',
+      value: formatValue(event.meta),
+      children: previewRows(event.meta),
+    })
 
   return rows
 }
@@ -194,7 +215,9 @@ function createEventInfoRows(event: TimelineEntry): InfoRow[] {
 function createGroupInfoRows(event: TimelineEntry): InfoRow[] {
   if (event.groupId == null) return []
 
-  const groupEvents = selectedLayerEvents.value.filter((item) => item.groupId === event.groupId)
+  const groupEvents = selectedLayerEvents.value.filter(
+    (item) => item.groupId === event.groupId,
+  )
   if (!groupEvents.length) return []
 
   const start = groupEvents[0]!.time
@@ -225,11 +248,15 @@ function getTimelineValuePreview(value: EncodedValue): ValueEntry[] {
     return value.value && typeof value.value === 'object'
       ? getTimelineValuePreview(value.value)
       : []
-  return 'preview' in value && Array.isArray(value.preview) ? value.preview.slice(0, 12) : []
+  return 'preview' in value && Array.isArray(value.preview)
+    ? value.preview.slice(0, 12)
+    : []
 }
 
 function getLayerColor(layer: TimelineLayerEntry): string {
-  return layer.color == null ? '#42b983' : `#${layer.color.toString(16).padStart(6, '0')}`
+  return layer.color == null
+    ? '#42b983'
+    : `#${layer.color.toString(16).padStart(6, '0')}`
 }
 
 function formatLayerLabel(layerId: string): string {
@@ -266,11 +293,20 @@ onUnmounted(() => {
 <template>
   <div ref="container" class="h-full w-full">
     <Splitpanes class="h-full min-h-0 overflow-hidden" :horizontal="horizontal">
-      <Pane v-if="apps.length > 1" class="h-full min-h-0" min-size="12" size="20">
+      <Pane
+        v-if="apps.length > 1"
+        class="h-full min-h-0"
+        min-size="12"
+        size="20"
+      >
         <AppList />
       </Pane>
 
-      <Pane class="h-full min-h-0" min-size="20" :size="apps.length > 1 ? 22 : 28">
+      <Pane
+        class="h-full min-h-0"
+        min-size="20"
+        :size="apps.length > 1 ? 22 : 28"
+      >
         <div class="h-full min-h-0 flex flex-col p-2">
           <div
             class="relative mb-1 min-h-7 w-full shrink-0 flex items-center justify-end border-b border-b-dashed border-base pb-1"
@@ -290,7 +326,9 @@ onUnmounted(() => {
                 "
                 class="h-6 w-6 border-0 bg-transparent p-0 flex items-center justify-center"
                 type="button"
-                :aria-label="timelineRecording ? 'Stop recording' : 'Start recording'"
+                :aria-label="
+                  timelineRecording ? 'Stop recording' : 'Start recording'
+                "
                 @click="toggleTimelineRecording"
               >
                 <span
@@ -315,7 +353,9 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <ul class="no-scrollbar m-0 min-h-0 flex-1 list-none overflow-auto p-2">
+          <ul
+            class="no-scrollbar m-0 min-h-0 flex-1 list-none overflow-auto p-2"
+          >
             <li
               v-for="layer in layerOptions"
               :key="layer.id"
@@ -336,7 +376,9 @@ onUnmounted(() => {
               <button
                 class="absolute right-2 rounded-1 border-0 bg-primary-500 px-1 color-white text-3 op0 group-hover:op80 hover:op100 [.active_&]:(bg-primary-400 dark:bg-gray-600)"
                 type="button"
-                :aria-label="isLayerEnabled(layer.id) ? 'Disable layer' : 'Enable layer'"
+                :aria-label="
+                  isLayerEnabled(layer.id) ? 'Disable layer' : 'Enable layer'
+                "
                 @click.stop="toggleLayerEnabled(layer.id)"
               >
                 {{ isLayerEnabled(layer.id) ? 'Disable' : 'Enable' }}
@@ -391,7 +433,9 @@ onUnmounted(() => {
                           }"
                           aria-hidden="true"
                         />
-                        <p class="m-0 h-full min-w-0 flex items-center truncate pl-5">
+                        <p
+                          class="m-0 h-full min-w-0 flex items-center truncate pl-5"
+                        >
                           <span class="absolute top-5 pr-2 text-3 op40">
                             [{{ formatTime(event.time) }}]
                           </span>
@@ -422,7 +466,11 @@ onUnmounted(() => {
 
               <Pane class="h-full min-h-0" min-size="36" size="60">
                 <div class="no-scrollbar h-full min-h-0 overflow-auto p-5">
-                  <section v-for="section in infoSections" :key="section.id" class="mb-3">
+                  <section
+                    v-for="section in infoSections"
+                    :key="section.id"
+                    class="mb-3"
+                  >
                     <div class="flex items-center">
                       <span
                         class="i-carbon-chevron-right rotate-90 flex-none text-4 op50"
@@ -458,9 +506,14 @@ onUnmounted(() => {
             </Splitpanes>
           </template>
 
-          <div v-else class="min-h-0 flex-1 flex items-center justify-center color-muted">
+          <div
+            v-else
+            class="min-h-0 flex-1 flex items-center justify-center color-muted"
+          >
             <div class="text-center">
-              <div class="mx-auto mb-3 h-10 w-10 flex items-center justify-center">
+              <div
+                class="mx-auto mb-3 h-10 w-10 flex items-center justify-center"
+              >
                 <span class="i-carbon-time text-9 op70" aria-hidden="true" />
               </div>
               <div>No events</div>

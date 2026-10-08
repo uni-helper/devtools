@@ -120,10 +120,7 @@ import Uni from '@dcloudio/vite-plugin-uni'
 import { UniDevtoolsPlugin } from '@uni-helper/devtools-devframe/plugin'
 
 export default defineConfig({
-  plugins: [
-    UniDevtoolsPlugin(),
-    Uni(),
-  ],
+  plugins: [UniDevtoolsPlugin(), Uni()],
 })
 ```
 

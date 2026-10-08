@@ -13,39 +13,79 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ')
 }
 
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link'
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'ghost'
+  | 'destructive'
+  | 'link'
 export type ButtonSize = 'md' | 'sm' | 'lg'
-export interface ButtonProps { variant?: ButtonVariant, size?: ButtonSize, class?: string }
+export interface ButtonProps {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  class?: string
+}
 
-export function button({ variant = 'primary', size = 'md', class: extra }: ButtonProps = {}): string {
+export function button({
+  variant = 'primary',
+  size = 'md',
+  class: extra,
+}: ButtonProps = {}): string {
   const variantClass: Record<ButtonVariant, string> = {
     primary: 'btn-primary',
     secondary: 'btn-action',
     outline: 'btn-action',
-    ghost: 'inline-flex items-center justify-center gap-1.5 rounded px2 py1 op75 hover:op100 hover:bg-active transition disabled:pointer-events-none disabled:op30!',
+    ghost:
+      'inline-flex items-center justify-center gap-1.5 rounded px2 py1 op75 hover:op100 hover:bg-active transition disabled:pointer-events-none disabled:op30!',
     destructive: 'btn-action text-error border-error/30!',
     link: 'inline-flex items-center gap-1.5 color-active hover:underline underline-offset-2',
   }
-  const sizeClass = size === 'sm'
-    ? (variant === 'primary' ? 'text-sm px-2.5! py-1!' : 'text-sm')
-    : size === 'lg' ? 'text-base px-4! py-2!' : ''
+  const sizeClass =
+    size === 'sm'
+      ? variant === 'primary'
+        ? 'text-sm px-2.5! py-1!'
+        : 'text-sm'
+      : size === 'lg'
+        ? 'text-base px-4! py-2!'
+        : ''
   return cx(variantClass[variant], sizeClass, extra)
 }
 
 export type IconButtonVariant = 'outline' | 'ghost'
 export type IconButtonSize = 'md' | 'sm'
-export interface IconButtonProps { variant?: IconButtonVariant, size?: IconButtonSize, class?: string }
+export interface IconButtonProps {
+  variant?: IconButtonVariant
+  size?: IconButtonSize
+  class?: string
+}
 
-export function iconButton({ variant = 'outline', size = 'md', class: extra }: IconButtonProps = {}): string {
+export function iconButton({
+  variant = 'outline',
+  size = 'md',
+  class: extra,
+}: IconButtonProps = {}): string {
   const base = variant === 'ghost' ? 'btn-icon' : 'btn-icon-square'
   const sizeClass = size === 'sm' ? 'w-7! h-7! text-sm' : ''
   return cx(base, sizeClass, extra)
 }
 
-export type BadgeVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'destructive' | 'outline'
-export interface BadgeProps { variant?: BadgeVariant, class?: string }
+export type BadgeVariant =
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'warning'
+  | 'destructive'
+  | 'outline'
+export interface BadgeProps {
+  variant?: BadgeVariant
+  class?: string
+}
 
-export function badge({ variant = 'secondary', class: extra }: BadgeProps = {}): string {
+export function badge({
+  variant = 'secondary',
+  class: extra,
+}: BadgeProps = {}): string {
   const variantClass: Record<BadgeVariant, string> = {
     primary: 'badge-active',
     secondary: 'badge-muted',
@@ -62,7 +102,10 @@ export function tag(color: string, extra?: string): string {
 }
 
 export function tabsList(extra?: string): string {
-  return cx('inline-flex items-center gap-1 p-1 rounded-lg bg-secondary w-max', extra)
+  return cx(
+    'inline-flex items-center gap-1 p-1 rounded-lg bg-secondary w-max',
+    extra,
+  )
 }
 
 export function tab(extra?: string): string {
@@ -72,8 +115,14 @@ export function tab(extra?: string): string {
   )
 }
 
-export interface NavTabProps { active?: boolean, class?: string }
-export function navTab({ active = false, class: extra }: NavTabProps = {}): string {
+export interface NavTabProps {
+  active?: boolean
+  class?: string
+}
+export function navTab({
+  active = false,
+  class: extra,
+}: NavTabProps = {}): string {
   return cx(
     'relative inline-flex items-center gap-1.5 max-w-52 px-2 py-1 rounded-md border border-transparent text-sm op-fade select-none cursor-pointer transition hover:op100 hover:bg-active',
     active && 'op100! bg-active border-base! color-base',
@@ -82,18 +131,29 @@ export function navTab({ active = false, class: extra }: NavTabProps = {}): stri
 }
 
 export function nav(extra?: string): string {
-  return cx('flex items-center gap-2 shrink-0 h-nav px-3 border-b border-base bg-base z-nav', extra)
+  return cx(
+    'flex items-center gap-2 shrink-0 h-nav px-3 border-b border-base bg-base z-nav',
+    extra,
+  )
 }
 
 export function navBrand(extra?: string): string {
-  return cx('flex items-center gap-1.5 shrink-0 font-semibold text-sm select-none', extra)
+  return cx(
+    'flex items-center gap-1.5 shrink-0 font-semibold text-sm select-none',
+    extra,
+  )
 }
 
 /**
  * Mirrors devframe's `DevframeConnectionStatus` (kept local so this class-helper
  * module stays free of package imports); the two share the same string members.
  */
-export type ConnectionStatus = 'connecting' | 'connected' | 'unauthorized' | 'disconnected' | 'error'
+export type ConnectionStatus =
+  | 'connecting'
+  | 'connected'
+  | 'unauthorized'
+  | 'disconnected'
+  | 'error'
 
 export interface ConnectionIndicator {
   /** Short status label, e.g. `disconnected`. */
@@ -104,7 +164,10 @@ export interface ConnectionIndicator {
   class: string
 }
 
-const CONNECTION_TONE: Record<Exclude<ConnectionStatus, 'connected'>, { label: string, dot: string }> = {
+const CONNECTION_TONE: Record<
+  Exclude<ConnectionStatus, 'connected'>,
+  { label: string; dot: string }
+> = {
   connecting: { label: 'connecting…', dot: 'bg-neutral-400 animate-pulse' },
   disconnected: { label: 'disconnected', dot: 'bg-error' },
   unauthorized: { label: 'unauthorized', dot: 'bg-warning' },
@@ -116,14 +179,19 @@ const CONNECTION_TONE: Record<Exclude<ConnectionStatus, 'connected'>, { label: s
  * `null` when the client is `connected`, so every surface renders the indicator
  * only while the connection is not live.
  */
-export function connectionIndicator(status: ConnectionStatus, extra?: string): ConnectionIndicator | null {
-  if (status === 'connected')
-    return null
+export function connectionIndicator(
+  status: ConnectionStatus,
+  extra?: string,
+): ConnectionIndicator | null {
+  if (status === 'connected') return null
   const tone = CONNECTION_TONE[status]
   return {
     label: tone.label,
     dot: cx('inline-block size-1.5 rounded-full shrink-0', tone.dot),
-    class: cx('flex items-center gap-1.5 shrink-0 text-xs color-muted select-none', extra),
+    class: cx(
+      'flex items-center gap-1.5 shrink-0 text-xs color-muted select-none',
+      extra,
+    ),
   }
 }
 
@@ -140,7 +208,10 @@ export interface ConnectionStateCopy {
   spin: boolean
 }
 
-const CONNECTION_STATE: Record<Exclude<ConnectionStatus, 'connected'>, ConnectionStateCopy> = {
+const CONNECTION_STATE: Record<
+  Exclude<ConnectionStatus, 'connected'>,
+  ConnectionStateCopy
+> = {
   connecting: {
     icon: 'i-ph-plugs-connected-duotone',
     title: 'Connecting…',
@@ -177,9 +248,10 @@ const CONNECTION_STATE: Record<Exclude<ConnectionStatus, 'connected'>, Connectio
  * why. Returns `null` when connected. Pair with the `connection*` class builders
  * below so every surface renders the identical centered glyph + title + body.
  */
-export function connectionState(status: ConnectionStatus): ConnectionStateCopy | null {
-  if (status === 'connected')
-    return null
+export function connectionState(
+  status: ConnectionStatus,
+): ConnectionStateCopy | null {
+  if (status === 'connected') return null
   return CONNECTION_STATE[status]
 }
 
@@ -188,7 +260,10 @@ export function connectionState(status: ConnectionStatus): ConnectionStateCopy |
  * strategy (`h-full`, `h-svh w-full`, `absolute inset-0`, …) via `extra`.
  */
 export function connectionPanel(extra?: string): string {
-  return cx('flex flex-col items-center justify-center gap-4 bg-base p-8 text-center', extra)
+  return cx(
+    'flex flex-col items-center justify-center gap-4 bg-base p-8 text-center',
+    extra,
+  )
 }
 
 export function connectionGlyph(spin = false, extra?: string): string {
@@ -208,19 +283,31 @@ export function connectionDetail(extra?: string): string {
 }
 
 export function toolbar(extra?: string): string {
-  return cx('flex items-center gap-2 shrink-0 h-8 px-2.5 border-b border-base bg-secondary text-sm', extra)
+  return cx(
+    'flex items-center gap-2 shrink-0 h-8 px-2.5 border-b border-base bg-secondary text-sm',
+    extra,
+  )
 }
 
 export function card(extra?: string): string {
-  return cx('flex flex-col rounded-xl border border-base bg-base shadow-sm', extra)
+  return cx(
+    'flex flex-col rounded-xl border border-base bg-base shadow-sm',
+    extra,
+  )
 }
 
 export function modalBackdrop(extra?: string): string {
-  return cx('fixed inset-0 z-modal-backdrop grid place-items-center p-4 bg-black/40 backdrop-blur-sm', extra)
+  return cx(
+    'fixed inset-0 z-modal-backdrop grid place-items-center p-4 bg-black/40 backdrop-blur-sm',
+    extra,
+  )
 }
 
 export function modalCard(extra?: string): string {
-  return cx('z-modal-content w-full max-w-sm flex flex-col gap-3 p-4 rounded-xl border border-base bg-base shadow-lg', extra)
+  return cx(
+    'z-modal-content w-full max-w-sm flex flex-col gap-3 p-4 rounded-xl border border-base bg-base shadow-lg',
+    extra,
+  )
 }
 
 export function panel(extra?: string): string {
@@ -228,7 +315,10 @@ export function panel(extra?: string): string {
 }
 
 export function input(extra?: string): string {
-  return cx('w-full min-w-0 rounded border border-base bg-base px-2.5 py-1 text-sm outline-none transition placeholder:color-faint focus-visible:border-active focus-visible:ring-2 focus-visible:ring-primary-500/40', extra)
+  return cx(
+    'w-full min-w-0 rounded border border-base bg-base px-2.5 py-1 text-sm outline-none transition placeholder:color-faint focus-visible:border-active focus-visible:ring-2 focus-visible:ring-primary-500/40',
+    extra,
+  )
 }
 
 export function link(extra?: string): string {
@@ -242,9 +332,16 @@ export function dot(state: DotState, extra?: string): string {
     idle: 'bg-neutral-400',
     error: 'bg-error',
   }
-  return cx('inline-block size-1.5 rounded-full shrink-0', stateClass[state], extra)
+  return cx(
+    'inline-block size-1.5 rounded-full shrink-0',
+    stateClass[state],
+    extra,
+  )
 }
 
 export function spinner(extra?: string): string {
-  return cx('inline-block size-4 rounded-full border-2 border-current border-t-transparent animate-spin', extra)
+  return cx(
+    'inline-block size-4 rounded-full border-2 border-current border-t-transparent animate-spin',
+    extra,
+  )
 }

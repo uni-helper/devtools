@@ -21,31 +21,41 @@ export interface CategorizedDevtoolsTab extends DevtoolsTab {
   hidden: boolean
 }
 
-export type CategorizedDevtoolsTabs = [DevtoolsTabCategory, CategorizedDevtoolsTab[]][]
+export type CategorizedDevtoolsTabs = [
+  DevtoolsTabCategory,
+  CategorizedDevtoolsTab[],
+][]
 
 export function useDevtoolsTabCatalog() {
   const { inspectors, plugins, inspectEnabled } = useDevtoolsClient()
   const { settings } = useDevtoolsSettings()
-  const routerInspector = computed(() => findRouterInspector(inspectors.value, plugins.value))
+  const routerInspector = computed(() =>
+    findRouterInspector(inspectors.value, plugins.value),
+  )
 
   const tabs = computed<DevtoolsTab[]>(() => {
     const visibleInspectors = inspectors.value.filter(
       (inspector) =>
-        (!isRouterInspectorId(inspector.id) || inspector.id === routerInspector.value?.id) &&
+        (!isRouterInspectorId(inspector.id) ||
+          inspector.id === routerInspector.value?.id) &&
         !isInternalCustomInspector(inspector),
     )
 
     return [
       // graph tab 不做可见性门禁：运行时 Vue < 3.5 时页面内会说明原因（见 pages/graph.vue）。
       // 静默隐藏会让用户以为工具坏了。
-      ...builtinTabs.filter((tab) => tab.id !== 'inspect' || inspectEnabled.value),
+      ...builtinTabs.filter(
+        (tab) => tab.id !== 'inspect' || inspectEnabled.value,
+      ),
       ...visibleInspectors.map((inspector, index) =>
         createInspectorTab(inspector, index, plugins.value),
       ),
     ].sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
   })
 
-  const configurableTabs = computed(() => tabs.value.filter((tab) => tab.id !== 'settings'))
+  const configurableTabs = computed(() =>
+    tabs.value.filter((tab) => tab.id !== 'settings'),
+  )
   const categorizedTabs = computed<CategorizedDevtoolsTabs>(() =>
     createCategorizedTabs(configurableTabs.value, settings.tabSettings),
   )
@@ -66,7 +76,9 @@ export function useDevtoolsTabs(activeTab: ComputedRef<DevtoolsTabId>) {
       return categoryTabs.filter((tab) => !tab.hidden)
     }),
   )
-  const systemTabs = computed(() => tabs.value.filter((tab) => tab.id === 'settings'))
+  const systemTabs = computed(() =>
+    tabs.value.filter((tab) => tab.id === 'settings'),
+  )
   const activeTabMeta = computed(
     () => tabs.value.find((tab) => tab.id === activeTab.value) ?? tabs.value[0],
   )
@@ -136,7 +148,8 @@ function createCategorizedTabs(
   for (const tab of tabs) {
     const pinned = tabSettings.pinnedTabs.includes(tab.id)
     const categoryName = pinned ? 'pinned' : getTabCategory(tab)
-    const categoryHidden = tabSettings.hiddenTabCategories.includes(categoryName)
+    const categoryHidden =
+      tabSettings.hiddenTabCategories.includes(categoryName)
     const hidden = categoryHidden || tabSettings.hiddenTabs.includes(tab.id)
 
     categories.get(categoryName)?.push({
@@ -147,7 +160,9 @@ function createCategorizedTabs(
 
   const pinnedTabs = categories.get('pinned') ?? []
   pinnedTabs.sort(
-    (a, b) => tabSettings.pinnedTabs.indexOf(a.id) - tabSettings.pinnedTabs.indexOf(b.id),
+    (a, b) =>
+      tabSettings.pinnedTabs.indexOf(a.id) -
+      tabSettings.pinnedTabs.indexOf(b.id),
   )
 
   return Array.from(categories.entries()).map(([name, categoryTabs]) => [
@@ -162,6 +177,16 @@ function createCategorizedTabs(
 }
 
 function getTabCategory(tab: DevtoolsTab): string {
-  if (['overview', 'components', 'graph', 'pages', 'network', 'timeline'].includes(tab.id)) return 'app'
+  if (
+    [
+      'overview',
+      'components',
+      'graph',
+      'pages',
+      'network',
+      'timeline',
+    ].includes(tab.id)
+  )
+    return 'app'
   return 'modules'
 }

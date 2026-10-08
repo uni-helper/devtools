@@ -25,7 +25,10 @@
  */
 import process from 'node:process'
 import { createMcpFetchHandler, createMcpServer } from 'devframe/adapters/mcp'
-import type { CreateMcpFetchHandlerOptions, McpFetchHandler } from 'devframe/adapters/mcp'
+import type {
+  CreateMcpFetchHandlerOptions,
+  McpFetchHandler,
+} from 'devframe/adapters/mcp'
 import { AgentRegistry } from '@uni-helper/devtools-core/relay'
 import { createUniDevtoolsDevframe } from '@uni-helper/devtools-core'
 
@@ -55,13 +58,17 @@ export interface McpStdioOptions {
  * stdout 是 MCP 的传输通道，因此本函数与它调用的链路**不得往 stdout 写任何
  * 非协议内容**；诊断信息一律走 stderr。
  */
-export async function serveUniDevtoolsMcpStdio(options: McpStdioOptions = {}): Promise<void> {
+export async function serveUniDevtoolsMcpStdio(
+  options: McpStdioOptions = {},
+): Promise<void> {
   const registry = new AgentRegistry()
-  const def = createUniDevtoolsDevframe(registry, { clientAssets: options.clientAssets })
+  const def = createUniDevtoolsDevframe(registry, {
+    clientAssets: options.clientAssets,
+  })
 
   process.stderr.write(
-    '[uni-devtools] MCP stdio 已启动（无中继：只有 node 本地 RPC 有真实结果；'
-    + '需要实时探针数据请改用 dev server 的 __mcp 路由）\n',
+    '[uni-devtools] MCP stdio 已启动（无中继：只有 node 本地 RPC 有真实结果；' +
+      '需要实时探针数据请改用 dev server 的 __mcp 路由）\n',
   )
 
   await createMcpServer(def, { transport: 'stdio' })
@@ -86,4 +93,9 @@ export function createUniDevtoolsMcpFetchHandler(
   return createMcpFetchHandler(ctx, mergedOptions)
 }
 
-export type { CreateMcpFetchHandlerOptions, CreateMcpServerOptions, McpFetchHandler, McpServerHandle } from 'devframe/adapters/mcp'
+export type {
+  CreateMcpFetchHandlerOptions,
+  CreateMcpServerOptions,
+  McpFetchHandler,
+  McpServerHandle,
+} from 'devframe/adapters/mcp'

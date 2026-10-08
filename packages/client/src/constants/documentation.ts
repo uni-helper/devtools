@@ -4,7 +4,10 @@ const VUE_API_PAGES = [
   ['Application API', 'application'],
   ['Composition API: Setup', 'composition-api-setup'],
   ['Composition API: Lifecycle Hooks', 'composition-api-lifecycle'],
-  ['Composition API: Dependency Injection', 'composition-api-dependency-injection'],
+  [
+    'Composition API: Dependency Injection',
+    'composition-api-dependency-injection',
+  ],
   ['Reactivity API: Core', 'reactivity-core'],
   ['Reactivity API: Utilities', 'reactivity-utilities'],
   ['Reactivity API: Advanced', 'reactivity-advanced'],
@@ -29,14 +32,19 @@ export function createVueDocumentationCommands(): DevtoolsCommand[] {
     icon: documentationIcon(slug),
     keywords: ['vue', 'docs', 'api', slug],
     action: () => {
-      window.open(`https://vuejs.org/api/${slug}.html`, '_blank', 'noopener,noreferrer')
+      window.open(
+        `https://vuejs.org/api/${slug}.html`,
+        '_blank',
+        'noopener,noreferrer',
+      )
     },
   }))
 }
 
 function documentationIcon(slug: string): string {
   if (slug === 'utility-types') return 'i-carbon-language'
-  if (slug === 'ssr' || slug === 'custom-renderer') return 'i-carbon-server-proxy'
+  if (slug === 'ssr' || slug === 'custom-renderer')
+    return 'i-carbon-server-proxy'
   if (slug.includes('css')) return 'i-carbon-color-palette'
   return 'i-logos-vue'
 }

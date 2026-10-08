@@ -11,7 +11,8 @@ import { Pane, Splitpanes } from 'splitpanes'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useDevtoolsClient } from '../../composables/devtools-client'
 
-const SELECTED_NODES_STORAGE = 'vue-devtools-next:custom-inspector:selected-nodes'
+const SELECTED_NODES_STORAGE =
+  'vue-devtools-next:custom-inspector:selected-nodes'
 
 const props = defineProps<{ inspector: CustomInspectorSnapshot }>()
 
@@ -48,7 +49,9 @@ const inspectorId = computed(() => props.inspector.id)
 // uni-devtools 改点 8：mp 多页 = 多 app（Components 需要 app 列隔离页面树），
 // 但 Pinia 是全局单例（探针经 getApp() 单实例枚举 _s，与页面无关）——app 列对
 // pinia inspector 无意义，且官方 Web 单 app 场景从不显示；对齐官方，pinia 下隐藏。
-const showAppList = computed(() => apps.value.length > 1 && props.inspector.id !== 'pinia')
+const showAppList = computed(
+  () => apps.value.length > 1 && props.inspector.id !== 'pinia',
+)
 const selectedNode = computed(() =>
   flattenTreeNodes(tree.value).find((node) => node.id === selectedNodeId.value),
 )
@@ -111,13 +114,16 @@ async function refreshTree() {
     tree.value = nodesSnapshot
     const nodes = flattenTreeNodes(tree.value)
     const storedNodeId = readStoredSelectedNodeId(id)
-    const nextSelectedNodeId = nodes.some((node) => node.id === selectedNodeId.value)
+    const nextSelectedNodeId = nodes.some(
+      (node) => node.id === selectedNodeId.value,
+    )
       ? selectedNodeId.value
       : storedNodeId && nodes.some((node) => node.id === storedNodeId)
         ? storedNodeId
         : (nodes[0]?.id ?? '')
 
-    if (selectedNodeId.value !== nextSelectedNodeId) selectedNodeId.value = nextSelectedNodeId
+    if (selectedNodeId.value !== nextSelectedNodeId)
+      selectedNodeId.value = nextSelectedNodeId
     else if (nextSelectedNodeId) void refreshState(nextSelectedNodeId)
 
     persistSelectedNodeId(id, selectedNodeId.value)
@@ -189,8 +195,13 @@ function resetInspector() {
   selectedNodeId.value = ''
 }
 
-function flattenTreeNodes(nodes: CustomInspectorTreeNode[]): CustomInspectorTreeNode[] {
-  return nodes.flatMap((node) => [node, ...flattenTreeNodes(node.children ?? [])])
+function flattenTreeNodes(
+  nodes: CustomInspectorTreeNode[],
+): CustomInspectorTreeNode[] {
+  return nodes.flatMap((node) => [
+    node,
+    ...flattenTreeNodes(node.children ?? []),
+  ])
 }
 
 function readStoredSelectedNodeId(id: string): string | undefined {
@@ -235,7 +246,10 @@ function writeStoredSelections(selections: Record<string, string>) {
   if (typeof window === 'undefined') return
 
   try {
-    window.localStorage.setItem(SELECTED_NODES_STORAGE, JSON.stringify(selections))
+    window.localStorage.setItem(
+      SELECTED_NODES_STORAGE,
+      JSON.stringify(selections),
+    )
   } catch {}
 }
 
@@ -279,7 +293,9 @@ onUnmounted(() => {
       <Pane class="h-full min-h-0" min-size="30">
         <InspectorState
           v-model:filter="stateFilter"
-          :filter-placeholder="inspector.stateFilterPlaceholder ?? 'Filter state...'"
+          :filter-placeholder="
+            inspector.stateFilterPlaceholder ?? 'Filter state...'
+          "
           :loading="stateLoading"
           :node-actions="inspector.nodeActions"
           :no-selection-text="inspector.noSelectionText ?? 'No node selected'"

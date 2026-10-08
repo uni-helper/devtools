@@ -19,7 +19,9 @@ export function buildComponentTree(
   favoriteComponentKeys: ReadonlySet<string> = new Set(),
   includeDuration = false,
 ): ComponentInspectorTreeNode[] {
-  const byId = new Map(componentSnapshots.map((component) => [component.id, component]))
+  const byId = new Map(
+    componentSnapshots.map((component) => [component.id, component]),
+  )
   const childCounts = new Map<string, number>()
   const query = parseComponentFilter(filterValue)
   const includedIds = new Set<string>()
@@ -27,12 +29,22 @@ export function buildComponentTree(
 
   for (const component of componentSnapshots) {
     if (!component.parentId) continue
-    childCounts.set(component.parentId, (childCounts.get(component.parentId) ?? 0) + 1)
+    childCounts.set(
+      component.parentId,
+      (childCounts.get(component.parentId) ?? 0) + 1,
+    )
   }
 
   if (query.positive.length) {
     for (const component of componentSnapshots) {
-      if (!matchesAllComponentFilters(component, query.positive, favoriteComponentKeys)) continue
+      if (
+        !matchesAllComponentFilters(
+          component,
+          query.positive,
+          favoriteComponentKeys,
+        )
+      )
+        continue
 
       let current: ComponentSnapshot | undefined = component
       while (current) {
@@ -45,7 +57,13 @@ export function buildComponentTree(
   }
 
   for (const component of componentSnapshots) {
-    if (matchesAnyComponentFilter(component, query.negative, favoriteComponentKeys))
+    if (
+      matchesAnyComponentFilter(
+        component,
+        query.negative,
+        favoriteComponentKeys,
+      )
+    )
       excludedIds.add(component.id)
   }
 
@@ -53,7 +71,8 @@ export function buildComponentTree(
   const childrenByParentId = new Map<string, ComponentSnapshot[]>()
 
   for (const component of componentSnapshots) {
-    if (!includedIds.has(component.id) || excludedIds.has(component.id)) continue
+    if (!includedIds.has(component.id) || excludedIds.has(component.id))
+      continue
 
     const parent = findVisibleParent(component, byId, includedIds, excludedIds)
 
@@ -94,7 +113,8 @@ function toComponentTreeNode(
       includeDuration,
     ),
   )
-  const childCount = component.childCount ?? childCounts.get(component.id) ?? children.length
+  const childCount =
+    component.childCount ?? childCounts.get(component.id) ?? children.length
 
   return {
     id: component.id,
@@ -110,7 +130,9 @@ function toComponentTreeNode(
   }
 }
 
-function formatComponentDuration(component: ComponentSnapshot): string | undefined {
+function formatComponentDuration(
+  component: ComponentSnapshot,
+): string | undefined {
   const duration = component.lastUpdateMs ?? component.lastMountMs
   if (duration == null || !Number.isFinite(duration)) return
   if (duration < 0.05) return '<0.1ms'
@@ -127,14 +149,22 @@ export interface ComponentFilterQuery {
   negative: ComponentFilterTerm[]
 }
 
-export function parseComponentFilter(filterValue: string): ComponentFilterQuery {
+export function parseComponentFilter(
+  filterValue: string,
+): ComponentFilterQuery {
   const query: ComponentFilterQuery = { positive: [], negative: [] }
 
-  for (const rawToken of filterValue.match(/-?(?:(?:file|tag|is):)?(?:"[^"]*"|[^\s"]+)/gi) ?? []) {
+  for (const rawToken of filterValue.match(
+    /-?(?:(?:file|tag|is):)?(?:"[^"]*"|[^\s"]+)/gi,
+  ) ?? []) {
     const negative = rawToken.startsWith('-') && rawToken.length > 1
-    const token = (negative ? rawToken.slice(1) : rawToken).replace(/^"|"$/g, '')
+    const token = (negative ? rawToken.slice(1) : rawToken).replace(
+      /^"|"$/g,
+      '',
+    )
     const separatorIndex = token.indexOf(':')
-    const rawField = separatorIndex > 0 ? token.slice(0, separatorIndex).toLowerCase() : ''
+    const rawField =
+      separatorIndex > 0 ? token.slice(0, separatorIndex).toLowerCase() : ''
     const value = (separatorIndex > 0 ? token.slice(separatorIndex + 1) : token)
       .replace(/^"|"$/g, '')
       .toLowerCase()
@@ -168,7 +198,11 @@ export function matchesComponentFilterQuery(
 ): boolean {
   const query = parseComponentFilter(filterValue)
   return (
-    matchesAllComponentFilters(component, query.positive, favoriteComponentKeys) &&
+    matchesAllComponentFilters(
+      component,
+      query.positive,
+      favoriteComponentKeys,
+    ) &&
     !matchesAnyComponentFilter(component, query.negative, favoriteComponentKeys)
   )
 }
@@ -192,7 +226,9 @@ function matchesAllComponentFilters(
   terms: ComponentFilterTerm[],
   favoriteComponentKeys: ReadonlySet<string>,
 ): boolean {
-  return terms.every((term) => matchesComponentFilter(component, term, favoriteComponentKeys))
+  return terms.every((term) =>
+    matchesComponentFilter(component, term, favoriteComponentKeys),
+  )
 }
 
 function matchesAnyComponentFilter(
@@ -200,7 +236,9 @@ function matchesAnyComponentFilter(
   terms: ComponentFilterTerm[],
   favoriteComponentKeys: ReadonlySet<string>,
 ): boolean {
-  return terms.some((term) => matchesComponentFilter(component, term, favoriteComponentKeys))
+  return terms.some((term) =>
+    matchesComponentFilter(component, term, favoriteComponentKeys),
+  )
 }
 
 function matchesComponentFilter(
@@ -223,7 +261,9 @@ function matchesComponentFilter(
       return (
         component.name.toLowerCase().includes(term.value) ||
         !!component.file?.toLowerCase().includes(term.value) ||
-        !!component.tags?.some((tag) => tag.label.toLowerCase().includes(term.value))
+        !!component.tags?.some((tag) =>
+          tag.label.toLowerCase().includes(term.value),
+        )
       )
   }
 }

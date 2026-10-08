@@ -66,8 +66,8 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
       const snapshot = buildReactivityGraph({ count: countRef })
 
       expect(snapshot.nodes).toHaveLength(2)
-      const refNode = snapshot.nodes.find(n => n.type === 'ref')
-      const renderNode = snapshot.nodes.find(n => n.type === 'render')
+      const refNode = snapshot.nodes.find((n) => n.type === 'ref')
+      const renderNode = snapshot.nodes.find((n) => n.type === 'render')
 
       expect(refNode).toBeDefined()
       expect(refNode!.label).toBe('count')
@@ -108,8 +108,8 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
       const snapshot = buildReactivityGraph({ title: titleRef })
 
       expect(snapshot.nodes).toHaveLength(2)
-      const refNode = snapshot.nodes.find(n => n.type === 'ref')
-      const renderNode = snapshot.nodes.find(n => n.type === 'render')
+      const refNode = snapshot.nodes.find((n) => n.type === 'ref')
+      const renderNode = snapshot.nodes.find((n) => n.type === 'render')
 
       expect(refNode).toBeDefined()
       expect(refNode!.label).toBe('title')
@@ -143,8 +143,8 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
       const snapshot = buildReactivityGraph({ doubleCount: computedRef })
 
       expect(snapshot.nodes).toHaveLength(2)
-      const computedNode = snapshot.nodes.find(n => n.type === 'computed')
-      const depNode = snapshot.nodes.find(n => n.type === 'reactive')
+      const computedNode = snapshot.nodes.find((n) => n.type === 'computed')
+      const depNode = snapshot.nodes.find((n) => n.type === 'reactive')
 
       expect(computedNode).toBeDefined()
       expect(computedNode!.label).toBe('doubleCount')
@@ -183,7 +183,7 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
 
       // sharedRef 节点只有 1 个，renderEffect 节点只有 1 个
       expect(snapshot.nodes).toHaveLength(2)
-      const refNodes = snapshot.nodes.filter(n => n.type === 'ref')
+      const refNodes = snapshot.nodes.filter((n) => n.type === 'ref')
       expect(refNodes).toHaveLength(1)
 
       // aliasA 和 aliasB 指向同一个 ref，产生的边完全去重，只有一条
@@ -202,12 +202,12 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
       const snapshot1 = buildReactivityGraph({ count: myRef })
       const snapshot2 = buildReactivityGraph({ count: myRef })
 
-      const node1 = snapshot1.nodes.find(n => n.type === 'ref')
-      const node2 = snapshot2.nodes.find(n => n.type === 'ref')
+      const node1 = snapshot1.nodes.find((n) => n.type === 'ref')
+      const node2 = snapshot2.nodes.find((n) => n.type === 'ref')
       expect(node1!.id).toBe(node2!.id)
 
-      const render1 = snapshot1.nodes.find(n => n.type === 'render')
-      const render2 = snapshot2.nodes.find(n => n.type === 'render')
+      const render1 = snapshot1.nodes.find((n) => n.type === 'render')
+      const render2 = snapshot2.nodes.find((n) => n.type === 'render')
       expect(render1!.id).toBe(render2!.id)
     })
   })
@@ -288,7 +288,7 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
       }
 
       const snapshot = buildReactivityGraph({ val: ref })
-      const types = snapshot.nodes.map(n => n.type)
+      const types = snapshot.nodes.map((n) => n.type)
 
       expect(types).toContain('ref')
       expect(types).toContain('render')
@@ -323,14 +323,14 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
 
       const snapshot = buildReactivityGraph({ val: ref })
 
-      const renderNode = snapshot.nodes.find(n => n.type === 'render')
+      const renderNode = snapshot.nodes.find((n) => n.type === 'render')
       expect(renderNode).toBeDefined()
       expect(renderNode!.label).toBe('Anonymous component render')
 
-      const watchNodes = snapshot.nodes.filter(n => n.type === 'watch')
+      const watchNodes = snapshot.nodes.filter((n) => n.type === 'watch')
       expect(watchNodes).toHaveLength(2)
       // cbWatcher 提取出 cb 源码预览
-      const cbNode = watchNodes.find(n => n.data.cb !== undefined)
+      const cbNode = watchNodes.find((n) => n.data.cb !== undefined)
       expect(cbNode?.data.cb).toContain('onUpdate')
     })
 
@@ -356,7 +356,7 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
         refWithUnknown,
       })
 
-      const types = snapshot.nodes.map(n => n.type)
+      const types = snapshot.nodes.map((n) => n.type)
       expect(types).toContain('ref')
       expect(types).toContain('reactive')
       expect(types).toContain('computed')
@@ -366,12 +366,27 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
 
   describe('6. 边界与空输入', () => {
     it('null、undefined、空对象与非对象类型安全返回空快照', () => {
-      expect(buildReactivityGraph(null)).toEqual({ nodes: [], relationships: [] })
-      expect(buildReactivityGraph(undefined)).toEqual({ nodes: [], relationships: [] })
+      expect(buildReactivityGraph(null)).toEqual({
+        nodes: [],
+        relationships: [],
+      })
+      expect(buildReactivityGraph(undefined)).toEqual({
+        nodes: [],
+        relationships: [],
+      })
       expect(buildReactivityGraph({})).toEqual({ nodes: [], relationships: [] })
-      expect(buildReactivityGraph(123 as any)).toEqual({ nodes: [], relationships: [] })
-      expect(buildReactivityGraph('string' as any)).toEqual({ nodes: [], relationships: [] })
-      expect(buildReactivityGraph(true as any)).toEqual({ nodes: [], relationships: [] })
+      expect(buildReactivityGraph(123 as any)).toEqual({
+        nodes: [],
+        relationships: [],
+      })
+      expect(buildReactivityGraph('string' as any)).toEqual({
+        nodes: [],
+        relationships: [],
+      })
+      expect(buildReactivityGraph(true as any)).toEqual({
+        nodes: [],
+        relationships: [],
+      })
     })
 
     it('跳过以 "_" 或 "$" 开头的私有属性', () => {
@@ -462,8 +477,8 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
       const snapshot = buildReactivityGraph(simulatedProxy)
 
       expect(snapshot.nodes).toHaveLength(2)
-      const refNode = snapshot.nodes.find(n => n.type === 'ref')
-      const renderNode = snapshot.nodes.find(n => n.type === 'render')
+      const refNode = snapshot.nodes.find((n) => n.type === 'ref')
+      const renderNode = snapshot.nodes.find((n) => n.type === 'render')
 
       expect(refNode).toBeDefined()
       expect(refNode!.label).toBe('count')
@@ -499,7 +514,7 @@ describe('reactivity-graph: 响应式图采集器 (探针侧)', () => {
       const snapshot = buildReactivityGraph(proxy as any)
 
       expect(snapshot.nodes).toHaveLength(2)
-      const refNode = snapshot.nodes.find(n => n.type === 'ref')
+      const refNode = snapshot.nodes.find((n) => n.type === 'ref')
       expect(refNode).toBeDefined()
       expect(refNode!.label).toBe('message')
       expect(refNode!.data.value).toBe('"vue-proxy"')

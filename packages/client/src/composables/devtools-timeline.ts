@@ -1,5 +1,8 @@
 import type { EncodedValue } from '@vue/devtools-kit'
-import type { DevtoolsRpcClient, DevtoolsRpcEvent } from '@vue/devtools-kit/client'
+import type {
+  DevtoolsRpcClient,
+  DevtoolsRpcEvent,
+} from '@vue/devtools-kit/client'
 import { ref, shallowRef, watch } from 'vue'
 
 export interface TimelineEntry {
@@ -46,7 +49,9 @@ interface StoredTimelineSettings {
   selectedLayerId: string
 }
 
-export function createDevtoolsTimeline(getRpcClient: () => DevtoolsRpcClient | undefined) {
+export function createDevtoolsTimeline(
+  getRpcClient: () => DevtoolsRpcClient | undefined,
+) {
   const initialTimelineSettings = readTimelineSettings()
   const timeline = shallowRef<TimelineEntry[]>([])
   const timelineLayers = shallowRef<TimelineLayerEntry[]>([])
@@ -106,11 +111,14 @@ export function createDevtoolsTimeline(getRpcClient: () => DevtoolsRpcClient | u
   function enqueueTimelineEvent(event: TimelineRpcEvent) {
     if (pendingCount === TIMELINE_PENDING_LIMIT) {
       const removed = pendingTimelineEvents[pendingHead]
-      pendingDropped += removed?.type === 'timeline:eventsLimited' ? (removed.dropped ?? 0) : 1
+      pendingDropped +=
+        removed?.type === 'timeline:eventsLimited' ? (removed.dropped ?? 0) : 1
       pendingTimelineEvents[pendingHead] = event
       pendingHead = (pendingHead + 1) % TIMELINE_PENDING_LIMIT
     } else {
-      pendingTimelineEvents[(pendingHead + pendingCount) % TIMELINE_PENDING_LIMIT] = event
+      pendingTimelineEvents[
+        (pendingHead + pendingCount) % TIMELINE_PENDING_LIMIT
+      ] = event
       pendingCount++
     }
     scheduleFlush()
@@ -121,7 +129,8 @@ export function createDevtoolsTimeline(getRpcClient: () => DevtoolsRpcClient | u
     timelineFlushPending = true
     const generation = timelineQueueGeneration
     scheduleTimelineTask(() => {
-      if (generation !== timelineQueueGeneration || !timelineRecording.value) return
+      if (generation !== timelineQueueGeneration || !timelineRecording.value)
+        return
       timelineFlushPending = false
       flushTimelineEvents()
     })
@@ -175,8 +184,12 @@ export function createDevtoolsTimeline(getRpcClient: () => DevtoolsRpcClient | u
           appId: event.appId,
           pluginId: event.pluginId,
           layerId,
-          title: limited ? formatTimelineLimitLabel(dropped, coalesced) : event.title,
-          subtitle: limited ? (event.subtitle ?? 'Runtime event limit reached') : event.subtitle,
+          title: limited
+            ? formatTimelineLimitLabel(dropped, coalesced)
+            : event.title,
+          subtitle: limited
+            ? (event.subtitle ?? 'Runtime event limit reached')
+            : event.subtitle,
           data: event.data,
           meta: event.meta,
           groupId: event.groupId,
@@ -215,7 +228,8 @@ export function createDevtoolsTimeline(getRpcClient: () => DevtoolsRpcClient | u
   }
 
   function scheduleTimelineTask(task: () => void) {
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => task())
+    if (typeof requestAnimationFrame === 'function')
+      requestAnimationFrame(() => task())
     else setTimeout(task, 0)
   }
 
@@ -228,7 +242,10 @@ export function createDevtoolsTimeline(getRpcClient: () => DevtoolsRpcClient | u
     timelineFlushPending = false
   }
 
-  function formatTimelineLimitLabel(dropped: number, coalesced: number): string {
+  function formatTimelineLimitLabel(
+    dropped: number,
+    coalesced: number,
+  ): string {
     if (dropped && coalesced) return 'Events dropped and coalesced'
     if (dropped) return 'Events dropped'
     if (coalesced) return 'Events coalesced'
@@ -356,7 +373,10 @@ export function createDevtoolsTimeline(getRpcClient: () => DevtoolsRpcClient | u
 
       const record = value as Partial<StoredTimelineSettings>
       return {
-        recording: typeof record.recording === 'boolean' ? record.recording : fallback.recording,
+        recording:
+          typeof record.recording === 'boolean'
+            ? record.recording
+            : fallback.recording,
         disabledLayerIds: Array.isArray(record.disabledLayerIds)
           ? record.disabledLayerIds.filter(
               (layerId): layerId is string => typeof layerId === 'string',
@@ -376,7 +396,10 @@ export function createDevtoolsTimeline(getRpcClient: () => DevtoolsRpcClient | u
     if (typeof window === 'undefined') return
 
     try {
-      window.localStorage.setItem(TIMELINE_SETTINGS_STORAGE, JSON.stringify(settings))
+      window.localStorage.setItem(
+        TIMELINE_SETTINGS_STORAGE,
+        JSON.stringify(settings),
+      )
     } catch {}
   }
 

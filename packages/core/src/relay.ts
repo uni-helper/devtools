@@ -1,14 +1,24 @@
 import type { BirpcGroup, BirpcReturn } from 'birpc'
-import type { DevframeNodeRpcSession, DevframeNodeRpcSessionMeta, DevframeRpcConnection } from 'devframe/types'
+import type {
+  DevframeNodeRpcSession,
+  DevframeNodeRpcSessionMeta,
+  DevframeRpcConnection,
+} from 'devframe/types'
 import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
 import { AGENT_RPC } from './rpc-names.ts'
 
 /** URL marker attached by the mini-program agent probe */
 export const AGENT_CLIENT_MARKER = 'client=uni-agent'
 
-export type AgentClient = BirpcReturn<Record<string, (...args: any[]) => any>, Record<string, never>, false>
+export type AgentClient = BirpcReturn<
+  Record<string, (...args: any[]) => any>,
+  Record<string, never>,
+  false
+>
 
-export type BirpcGroupResolver = BirpcGroup<any, any, false> | (() => BirpcGroup<any, any, false> | undefined)
+export type BirpcGroupResolver =
+  | BirpcGroup<any, any, false>
+  | (() => BirpcGroup<any, any, false> | undefined)
 
 const DEFAULT_CALL_TIMEOUT = 5_000
 
@@ -22,16 +32,13 @@ const AGENT_CALL_MISS = Symbol('agent-call-miss')
  * 不再是 Error 实例；这里要认这种形态，否则错误文案退化成 `[object Object]`。
  */
 function describeAgentError(err: unknown): string {
-  if (err instanceof Error)
-    return err.message
+  if (err instanceof Error) return err.message
   if (err && typeof err === 'object') {
     const message = (err as { message?: unknown }).message
-    if (typeof message === 'string' && message)
-      return message
+    if (typeof message === 'string' && message) return message
     try {
       return JSON.stringify(err)
-    }
-    catch {
+    } catch {
       return String(err)
     }
   }
@@ -67,24 +74,27 @@ export class AgentRegistry {
   }
 
   getGroup(): BirpcGroup<any, any, false> | undefined {
-    if (typeof this.groupSource === 'function')
-      return this.groupSource()
+    if (typeof this.groupSource === 'function') return this.groupSource()
     return this.groupSource
   }
 
-  connect = (connection: DevframeRpcConnection, _session?: DevframeNodeRpcSession): void => {
+  connect = (
+    connection: DevframeRpcConnection,
+    _session?: DevframeNodeRpcSession,
+  ): void => {
     const url = connection.request?.url ?? ''
-    if (!url.includes(AGENT_CLIENT_MARKER))
-      return
+    if (!url.includes(AGENT_CLIENT_MARKER)) return
 
     const group = this.getGroup()
     const clients = group?.clients ?? []
     const client = clients[clients.length - 1] as AgentClient | undefined
-    if (client)
-      this.agents.set(connection.id, client)
+    if (client) this.agents.set(connection.id, client)
   }
 
-  disconnect = (connection: DevframeRpcConnection, _meta?: DevframeNodeRpcSessionMeta): void => {
+  disconnect = (
+    connection: DevframeRpcConnection,
+    _meta?: DevframeNodeRpcSessionMeta,
+  ): void => {
     this.agents.delete(connection.id)
   }
 
@@ -105,9 +115,11 @@ export class AgentRegistry {
     const tryAllAgents = async (): Promise<T | typeof AGENT_CALL_MISS> => {
       for (const client of this.agents.values()) {
         try {
-          return (await withTimeout(client.$call(method, ...args), this.defaultTimeout)) as T
-        }
-        catch (err) {
+          return (await withTimeout(
+            client.$call(method, ...args),
+            this.defaultTimeout,
+          )) as T
+        } catch (err) {
           failures.push(describeAgentError(err))
         }
       }
@@ -115,20 +127,22 @@ export class AgentRegistry {
     }
 
     const direct = await tryAllAgents()
-    if (direct !== AGENT_CALL_MISS)
-      return direct
+    if (direct !== AGENT_CALL_MISS) return direct
 
     await this.refreshByPing()
 
     const afterPing = await tryAllAgents()
-    if (afterPing !== AGENT_CALL_MISS)
-      return afterPing
+    if (afterPing !== AGENT_CALL_MISS) return afterPing
 
     if (this.agents.size === 0) {
-      throw new Error('No uni-devtools agent connected. Please ensure the uni-app is running and the devtools agent is injected.')
+      throw new Error(
+        'No uni-devtools agent connected. Please ensure the uni-app is running and the devtools agent is injected.',
+      )
     }
 
-    throw new Error(`uni-devtools agent call "${method}" failed: ${failures.join(' | ')}`)
+    throw new Error(
+      `uni-devtools agent call "${method}" failed: ${failures.join(' | ')}`,
+    )
   }
 
   /**
@@ -144,8 +158,7 @@ export class AgentRegistry {
       try {
         await withTimeout(client.$call(AGENT_RPC.ping), this.defaultTimeout)
         this.agents.set(clients.indexOf(client), client)
-      }
-      catch {
+      } catch {
         // Non-agent peer or disconnected socket, skip
       }
     }
@@ -156,7 +169,10 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`Agent call timed out after ${ms}ms`)), ms),
+      setTimeout(
+        () => reject(new Error(`Agent call timed out after ${ms}ms`)),
+        ms,
+      ),
     ),
   ])
 }

@@ -144,12 +144,17 @@ export const shadowSurfaceSafelist: string[] = [
  * overridable `--colors-primary-<stop>` custom properties (derived from
  * `--devframe-primary`). Must match that file's declarations exactly.
  */
-const OVERRIDABLE_PRIMARY_STOPS = ['DEFAULT', '600', '500', '400', '300'] as const
+const OVERRIDABLE_PRIMARY_STOPS = [
+  'DEFAULT',
+  '600',
+  '500',
+  '400',
+  '300',
+] as const
 
 function hexToRgbTriplet(hex: string): string | undefined {
   const match = /^#([0-9a-f]{6})$/i.exec(hex)
-  if (!match)
-    return undefined
+  if (!match) return undefined
   const int = Number.parseInt(match[1], 16)
   return `${(int >> 16) & 255} ${(int >> 8) & 255} ${int & 255}`
 }
@@ -177,14 +182,19 @@ function hexToRgbTriplet(hex: string): string | undefined {
  * @param css - The compiled Wind3 CSS (pre-`--un-*` namespacing).
  * @param primaryRamp - The generator's resolved `theme.colors.primary` ramp.
  */
-export function rewireBakedPrimaryColors(css: string, primaryRamp: Record<string, string>): string {
+export function rewireBakedPrimaryColors(
+  css: string,
+  primaryRamp: Record<string, string>,
+): string {
   let out = css
   for (const stop of OVERRIDABLE_PRIMARY_STOPS) {
     const hex = primaryRamp[stop]
     const rgb = hex && hexToRgbTriplet(hex)
-    if (!rgb)
-      continue
-    const varName = stop === 'DEFAULT' ? '--colors-primary-DEFAULT' : `--colors-primary-${stop}`
+    if (!rgb) continue
+    const varName =
+      stop === 'DEFAULT'
+        ? '--colors-primary-DEFAULT'
+        : `--colors-primary-${stop}`
     out = out.replace(
       new RegExp(String.raw`rgb\(${rgb}(?!\d)`, 'g'),
       `rgb(from var(${varName}, ${hex}) r g b`,

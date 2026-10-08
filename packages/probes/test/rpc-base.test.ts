@@ -4,7 +4,10 @@ import {
   getCurrentPagesSafe,
   resolveRuntimeUni,
 } from '../src/runtime/rpc-base'
-import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree'
+import {
+  clearInstanceRegistry,
+  extractComponentNode,
+} from '../src/runtime/tree'
 
 describe('rpc-base: createBaseRpcFunctions', () => {
   beforeEach(() => {
@@ -67,7 +70,9 @@ describe('rpc-base: createBaseRpcFunctions', () => {
     expect(resString).toHaveProperty('data')
     expect(resString.data).toEqual({ count: 1 })
 
-    const resObject = fns['uni-devtools:agent:getComponentState']({ id: 'comp-test' })
+    const resObject = fns['uni-devtools:agent:getComponentState']({
+      id: 'comp-test',
+    })
     expect(resObject).toHaveProperty('id', 'comp-test')
     expect(resObject.data).toEqual({ count: 1 })
   })
@@ -84,11 +89,19 @@ describe('rpc-base: createBaseRpcFunctions', () => {
 
   it('updateComponentState 支持两种入参形态并返回结果', () => {
     const fns = createBaseRpcFunctions()
-    const resObj = fns['uni-devtools:agent:updateComponentState']({ id: 'comp-test', key: 'count', value: 2 })
+    const resObj = fns['uni-devtools:agent:updateComponentState']({
+      id: 'comp-test',
+      key: 'count',
+      value: 2,
+    })
     expect(resObj.ok).toBe(true)
     expect(resObj.key).toBe('count')
 
-    const resArgs = fns['uni-devtools:agent:updateComponentState']('comp-test', 'count', 3)
+    const resArgs = fns['uni-devtools:agent:updateComponentState'](
+      'comp-test',
+      'count',
+      3,
+    )
     expect(resArgs.ok).toBe(true)
     expect(resArgs.key).toBe('count')
   })
@@ -107,14 +120,13 @@ describe('rpc-base: createBaseRpcFunctions', () => {
 
     try {
       const fns = createBaseRpcFunctions()
-      const res = await fns['uni-devtools:agent:navigate']({ path: '/pages/index' })
+      const res = await fns['uni-devtools:agent:navigate']({
+        path: '/pages/index',
+      })
       expect(res).toEqual({ ok: false, error: 'uni runtime is not available' })
-    }
-    finally {
-      if (originalUni !== undefined)
-        (globalThis as any).uni = originalUni
-      if (originalWx !== undefined)
-        (globalThis as any).wx = originalWx
+    } finally {
+      if (originalUni !== undefined) (globalThis as any).uni = originalUni
+      if (originalWx !== undefined) (globalThis as any).wx = originalWx
     }
   })
 })
@@ -125,8 +137,7 @@ describe('rpc-base: getCurrentPagesSafe & getRouterInfo', () => {
   afterEach(() => {
     if (originalGetPages !== undefined) {
       ;(globalThis as any).getCurrentPages = originalGetPages
-    }
-    else {
+    } else {
       delete (globalThis as any).getCurrentPages
     }
   })
@@ -200,11 +211,9 @@ describe('rpc-base: resolveRuntimeUni', () => {
   const originalWx = (globalThis as any).wx
 
   afterEach(() => {
-    if (originalUni !== undefined)
-      (globalThis as any).uni = originalUni
+    if (originalUni !== undefined) (globalThis as any).uni = originalUni
     else delete (globalThis as any).uni
-    if (originalWx !== undefined)
-      (globalThis as any).wx = originalWx
+    if (originalWx !== undefined) (globalThis as any).wx = originalWx
     else delete (globalThis as any).wx
   })
 

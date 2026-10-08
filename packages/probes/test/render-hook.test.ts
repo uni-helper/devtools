@@ -23,7 +23,9 @@ describe('__uniDevtoolsNotifyRender', () => {
       received.push(...args)
       return { vnode: true }
     }
-    const wrapped = __uniDevtoolsNotifyRender(render) as (...args: unknown[]) => unknown
+    const wrapped = __uniDevtoolsNotifyRender(render) as (
+      ...args: unknown[]
+    ) => unknown
 
     const args = [ctx, cache, props, setup, data, options]
     const thisObj = { proxy: true }

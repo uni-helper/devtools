@@ -7,7 +7,11 @@ import type {
 import { computed, toRef } from 'vue'
 import DevtoolsIcon from '../common/DevtoolsIcon.vue'
 import { displayNodeLabel } from '../../utils/reactivity-graph-layout'
-import { typeColor, nodeTypeLabel, formatNodeValue } from '../../utils/reactivity-graph-display'
+import {
+  typeColor,
+  nodeTypeLabel,
+  formatNodeValue,
+} from '../../utils/reactivity-graph-display'
 import {
   emptyRelationshipPath,
   type RelationshipPathResult,
@@ -26,7 +30,9 @@ const filteredGraph = toRef(props, 'filteredGraph')
 const nodes = computed(() => props.filteredGraph.nodes)
 const relationships = computed(() => props.filteredGraph.relationships)
 const pathModeActive = computed(() => !!props.path)
-const selectedRelationshipPath = computed(() => props.path ?? emptyRelationshipPath())
+const selectedRelationshipPath = computed(
+  () => props.path ?? emptyRelationshipPath(),
+)
 function selectGraphNode(nodeId: string) {
   emit('select', nodeId)
 }
@@ -67,7 +73,9 @@ const RELATIONSHIP_DETAIL_SPACING = {
   dot: 16,
 }
 
-const snapshotNodeById = computed(() => new Map(props.graph.nodes.map((node) => [node.id, node])))
+const snapshotNodeById = computed(
+  () => new Map(props.graph.nodes.map((node) => [node.id, node])),
+)
 
 const selectedPathNodes = computed(() =>
   selectedRelationshipPath.value.orderedNodeIds
@@ -77,16 +85,26 @@ const selectedPathNodes = computed(() =>
 
 const selectedPathRelationships = computed(() => {
   const relationshipById = new Map(
-    filteredGraph.value.relationships.map((relationship) => [relationship.id, relationship]),
+    filteredGraph.value.relationships.map((relationship) => [
+      relationship.id,
+      relationship,
+    ]),
   )
   return selectedRelationshipPath.value.orderedRelationshipIds
     .map((relationshipId) => relationshipById.get(relationshipId))
-    .filter((relationship): relationship is ReactivityRelationship => relationship !== undefined)
+    .filter(
+      (relationship): relationship is ReactivityRelationship =>
+        relationship !== undefined,
+    )
 })
 
-const nodeById = computed(() => new Map(nodes.value.map((node) => [node.id, node])))
+const nodeById = computed(
+  () => new Map(nodes.value.map((node) => [node.id, node])),
+)
 
-const selectedNode = computed(() => nodes.value.find((node) => node.id === selectedNodeId.value))
+const selectedNode = computed(() =>
+  nodes.value.find((node) => node.id === selectedNodeId.value),
+)
 
 const selectedStateRows = computed(() =>
   selectedNodeId.value && snapshotNodeById.value.has(selectedNodeId.value)
@@ -107,7 +125,8 @@ const relationshipDetailLayout = computed(() => buildRelationshipDetailLayout())
 function relationshipDetailListHeight(count: number) {
   if (!count) return 0
   return (
-    RELATIONSHIP_DETAIL_SPACING.height * count + RELATIONSHIP_DETAIL_SPACING.padding * (count + 1)
+    RELATIONSHIP_DETAIL_SPACING.height * count +
+    RELATIONSHIP_DETAIL_SPACING.padding * (count + 1)
   )
 }
 
@@ -123,13 +142,19 @@ function buildRelationshipDetailTraversal(
   let frontier = new Set([startId])
   let nodeCount = 0
 
-  for (let depth = 1; depth <= dependencyDepth.value && frontier.size; depth += 1) {
+  for (
+    let depth = 1;
+    depth <= dependencyDepth.value && frontier.size;
+    depth += 1
+  ) {
     const nextIds: string[] = []
     const nextSeen = new Set<string>()
 
     for (const relationship of relationships.value) {
-      const candidateId = side === 'dependency' ? relationship.from : relationship.to
-      const frontierId = side === 'dependency' ? relationship.to : relationship.from
+      const candidateId =
+        side === 'dependency' ? relationship.from : relationship.to
+      const frontierId =
+        side === 'dependency' ? relationship.to : relationship.from
       if (!frontier.has(frontierId)) continue
       if (visited.has(candidateId) || nextSeen.has(candidateId)) continue
       if (!nodeById.value.has(candidateId)) continue
@@ -165,20 +190,27 @@ function buildRelationshipDetailLayout() {
   const startId = selectedNodeId.value
   if (!startId) {
     return {
-      centerX: RELATIONSHIP_DETAIL_SPACING.canvasPadding + RELATIONSHIP_DETAIL_SPACING.dot / 2,
+      centerX:
+        RELATIONSHIP_DETAIL_SPACING.canvasPadding +
+        RELATIONSHIP_DETAIL_SPACING.dot / 2,
       centerY: RELATIONSHIP_DETAIL_SPACING.dot / 2,
       height: RELATIONSHIP_DETAIL_SPACING.dot,
       links: [] satisfies RelationshipDetailLayoutLink[],
       nodes: [] satisfies RelationshipDetailLayoutNode[],
-      width: RELATIONSHIP_DETAIL_SPACING.canvasPadding * 2 + RELATIONSHIP_DETAIL_SPACING.dot,
+      width:
+        RELATIONSHIP_DETAIL_SPACING.canvasPadding * 2 +
+        RELATIONSHIP_DETAIL_SPACING.dot,
     }
   }
 
   const dependencyLayers = relationshipDetailDependencyTraversal.value.layers
-  const dependencyDepthById = relationshipDetailDependencyTraversal.value.depthById
+  const dependencyDepthById =
+    relationshipDetailDependencyTraversal.value.depthById
   const subscriberLayers = relationshipDetailSubscriberTraversal.value.layers
-  const subscriberDepthById = relationshipDetailSubscriberTraversal.value.depthById
-  const columnStep = RELATIONSHIP_DETAIL_SPACING.width + RELATIONSHIP_DETAIL_SPACING.columnGap
+  const subscriberDepthById =
+    relationshipDetailSubscriberTraversal.value.depthById
+  const columnStep =
+    RELATIONSHIP_DETAIL_SPACING.width + RELATIONSHIP_DETAIL_SPACING.columnGap
   const centerX =
     RELATIONSHIP_DETAIL_SPACING.canvasPadding +
     subscriberLayers.length * columnStep +
@@ -190,13 +222,20 @@ function buildRelationshipDetailLayout() {
     dependencyLayers.length * columnStep
   const height = Math.max(
     RELATIONSHIP_DETAIL_SPACING.dot,
-    ...subscriberLayers.map((layer) => relationshipDetailListHeight(layer.length)),
-    ...dependencyLayers.map((layer) => relationshipDetailListHeight(layer.length)),
+    ...subscriberLayers.map((layer) =>
+      relationshipDetailListHeight(layer.length),
+    ),
+    ...dependencyLayers.map((layer) =>
+      relationshipDetailListHeight(layer.length),
+    ),
   )
   let centerY = height / 2
   const nodes: RelationshipDetailLayoutNode[] = []
   const firstLayerYs: number[] = []
-  const positions = new Map<string, { node?: RelationshipDetailLayoutNode; x: number; y: number }>()
+  const positions = new Map<
+    string,
+    { node?: RelationshipDetailLayoutNode; x: number; y: number }
+  >()
 
   subscriberLayers.forEach((layer, layerIndex) => {
     const depth = layerIndex + 1
@@ -212,9 +251,17 @@ function buildRelationshipDetailLayout() {
     layer.forEach((node, nodeIndex) => {
       const y =
         top +
-        nodeIndex * (RELATIONSHIP_DETAIL_SPACING.height + RELATIONSHIP_DETAIL_SPACING.padding) +
+        nodeIndex *
+          (RELATIONSHIP_DETAIL_SPACING.height +
+            RELATIONSHIP_DETAIL_SPACING.padding) +
         RELATIONSHIP_DETAIL_SPACING.height / 2
-      const item: RelationshipDetailLayoutNode = { depth, node, side: 'subscriber', x, y }
+      const item: RelationshipDetailLayoutNode = {
+        depth,
+        node,
+        side: 'subscriber',
+        x,
+        y,
+      }
       nodes.push(item)
       if (layerIndex === 0) firstLayerYs.push(y)
       positions.set(node.id, { node: item, x, y })
@@ -234,9 +281,17 @@ function buildRelationshipDetailLayout() {
     layer.forEach((node, nodeIndex) => {
       const y =
         top +
-        nodeIndex * (RELATIONSHIP_DETAIL_SPACING.height + RELATIONSHIP_DETAIL_SPACING.padding) +
+        nodeIndex *
+          (RELATIONSHIP_DETAIL_SPACING.height +
+            RELATIONSHIP_DETAIL_SPACING.padding) +
         RELATIONSHIP_DETAIL_SPACING.height / 2
-      const item: RelationshipDetailLayoutNode = { depth, node, side: 'dependency', x, y }
+      const item: RelationshipDetailLayoutNode = {
+        depth,
+        node,
+        side: 'dependency',
+        x,
+        y,
+      }
       nodes.push(item)
       if (layerIndex === 0) firstLayerYs.push(y)
       positions.set(node.id, { node: item, x, y })
@@ -276,7 +331,9 @@ function buildRelationshipDetailLayout() {
 
     const subscriberDepth = subscriberDepthById.get(relationship.to)
     const subscriberParentDepth =
-      relationship.from === startId ? 0 : subscriberDepthById.get(relationship.from)
+      relationship.from === startId
+        ? 0
+        : subscriberDepthById.get(relationship.from)
     if (
       subscriberDepth !== undefined &&
       subscriberParentDepth !== undefined &&
@@ -301,11 +358,19 @@ function buildRelationshipDetailLayout() {
   return { centerX, centerY, height, links, nodes, width }
 }
 
-function relationshipDetailLeftEdge(position: { node?: RelationshipDetailLayoutNode; x: number }) {
-  return position.node ? position.x : position.x - RELATIONSHIP_DETAIL_SPACING.dot / 2
+function relationshipDetailLeftEdge(position: {
+  node?: RelationshipDetailLayoutNode
+  x: number
+}) {
+  return position.node
+    ? position.x
+    : position.x - RELATIONSHIP_DETAIL_SPACING.dot / 2
 }
 
-function relationshipDetailRightEdge(position: { node?: RelationshipDetailLayoutNode; x: number }) {
+function relationshipDetailRightEdge(position: {
+  node?: RelationshipDetailLayoutNode
+  x: number
+}) {
   return position.node
     ? position.x + RELATIONSHIP_DETAIL_SPACING.width
     : position.x + RELATIONSHIP_DETAIL_SPACING.dot / 2
@@ -350,7 +415,8 @@ function getGraphStateValueClass(value: string) {
   if (value === 'null' || value === 'undefined') return 'null-state-type'
   if (value === 'true' || value === 'false') return 'boolean-state-type'
   if (value.startsWith('"')) return 'string-state-type'
-  if (/^-?\d/.test(value) || value.startsWith('Symbol(')) return 'literal-state-type'
+  if (/^-?\d/.test(value) || value.startsWith('Symbol('))
+    return 'literal-state-type'
   return 'state-value'
 }
 
@@ -372,7 +438,9 @@ function formatGraphValue(node: ReactivityGraphNode) {
               type="button"
               @click="selectGraphNode(node.id)"
             >
-              <span class="w-4 shrink-0 text-right color-muted font-state-field text-3">
+              <span
+                class="w-4 shrink-0 text-right color-muted font-state-field text-3"
+              >
                 {{ index + 1 }}
               </span>
               <span
@@ -404,7 +472,10 @@ function formatGraphValue(node: ReactivityGraphNode) {
           </template>
         </div>
 
-        <div v-else class="h-28 flex items-center justify-center color-muted text-3.5 italic">
+        <div
+          v-else
+          class="h-28 flex items-center justify-center color-muted text-3.5 italic"
+        >
           No relationship path found
         </div>
       </section>
@@ -420,7 +491,9 @@ function formatGraphValue(node: ReactivityGraphNode) {
             :key="row.key"
             class="font-state-field min-w-0 flex items-center text-3.5"
           >
-            <span class="state-key shrink-0 overflow-hidden text-ellipsis whitespace-nowrap op70">
+            <span
+              class="state-key shrink-0 overflow-hidden text-ellipsis whitespace-nowrap op70"
+            >
               {{ row.key }}
             </span>
             <span class="colon mx-1 shrink-0">:</span>
@@ -436,7 +509,9 @@ function formatGraphValue(node: ReactivityGraphNode) {
       </section>
 
       <section class="border-t border-base pt-4">
-        <h2 class="mb-2 color-muted font-state-field text-3.5">Relationships</h2>
+        <h2 class="mb-2 color-muted font-state-field text-3.5">
+          Relationships
+        </h2>
 
         <div class="overflow-x-auto pb-2">
           <div
@@ -479,7 +554,9 @@ function formatGraphValue(node: ReactivityGraphNode) {
             <button
               v-for="item in relationshipDetailLayout.nodes"
               :key="`${item.side}:${item.depth}:${item.node.id}`"
-              v-tooltip.top="`${displayNodeLabel(item.node)} - ${nodeTypeLabel(item.node.type)}`"
+              v-tooltip.top="
+                `${displayNodeLabel(item.node)} - ${nodeTypeLabel(item.node.type)}`
+              "
               class="absolute z-20 min-w-0 block rounded-1 border border-base bg-base px-2 py-1 text-left color-base hover:bg-active"
               type="button"
               :style="{
@@ -503,7 +580,10 @@ function formatGraphValue(node: ReactivityGraphNode) {
             </button>
           </div>
 
-          <div v-else class="h-28 flex items-center justify-center color-muted text-3.5 italic">
+          <div
+            v-else
+            class="h-28 flex items-center justify-center color-muted text-3.5 italic"
+          >
             No data
           </div>
         </div>

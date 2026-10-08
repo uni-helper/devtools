@@ -63,7 +63,7 @@ packages/
 uni.rpc.register(defineRpcFunction({
   name: 'get-component-tree',
   handler: async () => { /* 返回数据 */ },
-  
+
   // 👇 这个字段自动暴露 MCP 接口
   agent: {
     description: 'Get component tree for AI analysis',
@@ -137,6 +137,7 @@ MCP Adapter（devframe 自动生成）
 ```
 
 **关键点**：
+
 - MCP Adapter 是 devframe 提供的，不需要自己实现
 - AI agent 在外部独立项目中实现
 - 本项目只负责暴露数据，不包含 AI 分析逻辑
@@ -145,16 +146,16 @@ MCP Adapter（devframe 自动生成）
 
 ## 各包职责
 
-| 包名 | 职责 | 运行环境 | MCP 相关 |
-|-----|------|---------|---------|
-| **shared** | 跨端共享类型和工具 | 全环境 | - |
-| **probe** | 小程序沙箱数据采集 | 小程序 | - |
-| **core** | Node 中继 + RPC + **MCP 暴露** | Node.js | ✅ **包含 agent 元数据** |
-| **adapter** | 协议翻译（给 client 用） | 浏览器 | - |
-| **client** | UI 面板 | 浏览器 | - |
-| **vite** | Vite 插件 | Node.js | - |
-| **webpack** | Webpack 插件 | Node.js | - |
-| **devtools** | 主入口 | Node.js | - |
+| 包名         | 职责                           | 运行环境 | MCP 相关                 |
+| ------------ | ------------------------------ | -------- | ------------------------ |
+| **shared**   | 跨端共享类型和工具             | 全环境   | -                        |
+| **probe**    | 小程序沙箱数据采集             | 小程序   | -                        |
+| **core**     | Node 中继 + RPC + **MCP 暴露** | Node.js  | ✅ **包含 agent 元数据** |
+| **adapter**  | 协议翻译（给 client 用）       | 浏览器   | -                        |
+| **client**   | UI 面板                        | 浏览器   | -                        |
+| **vite**     | Vite 插件                      | Node.js  | -                        |
+| **webpack**  | Webpack 插件                   | Node.js  | -                        |
+| **devtools** | 主入口                         | Node.js  | -                        |
 
 ---
 
@@ -168,42 +169,48 @@ export function createUniDevtoolsDevframe(registry, options) {
     id: 'uni-helper-devtools',
     name: 'Uni DevTools',
     // ...
-    
+
     async setup(ctx) {
       const uni = ctx.scope('uni-helper-devtools')
-      
+
       // 注册 RPC 方法，带 agent 元数据
-      uni.rpc.register(defineRpcFunction({
-        name: 'get-component-tree',
-        type: 'query',
-        jsonSerializable: true,
-        
-        // 👇 这个字段自动暴露给 AI agent
-        agent: {
-          description: 'Get the component tree of running uni-app pages',
-          input: (schema) => schema.object({
-            pageId: schema.string().optional()
+      uni.rpc.register(
+        defineRpcFunction({
+          name: 'get-component-tree',
+          type: 'query',
+          jsonSerializable: true,
+
+          // 👇 这个字段自动暴露给 AI agent
+          agent: {
+            description: 'Get the component tree of running uni-app pages',
+            input: (schema) =>
+              schema.object({
+                pageId: schema.string().optional(),
+              }),
+            output: (schema) =>
+              schema.object({
+                pages: schema.array(schema.any()),
+                vueVersion: schema.string(),
+              }),
+          },
+
+          setup: () => ({
+            handler: async (params) => {
+              const tree = await registry.callAgent(
+                'uni-devtools:agent:getComponentTree',
+              )
+              return {
+                fetchedAt: Date.now(),
+                pages: tree?.pages ?? [],
+                vueVersion: tree?.vueVersion,
+              }
+            },
           }),
-          output: (schema) => schema.object({
-            pages: schema.array(schema.any()),
-            vueVersion: schema.string()
-          })
-        },
-        
-        setup: () => ({
-          handler: async (params) => {
-            const tree = await registry.callAgent('uni-devtools:agent:getComponentTree')
-            return {
-              fetchedAt: Date.now(),
-              pages: tree?.pages ?? [],
-              vueVersion: tree?.vueVersion
-            }
-          }
-        })
-      }))
-      
+        }),
+      )
+
       // 更多 RPC 方法...
-    }
+    },
   })
 }
 ```
@@ -238,7 +245,7 @@ await client.connect(transport)
 // 调用 DevTools 暴露的方法
 const tree = await client.callTool({
   name: 'uni-helper-devtools:get-component-tree',
-  arguments: { pageId: '/pages/index' }
+  arguments: { pageId: '/pages/index' },
 })
 
 // AI 自己分析
@@ -247,7 +254,7 @@ for (const component of tree.pages[0].components) {
   if (component.renderCount > 100) {
     issues.push({
       type: 'performance',
-      message: `${component.name} renders too frequently`
+      message: `${component.name} renders too frequently`,
     })
   }
 }
@@ -257,14 +264,14 @@ for (const component of tree.pages[0].components) {
 
 ## 与原作者建议的对比
 
-| 维度 | 原作者建议 | 最终方案 | 说明 |
-|-----|-----------|---------|------|
-| 探针包 | `core` | `probe` | 避免混淆 |
-| Node 核心 | 未明确 | `core` | 包含 MCP 暴露 |
-| 适配器 | 未明确 | `adapter` | 1108 行资产保护 |
-| 面板 | `client` | `client` | ✅ 一致 |
-| agent 包 | "消费者" | ❌ **不创建** | **外部通过 MCP** |
-| 包数量 | 6+ | 8 | 补充 core + webpack |
+| 维度      | 原作者建议 | 最终方案      | 说明                |
+| --------- | ---------- | ------------- | ------------------- |
+| 探针包    | `core`     | `probe`       | 避免混淆            |
+| Node 核心 | 未明确     | `core`        | 包含 MCP 暴露       |
+| 适配器    | 未明确     | `adapter`     | 1108 行资产保护     |
+| 面板      | `client`   | `client`      | ✅ 一致             |
+| agent 包  | "消费者"   | ❌ **不创建** | **外部通过 MCP**    |
+| 包数量    | 6+         | 8             | 补充 core + webpack |
 
 ---
 
@@ -313,4 +320,3 @@ for (const component of tree.pages[0].components) {
 
 - **常量表必须拆成两张扁平表**。`shared/constants.ts` 不能导出 `{ ...AGENT_BASE_RPC, ...AGENT_RPC_VUE3 }` 这样的合并表：对象展开会让 esbuild 无法证明初始化无副作用，把整块（含 Pinia 键名）保留进 Vue 2 预构建产物，使「零 Vue 3 污染」的 `grep -ci pinia` 判据恒假阳性（实测 3 vs 0）。需要全表的 node 侧由 `core/src/rpc-names.ts` 自行组装。
 - **MCP 与「绑 LAN IP」互相冲突**。插件为让真机探针能连，原先只绑 LAN IP；而 MCP 路由的 loopback peer 检查要求对端来自 loopback，两者不可能同时成立（实测三种请求全 403）。修法是把「绑定地址」与「对外地址」拆开：server 绑 `0.0.0.0`，探针/面板 URL 仍用 LAN IP 自己拼（devframe 会把 `0.0.0.0` 规范成 `localhost`，不能直接取 `started.origin`）。
-

@@ -7,7 +7,9 @@ import type {
 import type { SimulationLinkDatum, SimulationNodeDatum } from 'd3-force'
 
 export interface ForceNode
-  extends Pick<ReactivityGraphNode, 'id' | 'type' | 'label'>, SimulationNodeDatum {
+  extends
+    Pick<ReactivityGraphNode, 'id' | 'type' | 'label'>,
+    SimulationNodeDatum {
   group: number
   incoming: number
   labelWidth: number
@@ -15,7 +17,8 @@ export interface ForceNode
   radius: number
 }
 
-export interface ForceLink extends SimulationLinkDatum<ForceNode>, ReactivityRelationship {
+export interface ForceLink
+  extends SimulationLinkDatum<ForceNode>, ReactivityRelationship {
   group: number
   source: string | ForceNode
   target: string | ForceNode
@@ -79,8 +82,14 @@ export function buildForceGraph(
   const nodes = graph.nodes.map((node) => {
     const group = groupByRoot.get(find(node.id)) ?? 0
     const degree = (incoming.get(node.id) ?? 0) + (outgoing.get(node.id) ?? 0)
-    const radius = Math.min(NODE_MAX_RADIUS, NODE_MIN_RADIUS + Math.sqrt(degree + 1) * 3)
-    const center = centers.get(group) ?? { x: viewportWidth / 2, y: viewportHeight / 2 }
+    const radius = Math.min(
+      NODE_MAX_RADIUS,
+      NODE_MIN_RADIUS + Math.sqrt(degree + 1) * 3,
+    )
+    const center = centers.get(group) ?? {
+      x: viewportWidth / 2,
+      y: viewportHeight / 2,
+    }
     const angle = (hashString(node.id) % 360) * (Math.PI / 180)
     const distance = 18 + (hashString(`${node.id}:distance`) % 54)
     const summary = groups[group]
@@ -102,7 +111,8 @@ export function buildForceGraph(
 
   const links = graph.relationships
     .map((relationship): ForceLink | undefined => {
-      if (!ids.has(relationship.from) || !ids.has(relationship.to)) return undefined
+      if (!ids.has(relationship.from) || !ids.has(relationship.to))
+        return undefined
 
       const group = groupByRoot.get(find(relationship.from)) ?? 0
       const summary = groups[group]
@@ -116,7 +126,9 @@ export function buildForceGraph(
         value: 1,
       } satisfies ForceLink
     })
-    .filter((relationship): relationship is ForceLink => relationship !== undefined)
+    .filter(
+      (relationship): relationship is ForceLink => relationship !== undefined,
+    )
 
   return { groups, links, nodes }
 }
@@ -156,11 +168,16 @@ export function shortenLabel(label: string) {
 function getLabelWidth(label: string) {
   return Math.min(
     LABEL_MAX_WIDTH,
-    Math.max(LABEL_MIN_WIDTH, shortenLabel(label).length * LABEL_CHAR_WIDTH + 22),
+    Math.max(
+      LABEL_MIN_WIDTH,
+      shortenLabel(label).length * LABEL_CHAR_WIDTH + 22,
+    ),
   )
 }
 
-export function displayNodeLabel(node: Pick<ReactivityGraphNode, 'label' | 'type'>) {
+export function displayNodeLabel(
+  node: Pick<ReactivityGraphNode, 'label' | 'type'>,
+) {
   const genericLabel = genericNodeLabel(node.type)
   const legacyFallbacks = new Set([
     node.type,

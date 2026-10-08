@@ -41,7 +41,9 @@ const tokens = computed(() => {
 
 <template>
   <div class="absolute inset-0 z-10 min-h-0 flex flex-col bg-base p-2">
-    <div class="h-10 shrink-0 flex items-center justify-between border-b border-base px-2">
+    <div
+      class="h-10 shrink-0 flex items-center justify-between border-b border-base px-2"
+    >
       <span class="font-500 text-3.5">Render Code</span>
       <button
         v-tooltip.bottom="'Close render code'"

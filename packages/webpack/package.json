@@ -1,7 +1,7 @@
 {
   "name": "@uni-helper/devtools-webpack",
-  "type": "module",
   "version": "0.0.1",
+  "type": "module",
   "exports": {
     ".": {
       "types": "./src/index.ts",

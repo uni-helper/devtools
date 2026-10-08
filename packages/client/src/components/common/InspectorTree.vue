@@ -117,7 +117,9 @@ const treeRows = computed<InspectorTreeRow[]>(() => {
   props.nodes.forEach((node) => visit(node, 0))
   return rows
 })
-const emptyText = computed(() => (props.filter ? props.noMatchingText : props.emptyText))
+const emptyText = computed(() =>
+  props.filter ? props.noMatchingText : props.emptyText,
+)
 
 watch(
   () => props.selectedNodeId,
@@ -143,7 +145,10 @@ watch([() => props.nodes, () => props.filter], () => {
 })
 
 function updateFilter(event: Event) {
-  emit('update:filter', event.target instanceof HTMLInputElement ? event.target.value : '')
+  emit(
+    'update:filter',
+    event.target instanceof HTMLInputElement ? event.target.value : '',
+  )
 }
 
 function decodeTooltipEntities(value: string): string {
@@ -160,7 +165,9 @@ function selectTreeNode(nodeId: string) {
 
 async function focusTreeRow(nodeId: string) {
   await nextTick()
-  requestAnimationFrame(() => treeRowElements.get(nodeId)?.focus({ preventScroll: true }))
+  requestAnimationFrame(() =>
+    treeRowElements.get(nodeId)?.focus({ preventScroll: true }),
+  )
 }
 
 function onTreeKeydown(event: KeyboardEvent) {
@@ -182,13 +189,18 @@ function onTreeKeydown(event: KeyboardEvent) {
       break
     case 'ArrowRight':
       event.preventDefault()
-      if (selected.hasChildren && selected.isCollapsed) setNodeCollapsed(selected, false)
-      else if (selected.hasChildren && rows[index + 1]?.parentId === selected.id)
+      if (selected.hasChildren && selected.isCollapsed)
+        setNodeCollapsed(selected, false)
+      else if (
+        selected.hasChildren &&
+        rows[index + 1]?.parentId === selected.id
+      )
         selectTreeNode(rows[index + 1].id)
       break
     case 'ArrowLeft':
       event.preventDefault()
-      if (selected.hasChildren && !selected.isCollapsed) setNodeCollapsed(selected, true)
+      if (selected.hasChildren && !selected.isCollapsed)
+        setNodeCollapsed(selected, true)
       else if (selected.parentId) selectTreeNode(selected.parentId)
       break
     case 'Home':
@@ -213,8 +225,12 @@ function toggleNodeCollapsed(node: InspectorTreeRow) {
 
 function setNodeCollapsed(node: InspectorTreeRow, collapsedValue: boolean) {
   const filtering = !!props.filter.trim()
-  const collapsed = new Set(filtering ? filteredCollapsedNodeIds.value : collapsedNodeIds.value)
-  const expanded = new Set(filtering ? filteredExpandedNodeIds.value : expandedNodeIds.value)
+  const collapsed = new Set(
+    filtering ? filteredCollapsedNodeIds.value : collapsedNodeIds.value,
+  )
+  const expanded = new Set(
+    filtering ? filteredExpandedNodeIds.value : expandedNodeIds.value,
+  )
 
   if (collapsedValue) {
     emit('collapse', node.id)
@@ -281,8 +297,14 @@ function pruneTrackedNodeIds() {
   collectNodeIds(props.nodes, nodeIds)
   collapsedNodeIds.value = intersectNodeIds(collapsedNodeIds.value, nodeIds)
   expandedNodeIds.value = intersectNodeIds(expandedNodeIds.value, nodeIds)
-  filteredCollapsedNodeIds.value = intersectNodeIds(filteredCollapsedNodeIds.value, nodeIds)
-  filteredExpandedNodeIds.value = intersectNodeIds(filteredExpandedNodeIds.value, nodeIds)
+  filteredCollapsedNodeIds.value = intersectNodeIds(
+    filteredCollapsedNodeIds.value,
+    nodeIds,
+  )
+  filteredExpandedNodeIds.value = intersectNodeIds(
+    filteredExpandedNodeIds.value,
+    nodeIds,
+  )
 }
 
 function collectNodeIds(nodes: InspectorTreeNode[], ids: Set<string>) {
@@ -292,11 +314,17 @@ function collectNodeIds(nodes: InspectorTreeNode[], ids: Set<string>) {
   }
 }
 
-function intersectNodeIds(trackedIds: Set<string>, nodeIds: Set<string>): Set<string> {
+function intersectNodeIds(
+  trackedIds: Set<string>,
+  nodeIds: Set<string>,
+): Set<string> {
   return new Set([...trackedIds].filter((id) => nodeIds.has(id)))
 }
 
-function setTreeRowElement(nodeId: string, element: Element | ComponentPublicInstance | null) {
+function setTreeRowElement(
+  nodeId: string,
+  element: Element | ComponentPublicInstance | null,
+) {
   const htmlElement = resolveHtmlElement(element)
   if (htmlElement) treeRowElements.set(nodeId, htmlElement)
   else treeRowElements.delete(nodeId)
@@ -305,10 +333,14 @@ function setTreeRowElement(nodeId: string, element: Element | ComponentPublicIns
 function resolveHtmlElement(
   element: Element | ComponentPublicInstance | null,
 ): HTMLElement | undefined {
-  if (typeof HTMLElement !== 'undefined' && element instanceof HTMLElement) return element
+  if (typeof HTMLElement !== 'undefined' && element instanceof HTMLElement)
+    return element
   const componentElement =
-    element && '$el' in element ? (element.$el as Element | undefined) : undefined
-  return typeof HTMLElement !== 'undefined' && componentElement instanceof HTMLElement
+    element && '$el' in element
+      ? (element.$el as Element | undefined)
+      : undefined
+  return typeof HTMLElement !== 'undefined' &&
+    componentElement instanceof HTMLElement
     ? componentElement
     : undefined
 }
@@ -330,7 +362,9 @@ async function scrollSelectedTreeNodeIntoView() {
 function getTagStyle(tag: ComponentTreeNodeTag): Record<string, string> {
   return {
     ...(tag.textColor == null ? {} : { color: toCssColor(tag.textColor) }),
-    ...(tag.backgroundColor == null ? {} : { backgroundColor: toCssColor(tag.backgroundColor) }),
+    ...(tag.backgroundColor == null
+      ? {}
+      : { backgroundColor: toCssColor(tag.backgroundColor) }),
   }
 }
 
@@ -394,7 +428,9 @@ function getActionButtonClass(action: InspectorTreeAction): string {
         v-tooltip.bottom="action.tooltip || 'Run action'"
         :class="getActionButtonClass(action)"
         type="button"
-        :aria-label="action.ariaLabel || action.tooltip || 'Run inspector action'"
+        :aria-label="
+          action.ariaLabel || action.tooltip || 'Run inspector action'
+        "
         :aria-pressed="action.pressed ?? action.active"
         @click="emit('action', index)"
       >
@@ -408,7 +444,10 @@ function getActionButtonClass(action: InspectorTreeAction): string {
       role="tree"
       @keydown="onTreeKeydown"
     >
-      <div v-if="loading && !treeRows.length" class="p-6 text-center color-muted">
+      <div
+        v-if="loading && !treeRows.length"
+        class="p-6 text-center color-muted"
+      >
         {{ loadingText }}
       </div>
 
@@ -435,7 +474,8 @@ function getActionButtonClass(action: InspectorTreeAction): string {
             :style="{ paddingLeft: `${node.depth * 15 + 4}px` }"
             role="treeitem"
             :tabindex="
-              selectedNodeId === node.id || (!selectedNodeId && treeRows[0]?.id === node.id)
+              selectedNodeId === node.id ||
+              (!selectedNodeId && treeRows[0]?.id === node.id)
                 ? 0
                 : -1
             "
@@ -457,7 +497,11 @@ function getActionButtonClass(action: InspectorTreeAction): string {
               @click.stop="toggleNodeCollapsed(node)"
             >
               <span
-                :class="node.isCollapsed ? 'i-carbon-chevron-right' : 'i-carbon-chevron-down'"
+                :class="
+                  node.isCollapsed
+                    ? 'i-carbon-chevron-right'
+                    : 'i-carbon-chevron-down'
+                "
                 aria-hidden="true"
               />
             </button>
@@ -478,7 +522,11 @@ function getActionButtonClass(action: InspectorTreeAction): string {
               <span
                 v-if="node.renderKey !== undefined && node.renderKey !== ''"
                 class="ml-1 text-xs op55"
-                :class="selectedNodeId === node.id ? 'text-purple-200 op100' : 'text-purple-500'"
+                :class="
+                  selectedNodeId === node.id
+                    ? 'text-purple-200 op100'
+                    : 'text-purple-500'
+                "
               >
                 key={{ node.renderKey }}
               </span>
@@ -526,20 +574,28 @@ function getActionButtonClass(action: InspectorTreeAction): string {
             </span>
             <button
               v-if="componentLabels"
-              v-tooltip.bottom="node.favorite ? 'Remove from favorites' : 'Add to favorites'"
+              v-tooltip.bottom="
+                node.favorite ? 'Remove from favorites' : 'Add to favorites'
+              "
               class="ml-1 h-6 w-6 shrink-0 rounded border-0 bg-transparent flex items-center justify-center"
               :class="
-                node.favorite ? 'color-amber-400' : 'op0 group-hover:op70 focus-visible:op100'
+                node.favorite
+                  ? 'color-amber-400'
+                  : 'op0 group-hover:op70 focus-visible:op100'
               "
               type="button"
-              :aria-label="node.favorite ? 'Remove from favorites' : 'Add to favorites'"
+              :aria-label="
+                node.favorite ? 'Remove from favorites' : 'Add to favorites'
+              "
               :aria-pressed="node.favorite"
               @keydown.stop
               @click.stop="emit('toggleFavorite', node.id)"
             >
               <span
                 class="text-5"
-                :class="node.favorite ? 'i-carbon-star-filled' : 'i-carbon-star'"
+                :class="
+                  node.favorite ? 'i-carbon-star-filled' : 'i-carbon-star'
+                "
                 aria-hidden="true"
               />
             </button>

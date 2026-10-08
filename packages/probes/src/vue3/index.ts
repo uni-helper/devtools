@@ -15,7 +15,11 @@
 import { AGENT_RPC_VUE3 } from '@uni-helper/devtools-shared'
 import type { AgentConfig, AgentInstance } from '../runtime/lifecycle.ts'
 import { createBaseRpcFunctions } from '../runtime/rpc-base.ts'
-import { disposeAgent, getAgentInstance, initAgentPipeline } from '../runtime/lifecycle.ts'
+import {
+  disposeAgent,
+  getAgentInstance,
+  initAgentPipeline,
+} from '../runtime/lifecycle.ts'
 import {
   type PiniaStateResult,
   type PiniaStoresResult,
@@ -34,21 +38,31 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     ...createBaseRpcFunctions(), // 8 个基础 RPC 方法（Vue 2/3 通用）
 
     // Vue 3 专属方法
-    [AGENT_RPC_VUE3.getComponentRenderCode]: (params: { id: string } | string): { code?: string } => {
+    [AGENT_RPC_VUE3.getComponentRenderCode]: (
+      params: { id: string } | string,
+    ): { code?: string } => {
       const id = typeof params === 'string' ? params : params?.id
       return getComponentRenderCode(id)
     },
-    [AGENT_RPC_VUE3.recomputeComponentState]: (params: { id: string, section: string, path: string[] }): { ok: boolean } => {
+    [AGENT_RPC_VUE3.recomputeComponentState]: (params: {
+      id: string
+      section: string
+      path: string[]
+    }): { ok: boolean } => {
       return recomputeComponentState(params.id, params.section, params.path)
     },
     [AGENT_RPC_VUE3.getPiniaStores]: (): PiniaStoresResult => {
       return getPiniaStores()
     },
-    [AGENT_RPC_VUE3.getPiniaState]: (args: { id: string } | string): PiniaStateResult => {
+    [AGENT_RPC_VUE3.getPiniaState]: (
+      args: { id: string } | string,
+    ): PiniaStateResult => {
       const id = typeof args === 'string' ? args : args?.id
       return getPiniaState(id)
     },
-    [AGENT_RPC_VUE3.updatePiniaState]: (params: any): UpdatePiniaStateResult => {
+    [AGENT_RPC_VUE3.updatePiniaState]: (
+      params: any,
+    ): UpdatePiniaStateResult => {
       return updatePiniaState(params)
     },
   }
@@ -64,11 +78,26 @@ export type { AgentConfig, AgentInstance }
 export { disposeAgent, getAgentInstance }
 
 // 向后兼容导出（按实际模块分别 re-export，保持现有外部消费方不受影响）
-export { collectComponentTree, getRegisteredInstance, getVueRuntimeVersion } from '../runtime/tree.ts'
+export {
+  collectComponentTree,
+  getRegisteredInstance,
+  getVueRuntimeVersion,
+} from '../runtime/tree.ts'
 export { createUniSocketChannel } from '../socket/index.ts'
-export { pushComponentTreeNow, schedulePushComponentTree } from '../runtime/push.ts'
-export { getComponentState, recomputeComponentState, updateComponentState } from '../runtime/state.ts'
-export { getPiniaState, getPiniaStores, updatePiniaState } from '../runtime/pinia.ts'
+export {
+  pushComponentTreeNow,
+  schedulePushComponentTree,
+} from '../runtime/push.ts'
+export {
+  getComponentState,
+  recomputeComponentState,
+  updateComponentState,
+} from '../runtime/state.ts'
+export {
+  getPiniaState,
+  getPiniaStores,
+  updatePiniaState,
+} from '../runtime/pinia.ts'
 export {
   clearNetworkRecords,
   getNetworkRecords,

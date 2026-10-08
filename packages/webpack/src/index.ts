@@ -11,7 +11,8 @@ import { AGENT_CLIENT_MARKER } from '@uni-helper/devtools-core/relay'
 if (!globalThis.crypto?.getRandomValues) {
   const g = globalThis as any
   g.crypto = (nodeCrypto as any).webcrypto || {
-    getRandomValues: (arr: ArrayBufferView) => (nodeCrypto as any).randomFillSync(arr),
+    getRandomValues: (arr: ArrayBufferView) =>
+      (nodeCrypto as any).randomFillSync(arr),
     randomUUID: () => (nodeCrypto as any).randomUUID(),
   }
 }
@@ -21,22 +22,39 @@ if (!(globalThis as any).Headers) {
     constructor(init?: any) {
       if (init) {
         if (Array.isArray(init)) {
-          for (const [k, v] of init) this._map.set(String(k).toLowerCase(), String(v))
-        }
-        else if (typeof init === 'object') {
-          for (const [k, v] of Object.entries(init)) this._map.set(k.toLowerCase(), String(v))
+          for (const [k, v] of init)
+            this._map.set(String(k).toLowerCase(), String(v))
+        } else if (typeof init === 'object') {
+          for (const [k, v] of Object.entries(init))
+            this._map.set(k.toLowerCase(), String(v))
         }
       }
     }
 
-    get(k: string) { return this._map.get(k.toLowerCase()) ?? null }
-    set(k: string, v: string) { this._map.set(k.toLowerCase(), String(v)) }
-    has(k: string) { return this._map.has(k.toLowerCase()) }
-    delete(k: string) { this._map.delete(k.toLowerCase()) }
-    forEach(fn: (v: string, k: string) => void) { this._map.forEach(fn) }
-    entries() { return this._map.entries() }
-    keys() { return this._map.keys() }
-    values() { return this._map.values() }
+    get(k: string) {
+      return this._map.get(k.toLowerCase()) ?? null
+    }
+    set(k: string, v: string) {
+      this._map.set(k.toLowerCase(), String(v))
+    }
+    has(k: string) {
+      return this._map.has(k.toLowerCase())
+    }
+    delete(k: string) {
+      this._map.delete(k.toLowerCase())
+    }
+    forEach(fn: (v: string, k: string) => void) {
+      this._map.forEach(fn)
+    }
+    entries() {
+      return this._map.entries()
+    }
+    keys() {
+      return this._map.keys()
+    }
+    values() {
+      return this._map.values()
+    }
   }
   ;(globalThis as any).Headers = Headers
 }
@@ -46,7 +64,9 @@ if (!(globalThis as any).Request) {
       Object.defineProperty(this, Symbol.toStringTag, { value: 'Request' })
     }
   }
-  Object.defineProperty(Request.prototype, Symbol.toStringTag, { value: 'Request' })
+  Object.defineProperty(Request.prototype, Symbol.toStringTag, {
+    value: 'Request',
+  })
   ;(globalThis as any).Request = Request
 }
 if (!(globalThis as any).Response) {
@@ -55,7 +75,9 @@ if (!(globalThis as any).Response) {
       Object.defineProperty(this, Symbol.toStringTag, { value: 'Response' })
     }
   }
-  Object.defineProperty(Response.prototype, Symbol.toStringTag, { value: 'Response' })
+  Object.defineProperty(Response.prototype, Symbol.toStringTag, {
+    value: 'Response',
+  })
   ;(globalThis as any).Response = Response
 }
 
@@ -72,8 +94,7 @@ export function ensureCliContext(): string {
   let realContext = rawContext
   try {
     realContext = fs.realpathSync(rawContext)
-  }
-  catch {
+  } catch {
     realContext = rawContext
   }
   process.env.UNI_CLI_CONTEXT = realContext
@@ -84,36 +105,33 @@ export function ensureCliContext(): string {
 ensureCliContext()
 
 function resolveEntryLoader(): string {
-  const here = typeof __dirname !== 'undefined'
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url))
+  const here =
+    typeof __dirname !== 'undefined'
+      ? __dirname
+      : path.dirname(fileURLToPath(import.meta.url))
 
   const candidates = [
     path.resolve(here, '../entry-loader.cjs'),
     path.resolve(here, './entry-loader.cjs'),
   ]
   for (const candidate of candidates) {
-    if (fs.existsSync(candidate))
-      return candidate
+    if (fs.existsSync(candidate)) return candidate
   }
   return candidates[0]
 }
 
 function resolveAgentVue2(): string {
-  const req = typeof require !== 'undefined'
-    ? require
-    : createRequire(import.meta.url)
+  const req =
+    typeof require !== 'undefined' ? require : createRequire(import.meta.url)
 
   try {
     return req.resolve('@uni-helper/devtools-probes/vue2')
-  }
-  catch {
+  } catch {
     // 兼容 exports 仅声明 import 条件或包尚未构建的情况
     const pkgJson = req.resolve('@uni-helper/devtools-probes/package.json')
     const pkgDir = path.dirname(pkgJson)
     const target = path.resolve(pkgDir, 'dist/agent-vue2.mjs')
-    if (fs.existsSync(target))
-      return target
+    if (fs.existsSync(target)) return target
     return path.resolve(pkgDir, 'src/vue2/index.ts')
   }
 }
@@ -125,7 +143,7 @@ export interface UniDevtoolsWebpackOptions {
 }
 
 interface PluginState {
-  ready: Promise<{ panelUrl: string, wsUrl: string } | null>
+  ready: Promise<{ panelUrl: string; wsUrl: string } | null>
   devToken: string
   started: boolean
 }
@@ -134,7 +152,12 @@ let globalState: PluginState | null = null
 
 function writeAgentConfig(
   cliContext: string,
-  config: { wsUrl: string, token: string, clientMarker: string, inputDir?: string },
+  config: {
+    wsUrl: string
+    token: string
+    clientMarker: string
+    inputDir?: string
+  },
 ): string {
   const dir = path.resolve(cliContext, 'node_modules/.uni-devtools')
   fs.mkdirSync(dir, { recursive: true })
@@ -144,14 +167,21 @@ function writeAgentConfig(
   return file
 }
 
-async function startSidecar(options: UniDevtoolsWebpackOptions = {}, cliContext: string): Promise<PluginState> {
-  if (globalState)
-    return globalState
+async function startSidecar(
+  options: UniDevtoolsWebpackOptions = {},
+  cliContext: string,
+): Promise<PluginState> {
+  if (globalState) return globalState
 
-  const { startUniDevtoolsServer, resolveAdvertisedHost, BASE } = await import('@uni-helper/devtools-core/sidecar')
+  const { startUniDevtoolsServer, resolveAdvertisedHost, BASE } =
+    await import('@uni-helper/devtools-core/sidecar')
 
   const advertisedHost = options.host ?? resolveAdvertisedHost()
-  const port = options.port ?? (process.env.UNI_DEVTOOLS_PORT ? Number(process.env.UNI_DEVTOOLS_PORT) : undefined)
+  const port =
+    options.port ??
+    (process.env.UNI_DEVTOOLS_PORT
+      ? Number(process.env.UNI_DEVTOOLS_PORT)
+      : undefined)
 
   const server = startUniDevtoolsServer({
     ...options,
@@ -191,10 +221,12 @@ async function startSidecar(options: UniDevtoolsWebpackOptions = {}, cliContext:
  *
  * 注意：此函数必须同步返回 chainableConfig，sidecar 在后台异步启动
  */
-export function uniDevtoolsWebpack(chainableConfig: any, options: UniDevtoolsWebpackOptions = {}): any {
+export function uniDevtoolsWebpack(
+  chainableConfig: any,
+  options: UniDevtoolsWebpackOptions = {},
+): any {
   // 生产构建零注入、零挂载
-  if (process.env.NODE_ENV === 'production')
-    return chainableConfig
+  if (process.env.NODE_ENV === 'production') return chainableConfig
 
   const cliContext = ensureCliContext()
 
@@ -202,7 +234,10 @@ export function uniDevtoolsWebpack(chainableConfig: any, options: UniDevtoolsWeb
   const statePromise = startSidecar(options, cliContext)
 
   // 1. 生成/定位配置模块真实文件，并通过 alias 映射 virtual:uni-devtools-agent 与 agent/vue2
-  const agentConfigFile = path.resolve(cliContext, 'node_modules/.uni-devtools/agent-config.js')
+  const agentConfigFile = path.resolve(
+    cliContext,
+    'node_modules/.uni-devtools/agent-config.js',
+  )
   const agentVue2Dist = resolveAgentVue2()
 
   chainableConfig.resolve.alias
@@ -227,10 +262,13 @@ export function uniDevtoolsWebpack(chainableConfig: any, options: UniDevtoolsWeb
     class UniDevtoolsWaitReadyPlugin {
       apply(compiler: any) {
         if (compiler.hooks?.beforeCompile?.tapPromise) {
-          compiler.hooks.beforeCompile.tapPromise('UniDevtoolsWebpack', async () => {
-            const state = await statePromise
-            await state.ready
-          })
+          compiler.hooks.beforeCompile.tapPromise(
+            'UniDevtoolsWebpack',
+            async () => {
+              const state = await statePromise
+              await state.ready
+            },
+          )
         }
       }
     },

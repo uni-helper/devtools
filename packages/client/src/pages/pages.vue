@@ -9,8 +9,13 @@ interface RouteRow extends RouterRouteRecordSnapshot {
   id: string
 }
 
-const { error, getMatchedRoutes, navigateRoute, routerSnapshot, selectedAppId } =
-  useDevtoolsClient()
+const {
+  error,
+  getMatchedRoutes,
+  navigateRoute,
+  routerSnapshot,
+  selectedAppId,
+} = useDevtoolsClient()
 
 const routeInput = ref('')
 const matchedRoutes = ref<RouterRouteRecordSnapshot[]>([])
@@ -21,14 +26,20 @@ const routeParamInputs = ref<Record<string, string[]>>({})
 let matchTimer: ReturnType<typeof setTimeout> | undefined
 
 const currentRoute = computed(() => routerSnapshot.value.currentRoute)
-const currentPath = computed(() => currentRoute.value?.path ?? currentRoute.value?.fullPath ?? '')
+const currentPath = computed(
+  () => currentRoute.value?.path ?? currentRoute.value?.fullPath ?? '',
+)
 const routes = computed<RouteRow[]>(() =>
-  flattenRoutes(routerSnapshot.value.routes).sort((a, b) => a.path.localeCompare(b.path)),
+  flattenRoutes(routerSnapshot.value.routes).sort((a, b) =>
+    a.path.localeCompare(b.path),
+  ),
 )
 const routeInputMatched = computed(() =>
   routeInput.value === currentRoute.value?.path ? [] : matchedRoutes.value,
 )
-const metaFieldVisible = computed(() => routes.value.some((route) => hasMeta(route)))
+const metaFieldVisible = computed(() =>
+  routes.value.some((route) => hasMeta(route)),
+)
 
 watch(
   [currentPath, selectedAppId],
@@ -83,7 +94,9 @@ function routeMatches(
   route: RouterRouteRecordSnapshot,
 ): boolean {
   return matched.some((item) =>
-    item.name && route.name ? item.name === route.name : item.path === route.path,
+    item.name && route.name
+      ? item.name === route.name
+      : item.path === route.path,
   )
 }
 
@@ -91,7 +104,10 @@ function hasMeta(route: RouterRouteRecordSnapshot): boolean {
   return !!route.meta && Object.keys(route.meta).length > 0
 }
 
-function metaToString(meta: Record<string, unknown> | undefined, indent = 0): string {
+function metaToString(
+  meta: Record<string, unknown> | undefined,
+  indent = 0,
+): string {
   if (!meta) return '-'
   const metaString = JSON.stringify(meta, null, indent)
   return metaString === '{}' ? '-' : metaString
@@ -128,7 +144,9 @@ function setRouteInput(route: RouteRow, index: number, value: string) {
 
 function buildRoutePath(route: RouteRow): string {
   return getRouteParts(route)
-    .map((part, index) => (isParamPart(part) ? getRouteInput(route, index) : part))
+    .map((part, index) =>
+      isParamPart(part) ? getRouteInput(route, index) : part,
+    )
     .join('')
     .replace(/\/+/g, '/')
 }
@@ -176,7 +194,10 @@ function isParamPart(part: string): boolean {
         <div>
           <template v-if="currentRoute?.path !== routeInput">
             <span>Press <b class="font-bold">Enter</b> to navigate</span>
-            <span v-if="!matching && !routeInputMatched.length" class="text-orange op75">
+            <span
+              v-if="!matching && !routeInputMatched.length"
+              class="text-orange op75"
+            >
               (no match)
             </span>
           </template>
@@ -191,7 +212,10 @@ function isParamPart(part: string): boolean {
           <details open>
             <summary class="cursor-pointer select-none p-4 hover:bg-active">
               <div class="flex items-start gap-2 text-xl transition op100">
-                <span class="i-carbon-tree-view-alt shrink-0 text-xl" aria-hidden="true" />
+                <span
+                  class="i-carbon-tree-view-alt shrink-0 text-xl"
+                  aria-hidden="true"
+                />
                 <div>
                   <div class="text-base">All Routes</div>
                   <div class="text-sm op50">
@@ -213,7 +237,9 @@ function isParamPart(part: string): boolean {
                     <th class="text-left" />
                     <th class="text-left">Route Path</th>
                     <th class="text-left">Name</th>
-                    <th v-if="metaFieldVisible" class="text-left">Route Meta</th>
+                    <th v-if="metaFieldVisible" class="text-left">
+                      Route Meta
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -294,8 +320,12 @@ function isParamPart(part: string): boolean {
                                   }
                                 "
                               >
-                                <div class="px-2 text-sm op50">Fill params and navigate:</div>
-                                <div class="flex items-center p-2 font-mono text-sm">
+                                <div class="px-2 text-sm op50">
+                                  Fill params and navigate:
+                                </div>
+                                <div
+                                  class="flex items-center p-2 font-mono text-sm"
+                                >
                                   <template
                                     v-for="(part, index) in getRouteParts(item)"
                                     :key="`${item.id}-input-${index}-${part}`"
@@ -305,7 +335,13 @@ function isParamPart(part: string): boolean {
                                       class="w-20 rounded-1 border border-primary-100 bg-transparent px-2 py-0.75 color-inherit outline-none dark:border-gray-700"
                                       :placeholder="part.slice(1)"
                                       :value="getRouteInput(item, index)"
-                                      @input="setRouteInput(item, index, getInputValue($event))"
+                                      @input="
+                                        setRouteInput(
+                                          item,
+                                          index,
+                                          getInputValue($event),
+                                        )
+                                      "
                                     />
                                     <span v-else>{{ part }}</span>
                                   </template>
@@ -323,7 +359,9 @@ function isParamPart(part: string): boolean {
                       </div>
                     </td>
 
-                    <td class="w-0 whitespace-nowrap pr-1 text-left font-mono text-sm op50">
+                    <td
+                      class="w-0 whitespace-nowrap pr-1 text-left font-mono text-sm op50"
+                    >
                       {{ item.name ?? '-' }}
                     </td>
 
@@ -343,7 +381,9 @@ function isParamPart(part: string): boolean {
                 </tbody>
               </table>
 
-              <div v-else class="px-4 py-8 text-center color-muted">No routes</div>
+              <div v-else class="px-4 py-8 text-center color-muted">
+                No routes
+              </div>
             </div>
           </details>
           <div class="border-b border-base" />

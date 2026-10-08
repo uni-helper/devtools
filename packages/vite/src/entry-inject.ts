@@ -42,8 +42,7 @@ export function shouldInjectAgentEntry(
   if (typeof queryOrOptions === 'object' && queryOrOptions !== null) {
     query = queryOrOptions.query
     code = queryOrOptions.code
-  }
-  else {
+  } else {
     query = queryOrOptions
     code = maybeCode
   }
@@ -54,13 +53,15 @@ export function shouldInjectAgentEntry(
   const effectiveQuery = query !== undefined ? query : extractedQuery
 
   // 仅允许空串：带 query 的入口（含裸 '?'）一律不注入——uni 会带 page query 重写页面入口
-  if (effectiveQuery !== '')
-    return false
+  if (effectiveQuery !== '') return false
 
-  if (!/(?:^|\/)src\/main\.[jt]s$/.test(bareId))
-    return false
+  if (!/(?:^|\/)src\/main\.[jt]s$/.test(bareId)) return false
 
-  if (code && (code.includes(AGENT_IMPORT_MARKER) || code.includes('@uni-helper/devtools-probes/vue3')))
+  if (
+    code &&
+    (code.includes(AGENT_IMPORT_MARKER) ||
+      code.includes('@uni-helper/devtools-probes/vue3'))
+  )
     return false
 
   return true
@@ -71,9 +72,11 @@ export interface TransformResult {
   map: null
 }
 
-export function transformAgentEntry(code: string, id: string): TransformResult | null {
-  if (!shouldInjectAgentEntry(id, undefined, code))
-    return null
+export function transformAgentEntry(
+  code: string,
+  id: string,
+): TransformResult | null {
+  if (!shouldInjectAgentEntry(id, undefined, code)) return null
 
   return {
     code: `${AGENT_IMPORT_LINE}${code}`,
@@ -109,8 +112,7 @@ export function transformInstrument(
 
   if (isVirtualComponentEntry(bareId)) {
     const file = resolveVirtualEntryFile(bareId)
-    if (!file)
-      return null
+    if (!file) return null
     const next = injectEntryFileGuard(code, file)
     return next ? { code: next, map: null } : null
   }
@@ -118,14 +120,12 @@ export function transformInstrument(
   if (isComponentModule(bareId)) {
     if (code.includes('setup') && options.parse) {
       const next = injectSetupBindings(code, options.parse)
-      if (next)
-        return { code: next, map: null }
+      if (next) return { code: next, map: null }
     }
     // plain <script>：render 经 _export_sfc 挂在模块层
     if (code.includes('_export_sfc')) {
       const next = injectPlainRenderHook(code)
-      if (next)
-        return { code: next, map: null }
+      if (next) return { code: next, map: null }
     }
   }
 

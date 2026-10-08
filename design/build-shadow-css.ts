@@ -7,7 +7,11 @@ import { transform } from 'lightningcss'
 import MagicString from 'magic-string'
 import { glob } from 'tinyglobby'
 import { createGenerator } from 'unocss'
-import { namespaceShadowCssVars, rewireBakedPrimaryColors, shadowSurfaceSafelist } from './uno.config'
+import {
+  namespaceShadowCssVars,
+  rewireBakedPrimaryColors,
+  shadowSurfaceSafelist,
+} from './uno.config'
 
 // Story-only utility classes must not leak into a shipped shadow-root
 // stylesheet.
@@ -62,12 +66,18 @@ export interface BuildShadowCssResult {
  * generated file itself; returns stats so each caller (a `scripts/` entry,
  * exempt from the `no-console` lint rule) prints its own summary line.
  */
-export async function buildShadowCss(options: BuildShadowCssOptions): Promise<BuildShadowCssResult> {
-  const { srcDir, globs, config, primaryRampPath, userStylePath, varPrefix } = options
+export async function buildShadowCss(
+  options: BuildShadowCssOptions,
+): Promise<BuildShadowCssResult> {
+  const { srcDir, globs, config, primaryRampPath, userStylePath, varPrefix } =
+    options
   const generatedCss = join(srcDir, '.generated/css.ts')
 
   const require = createRequire(import.meta.url)
-  const reset = await fs.readFile(require.resolve('@unocss/reset/tailwind.css'), 'utf-8')
+  const reset = await fs.readFile(
+    require.resolve('@unocss/reset/tailwind.css'),
+    'utf-8',
+  )
   const files = await glob(globs, {
     cwd: srcDir,
     absolute: true,
@@ -80,7 +90,11 @@ export async function buildShadowCss(options: BuildShadowCssOptions): Promise<Bu
   // would be absent from the shadow-root stylesheet, so scan the design
   // package's component sources too so those classes ship in the injected
   // CSS.
-  const designComponentsDir = join(require.resolve('@antfu/design/package.json'), '..', 'components')
+  const designComponentsDir = join(
+    require.resolve('@antfu/design/package.json'),
+    '..',
+    'components',
+  )
   const designFiles = await glob('**/*.vue', {
     cwd: designComponentsDir,
     absolute: true,
@@ -97,12 +111,17 @@ export async function buildShadowCss(options: BuildShadowCssOptions): Promise<Bu
 
   // Hand-written stylesheets may use `--at-apply`. Run each through the
   // configured transformers before merging them in the caller's order.
-  const userStylePaths = typeof userStylePath === 'string' ? [userStylePath] : (userStylePath ?? [])
+  const userStylePaths =
+    typeof userStylePath === 'string' ? [userStylePath] : (userStylePath ?? [])
   const userStyles: string[] = []
   for (const userStylePath of userStylePaths) {
-    const userStyle = new MagicString(await fs.readFile(userStylePath, 'utf-8').catch(() => ''))
+    const userStyle = new MagicString(
+      await fs.readFile(userStylePath, 'utf-8').catch(() => ''),
+    )
     for (const transformer of generator.config.transformers ?? []) {
-      await transformer.transform(userStyle, userStylePath, { uno: generator } as any)
+      await transformer.transform(userStyle, userStylePath, {
+        uno: generator,
+      } as any)
     }
     userStyles.push(userStyle.toString())
   }
@@ -120,19 +139,20 @@ export async function buildShadowCss(options: BuildShadowCssOptions): Promise<Bu
   // variables `primary-ramp.css` derives from `--devframe-primary`, so a
   // rebrand actually retints `text-primary`/`bg-primary`/`btn-primary`/…
   // (see `rewireBakedPrimaryColors`'s own comment).
-  const primaryTheme = (generator.config.theme as { colors?: Record<string, Record<string, string>> }).colors?.primary ?? {}
+  const primaryTheme =
+    (
+      generator.config.theme as {
+        colors?: Record<string, Record<string, string>>
+      }
+    ).colors?.primary ?? {}
   const unoCss = rewireBakedPrimaryColors(unoResult.css, primaryTheme)
   const surfacesCss = rewireBakedPrimaryColors(surfaces.css, primaryTheme)
   // Namespace Wind's `--un-*` vars so this shadow-root stylesheet is immune
   // to a host page's Wind4 `@property` registrations (see
   // `namespaceShadowCssVars`).
-  let css = [
-    reset,
-    ...userStyles,
-    unoCss,
-    surfacesCss,
-    primaryRamp,
-  ].filter((part): part is string => part !== undefined).join('\n')
+  let css = [reset, ...userStyles, unoCss, surfacesCss, primaryRamp]
+    .filter((part): part is string => part !== undefined)
+    .join('\n')
 
   css = namespaceShadowCssVars(css, varPrefix)
   try {
@@ -142,18 +162,23 @@ export async function buildShadowCss(options: BuildShadowCssOptions): Promise<Bu
       minify: true,
       errorRecovery: true,
     }).code.toString()
-  }
-  catch (e) {
-    console.warn('[build-shadow-css] lightningcss transform warning, using unminified CSS:', (e as Error).message)
+  } catch (e) {
+    console.warn(
+      '[build-shadow-css] lightningcss transform warning, using unminified CSS:',
+      (e as Error).message,
+    )
   }
 
   await fs.mkdir(join(srcDir, '.generated'), { recursive: true })
-  await fs.writeFile(generatedCss, [
-    `/* eslint-disable eslint-comments/no-unlimited-disable */`,
-    `/* eslint-disable */`,
-    `export default ${JSON.stringify(String(css))}`,
-    '',
-  ].join('\n'))
+  await fs.writeFile(
+    generatedCss,
+    [
+      `/* eslint-disable eslint-comments/no-unlimited-disable */`,
+      `/* eslint-disable */`,
+      `export default ${JSON.stringify(String(css))}`,
+      '',
+    ].join('\n'),
+  )
 
   return { sourceCount: files.length, css }
 }

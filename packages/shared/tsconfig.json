@@ -4,10 +4,6 @@
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "vitest.config.ts"
-  ],
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
   "exclude": ["dist", "node_modules"]
 }

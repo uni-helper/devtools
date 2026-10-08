@@ -16,8 +16,17 @@
 
 import { createRpcClient } from 'devframe/rpc/client'
 import { config } from 'virtual:uni-devtools-agent'
-import { type UniSocketChannelHandle, createUniSocketChannel } from '../socket/index.ts'
-import { bindPushDeps, cancelScheduledPush, cancelScheduledRenderNotify, resetPushGate, schedulePushComponentTree } from './push.ts'
+import {
+  type UniSocketChannelHandle,
+  createUniSocketChannel,
+} from '../socket/index.ts'
+import {
+  bindPushDeps,
+  cancelScheduledPush,
+  cancelScheduledRenderNotify,
+  resetPushGate,
+  schedulePushComponentTree,
+} from './push.ts'
 import { collectComponentTree } from './tree.ts'
 import {
   cancelScheduledNetworkPush,
@@ -66,14 +75,19 @@ function ensureProcessGlobalHooks(): void {
       wx.onAppRoute(() => {
         schedulePushComponentTree(200)
       })
-    }
-    catch {}
+    } catch {}
   }
 
   // uni 路由跳转拦截（涵盖 navigateTo / redirectTo / switchTab / navigateBack / reLaunch）
   const uniObj = typeof uni !== 'undefined' ? uni : (globalThis as any).uni
   if (uniObj && typeof uniObj.addInterceptor === 'function') {
-    const routeMethods = ['navigateTo', 'redirectTo', 'reLaunch', 'switchTab', 'navigateBack']
+    const routeMethods = [
+      'navigateTo',
+      'redirectTo',
+      'reLaunch',
+      'switchTab',
+      'navigateBack',
+    ]
     for (const method of routeMethods) {
       try {
         uniObj.addInterceptor(method, {
@@ -81,8 +95,7 @@ function ensureProcessGlobalHooks(): void {
             schedulePushComponentTree(250)
           },
         })
-      }
-      catch {}
+      } catch {}
     }
   }
 
@@ -95,8 +108,7 @@ function ensureProcessGlobalHooks(): void {
       existingHook.on('component:updated', () => schedulePushComponentTree(300))
       existingHook.on('component:removed', () => schedulePushComponentTree(300))
     }
-  }
-  catch {}
+  } catch {}
 }
 
 /**
@@ -122,8 +134,7 @@ function startSnapshotPolling(): void {
         lastSnapshot = snapshot
         schedulePushComponentTree(0)
       }
-    }
-    catch {}
+    } catch {}
   }, 2000)
 }
 
@@ -139,7 +150,9 @@ function stopSnapshotPolling(): void {
  *
  * 单例防重复初始化（应对 HMR 或多页面重复注入）：已有实例时直接返回，不重建。
  */
-export function initAgentPipeline(options: AgentPipelineOptions): AgentInstance {
+export function initAgentPipeline(
+  options: AgentPipelineOptions,
+): AgentInstance {
   if (activeAgentInstance) {
     return activeAgentInstance
   }
@@ -168,7 +181,9 @@ export function initAgentPipeline(options: AgentPipelineOptions): AgentInstance 
     wsUrl: fullWsUrl,
     /* eslint-disable no-console */
     onOpen: () => {
-      console.log('[uni-devtools-agent] DevTools connected, pushing initial state')
+      console.log(
+        '[uni-devtools-agent] DevTools connected, pushing initial state',
+      )
       schedulePushComponentTree(100)
       resetNetworkPushState()
       scheduleNetworkPush(100)

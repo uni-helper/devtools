@@ -6,7 +6,9 @@ export function getDisplayValue(value: EncodedValue): EncodedValue {
   return getCustomEncodedValue(value)?.value ?? value
 }
 
-export function getCustomEncodedValue(value: unknown): CustomEncodedValue | undefined {
+export function getCustomEncodedValue(
+  value: unknown,
+): CustomEncodedValue | undefined {
   if (
     value != null &&
     typeof value === 'object' &&
@@ -21,7 +23,10 @@ export function isReadOnlyCustomValue(value: EncodedValue): boolean {
   return !!custom && (custom.readOnly === true || custom.abstract === true)
 }
 
-export function isStateEntryInputEditable(entry: StateEntry, entryValue: EncodedValue): boolean {
+export function isStateEntryInputEditable(
+  entry: StateEntry,
+  entryValue: EncodedValue,
+): boolean {
   if (!entry.editable) return false
   if (isReadOnlyCustomValue(entryValue)) return false
 

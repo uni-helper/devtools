@@ -1,5 +1,9 @@
 import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
-import type { AppSnapshot, ComponentTreeNodeSnapshot, ComponentTreePatch } from '@vue/devtools-kit'
+import type {
+  AppSnapshot,
+  ComponentTreeNodeSnapshot,
+  ComponentTreePatch,
+} from '@vue/devtools-kit'
 
 export interface FlatTree {
   apps: AppSnapshot[]
@@ -19,7 +23,20 @@ export function buildFlatTree(tree: ComponentTreeResult): FlatTree {
   for (const page of tree.pages ?? []) {
     const appId = page.route
     let count = 0
-    const walk = (node: { id: string, name: string, file?: string, children?: Array<{ id: string, name: string, file?: string, children?: unknown[] }> }, parentId?: string): void => {
+    const walk = (
+      node: {
+        id: string
+        name: string
+        file?: string
+        children?: Array<{
+          id: string
+          name: string
+          file?: string
+          children?: unknown[]
+        }>
+      },
+      parentId?: string,
+    ): void => {
       nodes.push({
         id: node.id,
         appId,
@@ -34,8 +51,7 @@ export function buildFlatTree(tree: ComponentTreeResult): FlatTree {
       for (const child of node.children ?? [])
         walk(child as typeof node, node.id)
     }
-    if (page.components)
-      walk(page.components)
+    if (page.components) walk(page.components)
     // version 上报探针侧 Vue 运行时版本；面板用它做 Graph tab 门禁
     // （本地实现的 supportsReactivityGraphVueVersion，门槛 3.5.0）。
     // 门禁不通过时该 tab 仍可见，只是页面内说明原因（见 pages/graph.vue）
@@ -50,29 +66,26 @@ export function buildFlatTree(tree: ComponentTreeResult): FlatTree {
 }
 
 export function sameAppSet(a: AppSnapshot[], b: AppSnapshot[]): boolean {
-  if (a.length !== b.length)
-    return false
-  const ids = new Set(a.map(app => app.id))
-  return b.every(app => ids.has(app.id))
+  if (a.length !== b.length) return false
+  const ids = new Set(a.map((app) => app.id))
+  return b.every((app) => ids.has(app.id))
 }
 
 export function computeTreeDiff(
   prev: FlatTree,
   next: FlatTree,
-): { kind: 'apps-changed' } | { kind: 'patches', patchesByApp: Map<string, ComponentTreePatch[]> } {
-  if (!sameAppSet(prev.apps, next.apps))
-    return { kind: 'apps-changed' }
+):
+  | { kind: 'apps-changed' }
+  | { kind: 'patches'; patchesByApp: Map<string, ComponentTreePatch[]> } {
+  if (!sameAppSet(prev.apps, next.apps)) return { kind: 'apps-changed' }
 
   const patchesByApp = new Map<string, ComponentTreePatch[]>()
   const push = (appId: string, patch: ComponentTreePatch): void => {
     const list = patchesByApp.get(appId)
-    if (list)
-      list.push(patch)
-    else
-      patchesByApp.set(appId, [patch])
+    if (list) list.push(patch)
+    else patchesByApp.set(appId, [patch])
   }
-  for (const node of prev.nodes)
-    push(node.appId, { op: 'remove', id: node.id })
+  for (const node of prev.nodes) push(node.appId, { op: 'remove', id: node.id })
   for (const node of next.nodes)
     push(node.appId, { op: 'insert', parentId: node.parentId, node })
 

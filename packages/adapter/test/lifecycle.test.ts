@@ -12,18 +12,20 @@ interface ScriptedLifecycle {
   dispose: Mock<[], void>
 }
 
-function scriptedLifecycleBackend(opts: { connect?: 'hang' | 'ok' | 'fail' } = {}): ScriptedLifecycle {
+function scriptedLifecycleBackend(
+  opts: { connect?: 'hang' | 'ok' | 'fail' } = {},
+): ScriptedLifecycle {
   const connect = vi.fn(async () => {
-    if (opts.connect === 'fail')
-      throw new Error('连接失败')
-    if (opts.connect === 'hang')
-      await new Promise(() => {})
+    if (opts.connect === 'fail') throw new Error('连接失败')
+    if (opts.connect === 'hang') await new Promise(() => {})
   })
   const unsubscribe = vi.fn()
-  const subscribe = vi.fn((_key: string, _cb: (s: unknown) => void): ProbeSubscription => ({
-    ready: new Promise(() => {}),
-    unsubscribe,
-  }))
+  const subscribe = vi.fn(
+    (_key: string, _cb: (s: unknown) => void): ProbeSubscription => ({
+      ready: new Promise(() => {}),
+      unsubscribe,
+    }),
+  )
   const dispose = vi.fn()
   const backend: ProbeBackend = {
     capabilities: { openInEditor: true },
@@ -62,7 +64,10 @@ describe('dispose 竞态（评审 P0-1 / P1-4）', () => {
     const client = connectUniRpcClient({ backend: be.backend })
 
     await vi.advanceTimersByTimeAsync(1) // connect 完成，subscribe ready 永挂起
-    expect(be.subscribe).toHaveBeenCalledWith('component-tree', expect.any(Function))
+    expect(be.subscribe).toHaveBeenCalledWith(
+      'component-tree',
+      expect.any(Function),
+    )
 
     client.dispose()
     expect(be.dispose).toHaveBeenCalled()
@@ -94,7 +99,7 @@ describe('dispose 竞态（评审 P0-1 / P1-4）', () => {
   it('MockBackend dispose 后心跳停止且幂等', async () => {
     const be = createMockBackend({ networkTickInterval: 10 })
     const pushes: unknown[] = []
-    be.subscribe('network-records', s => pushes.push(s))
+    be.subscribe('network-records', (s) => pushes.push(s))
 
     be.dispose()
     be.dispose()

@@ -18,7 +18,10 @@
 
 import process from 'node:process'
 import { startDevServerHarness } from '../src/harness.ts'
-import { createRpcClient, createWsRpcChannel } from '../assets/panel/df-client.mjs'
+import {
+  createRpcClient,
+  createWsRpcChannel,
+} from '../assets/panel/df-client.mjs'
 
 const [cliOrigin, cliToken] = process.argv.slice(2)
 
@@ -37,8 +40,7 @@ if (!origin || !token) {
   origin = harness.origin
   token = harness.token
   wsUrl = harness.wsUrl
-}
-else {
+} else {
   wsUrl = `${origin.replace(/\/$/, '')}/__uni-devtools/__ws`
 }
 
@@ -57,7 +59,7 @@ function connectClient(name, functions, extraQuery = '') {
         const rpc = createRpcClient(functions, { channel })
         resolve(rpc)
       },
-      onError: e => reject(new Error(`${name} ws error: ${e?.message ?? e}`)),
+      onError: (e) => reject(new Error(`${name} ws error: ${e?.message ?? e}`)),
     })
     setTimeout(() => reject(new Error(`${name} connect timeout`)), 6000)
   })
@@ -78,15 +80,17 @@ try {
 
   // Mock mini-program agent data
   const FAKE_TREE = {
-    pages: [{
-      route: 'pages/index',
-      components: {
-        id: 'node-1',
-        name: 'FakeIndexPage',
-        type: 'page',
-        children: [{ id: 'node-2', name: 'FakeChild', type: 'component' }],
+    pages: [
+      {
+        route: 'pages/index',
+        components: {
+          id: 'node-1',
+          name: 'FakeIndexPage',
+          type: 'page',
+          children: [{ id: 'node-2', name: 'FakeChild', type: 'component' }],
+        },
       },
-    }],
+    ],
   }
 
   const FAKE_STATE = {
@@ -120,54 +124,70 @@ try {
     ok: true,
     ...overrides,
   })
-  const agent = await connectClient('agent', {
-    'uni-devtools:agent:ping': () => 424242,
-    'uni-devtools:agent:getComponentTree': () => FAKE_TREE,
-    'uni-devtools:agent:getComponentState': (args) => {
-      if (args?.id === 'node-2')
-        return FAKE_STATE
-      throw new Error(`Component not found: ${args?.id}`)
+  const agent = await connectClient(
+    'agent',
+    {
+      'uni-devtools:agent:ping': () => 424242,
+      'uni-devtools:agent:getComponentTree': () => FAKE_TREE,
+      'uni-devtools:agent:getComponentState': (args) => {
+        if (args?.id === 'node-2') return FAKE_STATE
+        throw new Error(`Component not found: ${args?.id}`)
+      },
+      'uni-devtools:agent:updateComponentState': (args) => {
+        return { ok: true, key: args.key, value: args.value }
+      },
+      'uni-devtools:agent:recomputeComponentState': () => {
+        return { ok: true }
+      },
+      'uni-devtools:agent:getRouterInfo': () => {
+        return {
+          currentRoute: {
+            path: '/pages/index',
+            fullPath: '/pages/index',
+            query: {},
+          },
+          stack: [{ path: '/pages/index', query: {}, options: {} }],
+        }
+      },
+      'uni-devtools:agent:navigate': () => {
+        return { ok: true }
+      },
+      'uni-devtools:agent:getNetworkRecords': (args) => {
+        const sinceId = args?.sinceId ?? 0
+        const limit = Math.min(args?.limit ?? 200, 500)
+        const records = agentNetworkRing
+          .filter((rec) => rec.id > sinceId)
+          .slice(-limit)
+        return {
+          records,
+          latestId: agentNetworkRing.length
+            ? agentNetworkRing[agentNetworkRing.length - 1].id
+            : 0,
+        }
+      },
+      'uni-devtools:agent:clearNetworkRecords': () => {
+        agentNetworkRing = []
+        return { ok: true }
+      },
     },
-    'uni-devtools:agent:updateComponentState': (args) => {
-      return { ok: true, key: args.key, value: args.value }
-    },
-    'uni-devtools:agent:recomputeComponentState': () => {
-      return { ok: true }
-    },
-    'uni-devtools:agent:getRouterInfo': () => {
-      return {
-        currentRoute: { path: '/pages/index', fullPath: '/pages/index', query: {} },
-        stack: [{ path: '/pages/index', query: {}, options: {} }],
-      }
-    },
-    'uni-devtools:agent:navigate': () => {
-      return { ok: true }
-    },
-    'uni-devtools:agent:getNetworkRecords': (args) => {
-      const sinceId = args?.sinceId ?? 0
-      const limit = Math.min(args?.limit ?? 200, 500)
-      const records = agentNetworkRing.filter(rec => rec.id > sinceId).slice(-limit)
-      return {
-        records,
-        latestId: agentNetworkRing.length ? agentNetworkRing[agentNetworkRing.length - 1].id : 0,
-      }
-    },
-    'uni-devtools:agent:clearNetworkRecords': () => {
-      agentNetworkRing = []
-      return { ok: true }
-    },
-  }, '?client=uni-agent')
+    '?client=uni-agent',
+  )
   console.log('✓ [2/5] 探针已连接并注册（token 鉴权与 wire 编解码通过）')
 
   // 3.5 探针自身作为推送调用方（P6 push 链路的真实形态）必须可信
-  const agentPush = await agent.$call('uni-helper-devtools:push-component-tree', { fetchedAt: Date.now(), pages: [] })
+  const agentPush = await agent.$call(
+    'uni-helper-devtools:push-component-tree',
+    { fetchedAt: Date.now(), pages: [] },
+  )
   if (!agentPush || agentPush.ok !== true) {
-    throw new Error(`探针 push-component-tree 期望 { ok: true }，实际: ${JSON.stringify(agentPush)}`)
+    throw new Error(
+      `探针 push-component-tree 期望 { ok: true }，实际: ${JSON.stringify(agentPush)}`,
+    )
   }
   console.log('✓ [3.5/5] 探针推送调用方可信，push-component-tree 入口可用')
 
   // Allow registration event to settle
-  await new Promise(r => setTimeout(r, 600))
+  await new Promise((r) => setTimeout(r, 600))
 
   // 3. Connect simulated panel client
   const panel = await connectClient('panel', {})
@@ -176,7 +196,9 @@ try {
   // 4. Test relay ping
   const pingRes = await panel.$call('uni-helper-devtools:ping')
   if (!pingRes || pingRes.agentConnected !== true) {
-    throw new Error(`uni-helper-devtools:ping agentConnected 期望 true，实际: ${pingRes?.agentConnected}`)
+    throw new Error(
+      `uni-helper-devtools:ping agentConnected 期望 true，实际: ${pingRes?.agentConnected}`,
+    )
   }
   console.log('✓ [4/5] ping 调用成功，agentConnected === true')
 
@@ -186,7 +208,9 @@ try {
     pages: [],
   })
   if (!pushRes || pushRes.ok !== true) {
-    throw new Error(`push-component-tree 期望 { ok: true }，实际: ${JSON.stringify(pushRes)}`)
+    throw new Error(
+      `push-component-tree 期望 { ok: true }，实际: ${JSON.stringify(pushRes)}`,
+    )
   }
   console.log('✓ [4.5/5] push-component-tree 推送入口可用（经 panel 调用）')
 
@@ -194,111 +218,190 @@ try {
   const treeRes = await panel.$call('uni-helper-devtools:get-component-tree')
   const rootCompName = treeRes?.pages?.[0]?.components?.name
   if (rootCompName !== 'FakeIndexPage') {
-    throw new Error(`get-component-tree 组件树往返失败，期望 FakeIndexPage，实际: ${rootCompName}`)
+    throw new Error(
+      `get-component-tree 组件树往返失败，期望 FakeIndexPage，实际: ${rootCompName}`,
+    )
   }
 
   // Also verify state RPCs
-  const stateRes = await panel.$call('uni-helper-devtools:get-component-state', { id: 'node-2' })
+  const stateRes = await panel.$call(
+    'uni-helper-devtools:get-component-state',
+    { id: 'node-2' },
+  )
   if (
-    stateRes?.name !== 'FakeChild'
-    || stateRes?.setup?.title?.value !== 'Hello'
-    || stateRes?.props?.label !== 'demo'
-    || stateRes?.setup?.title?.stateType !== 'ref'
+    stateRes?.name !== 'FakeChild' ||
+    stateRes?.setup?.title?.value !== 'Hello' ||
+    stateRes?.props?.label !== 'demo' ||
+    stateRes?.setup?.title?.stateType !== 'ref'
   ) {
-    throw new Error(`get-component-state 状态读取失败: ${JSON.stringify(stateRes)}`)
+    throw new Error(
+      `get-component-state 状态读取失败: ${JSON.stringify(stateRes)}`,
+    )
   }
 
-  const recomputeRes = await panel.$call('uni-helper-devtools:recompute-component-state', {
-    id: 'node-2',
-    section: 'setup',
-    path: ['title'],
-  })
+  const recomputeRes = await panel.$call(
+    'uni-helper-devtools:recompute-component-state',
+    {
+      id: 'node-2',
+      section: 'setup',
+      path: ['title'],
+    },
+  )
   if (!recomputeRes || recomputeRes.ok !== true) {
-    throw new Error(`recompute-component-state 调用失败: ${JSON.stringify(recomputeRes)}`)
+    throw new Error(
+      `recompute-component-state 调用失败: ${JSON.stringify(recomputeRes)}`,
+    )
   }
 
-  const updateRes = await panel.$call('uni-helper-devtools:update-component-state', {
-    id: 'node-2',
-    key: 'count',
-    value: 99,
-  })
+  const updateRes = await panel.$call(
+    'uni-helper-devtools:update-component-state',
+    {
+      id: 'node-2',
+      key: 'count',
+      value: 99,
+    },
+  )
   if (updateRes?.ok !== true || updateRes?.value !== 99) {
-    throw new Error(`update-component-state 状态写入失败: ${JSON.stringify(updateRes)}`)
+    throw new Error(
+      `update-component-state 状态写入失败: ${JSON.stringify(updateRes)}`,
+    )
   }
 
   console.log('✓ [5/5] relay 4 大冻结 RPC + recompute 全量定向往返验证通过')
 
   // 5.3 Verify router RPCs (W5)
-  const routesRes = await panel.$call('uni-helper-devtools:get-registered-routes')
+  const routesRes = await panel.$call(
+    'uni-helper-devtools:get-registered-routes',
+  )
   if (!routesRes || !Array.isArray(routesRes.routes)) {
-    throw new Error(`get-registered-routes 期望返回 routes 数组，实际: ${JSON.stringify(routesRes)}`)
+    throw new Error(
+      `get-registered-routes 期望返回 routes 数组，实际: ${JSON.stringify(routesRes)}`,
+    )
   }
 
   const routerInfoRes = await panel.$call('uni-helper-devtools:get-router-info')
   if (routerInfoRes?.currentRoute?.path !== '/pages/index') {
-    throw new Error(`get-router-info 期望 currentRoute /pages/index，实际: ${JSON.stringify(routerInfoRes)}`)
+    throw new Error(
+      `get-router-info 期望 currentRoute /pages/index，实际: ${JSON.stringify(routerInfoRes)}`,
+    )
   }
 
-  const navRes = await panel.$call('uni-helper-devtools:navigate-to', { path: '/pages/index' })
+  const navRes = await panel.$call('uni-helper-devtools:navigate-to', {
+    path: '/pages/index',
+  })
   if (navRes?.ok !== true) {
-    throw new Error(`navigate-to 期望 { ok: true }，实际: ${JSON.stringify(navRes)}`)
+    throw new Error(
+      `navigate-to 期望 { ok: true }，实际: ${JSON.stringify(navRes)}`,
+    )
   }
-  console.log('✓ [5.3/5] router 扩展 RPC (get-registered-routes / get-router-info / navigate-to) 定向往返验证通过')
+  console.log(
+    '✓ [5.3/5] router 扩展 RPC (get-registered-routes / get-router-info / navigate-to) 定向往返验证通过',
+  )
 
   // 5.4 W13 Network 全链路：探针推送 → node 幂等 merge → 面板拉取/增量 → 清空双向
   const netBatch = [
     netRec(1),
-    netRec(2, { type: 'upload', method: 'POST', url: 'https://api.example.com/upload', requestBody: { filePath: 'wxfile://tmp/a.png', name: 'file' } }),
+    netRec(2, {
+      type: 'upload',
+      method: 'POST',
+      url: 'https://api.example.com/upload',
+      requestBody: { filePath: 'wxfile://tmp/a.png', name: 'file' },
+    }),
   ]
   agentNetworkRing.push(...netBatch)
-  const netPush = await agent.$call('uni-helper-devtools:push-network-records', { records: netBatch })
+  const netPush = await agent.$call(
+    'uni-helper-devtools:push-network-records',
+    { records: netBatch },
+  )
   if (netPush?.ok !== true) {
-    throw new Error(`push-network-records 期望 { ok: true }，实际: ${JSON.stringify(netPush)}`)
+    throw new Error(
+      `push-network-records 期望 { ok: true }，实际: ${JSON.stringify(netPush)}`,
+    )
   }
   const netGet = await panel.$call('uni-helper-devtools:get-network-records')
-  if (netGet?.records?.length !== 2 || netGet?.latestId !== 2 || netGet.records[0].url !== netBatch[0].url) {
-    throw new Error(`get-network-records 全量拉取失败: ${JSON.stringify(netGet)}`)
+  if (
+    netGet?.records?.length !== 2 ||
+    netGet?.latestId !== 2 ||
+    netGet.records[0].url !== netBatch[0].url
+  ) {
+    throw new Error(
+      `get-network-records 全量拉取失败: ${JSON.stringify(netGet)}`,
+    )
   }
   // 幂等：重复推送同批不得产生重复记录
-  await agent.$call('uni-helper-devtools:push-network-records', { records: netBatch })
+  await agent.$call('uni-helper-devtools:push-network-records', {
+    records: netBatch,
+  })
   const netGetDup = await panel.$call('uni-helper-devtools:get-network-records')
   if (netGetDup?.records?.length !== 2) {
-    throw new Error(`push-network-records 幂等 merge 失败，期望 2 条实际 ${netGetDup?.records?.length}`)
+    throw new Error(
+      `push-network-records 幂等 merge 失败，期望 2 条实际 ${netGetDup?.records?.length}`,
+    )
   }
   // sinceId 增量拉取
-  const netInc = await panel.$call('uni-helper-devtools:get-network-records', { sinceId: 1 })
+  const netInc = await panel.$call('uni-helper-devtools:get-network-records', {
+    sinceId: 1,
+  })
   if (netInc?.records?.length !== 1 || netInc.records[0]?.id !== 2) {
-    throw new Error(`get-network-records sinceId 增量拉取失败: ${JSON.stringify(netInc)}`)
+    throw new Error(
+      `get-network-records sinceId 增量拉取失败: ${JSON.stringify(netInc)}`,
+    )
   }
   // 完成态补推（B-network-1003 回归）：同 id 的 pending 快照先随批推出、终态后补，
   // node merge 必须以终态覆盖 pending——旧「未知 id 才插入」会让看板永远停在
   // pending/FAIL。真实探针语义：同一记录对象就地结算后原样重推。
   const pendingRec = netRec(3, { status: 0, ok: false, duration: undefined })
   agentNetworkRing.push(pendingRec)
-  await agent.$call('uni-helper-devtools:push-network-records', { records: [pendingRec] })
-  const netAfterPending = await panel.$call('uni-helper-devtools:get-network-records')
+  await agent.$call('uni-helper-devtools:push-network-records', {
+    records: [pendingRec],
+  })
+  const netAfterPending = await panel.$call(
+    'uni-helper-devtools:get-network-records',
+  )
   if (netAfterPending?.records?.length !== 3) {
-    throw new Error(`pending 快照入列失败，期望 3 条实际 ${netAfterPending?.records?.length}`)
+    throw new Error(
+      `pending 快照入列失败，期望 3 条实际 ${netAfterPending?.records?.length}`,
+    )
   }
   pendingRec.status = 201
   pendingRec.ok = true
   pendingRec.duration = 456
-  await agent.$call('uni-helper-devtools:push-network-records', { records: [pendingRec] })
-  const netAfterDone = await panel.$call('uni-helper-devtools:get-network-records')
-  const recDone = netAfterDone?.records?.find(rec => rec.id === 3)
-  if (netAfterDone?.records?.length !== 3 || recDone?.status !== 201 || recDone?.duration == null) {
-    throw new Error(`完成态补推 merge 失败：同 id 终态未覆盖 pending: ${JSON.stringify(recDone)}`)
+  await agent.$call('uni-helper-devtools:push-network-records', {
+    records: [pendingRec],
+  })
+  const netAfterDone = await panel.$call(
+    'uni-helper-devtools:get-network-records',
+  )
+  const recDone = netAfterDone?.records?.find((rec) => rec.id === 3)
+  if (
+    netAfterDone?.records?.length !== 3 ||
+    recDone?.status !== 201 ||
+    recDone?.duration == null
+  ) {
+    throw new Error(
+      `完成态补推 merge 失败：同 id 终态未覆盖 pending: ${JSON.stringify(recDone)}`,
+    )
   }
   // 清空：node sharedState + 探针环形缓冲都要清（透传失败会被下一步抓到）
-  const netClear = await panel.$call('uni-helper-devtools:clear-network-records')
+  const netClear = await panel.$call(
+    'uni-helper-devtools:clear-network-records',
+  )
   if (netClear?.ok !== true) {
-    throw new Error(`clear-network-records 期望 { ok: true }，实际: ${JSON.stringify(netClear)}`)
+    throw new Error(
+      `clear-network-records 期望 { ok: true }，实际: ${JSON.stringify(netClear)}`,
+    )
   }
-  const netGetCleared = await panel.$call('uni-helper-devtools:get-network-records')
+  const netGetCleared = await panel.$call(
+    'uni-helper-devtools:get-network-records',
+  )
   if (netGetCleared?.records?.length !== 0 || netGetCleared?.latestId !== 0) {
-    throw new Error(`clear-network-records 后拉取应为空，实际: ${JSON.stringify(netGetCleared)}`)
+    throw new Error(
+      `clear-network-records 后拉取应为空，实际: ${JSON.stringify(netGetCleared)}`,
+    )
   }
-  console.log('✓ [5.4/5] network RPC (push 幂等 merge / get 全量+增量 / clear 双向) 全链路验证通过')
+  console.log(
+    '✓ [5.4/5] network RPC (push 幂等 merge / get 全量+增量 / clear 双向) 全链路验证通过',
+  )
   console.log('\n======================================================')
   console.log('  E2E 验收通过：packages/core 全链路端到端正常！')
   console.log('======================================================\n')
@@ -307,8 +410,7 @@ try {
     await harness.close()
   }
   process.exit(0)
-}
-catch (err) {
+} catch (err) {
   console.error('\n❌ E2E 验证失败:', err)
   if (harness) {
     await harness.close().catch(() => {})

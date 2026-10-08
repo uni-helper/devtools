@@ -4,14 +4,22 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 import { computed, reactive, ref } from 'vue'
-import { getPiniaState, getPiniaStores, updatePiniaState } from '../src/runtime/pinia'
+import {
+  getPiniaState,
+  getPiniaStores,
+  updatePiniaState,
+} from '../src/runtime/pinia'
 
 function setupStores(stores: Record<string, any>) {
   ;(globalThis as any).getApp = () => ({
     $vm: {
       $: {
         appContext: {
-          config: { globalProperties: { $pinia: { _s: new Map(Object.entries(stores)) } } },
+          config: {
+            globalProperties: {
+              $pinia: { _s: new Map(Object.entries(stores)) },
+            },
+          },
         },
       },
     },
@@ -66,7 +74,9 @@ describe('updatePiniaState', () => {
   it('顶层 ref 赋值落 .value', () => {
     const title = ref('a')
     setupStores({ s: { $state: { title } } })
-    expect(updatePiniaState({ id: 's', key: 'title', value: 'b' }).ok).toBe(true)
+    expect(updatePiniaState({ id: 's', key: 'title', value: 'b' }).ok).toBe(
+      true,
+    )
     expect(title.value).toBe('b')
   })
 
@@ -86,7 +96,11 @@ describe('updatePiniaState', () => {
 
   it('键不存在 / 不可导航路径如实报错', () => {
     setupStores({ s: { $state: { n: 1 } } })
-    expect(() => updatePiniaState({ id: 's', key: 'ghost', value: 1 })).toThrow(/not found/)
-    expect(() => updatePiniaState({ id: 's', path: ['n', 'x'], value: 1 })).toThrow(/not navigable/)
+    expect(() => updatePiniaState({ id: 's', key: 'ghost', value: 1 })).toThrow(
+      /not found/,
+    )
+    expect(() =>
+      updatePiniaState({ id: 's', path: ['n', 'x'], value: 1 }),
+    ).toThrow(/not navigable/)
   })
 })

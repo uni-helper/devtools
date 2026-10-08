@@ -83,10 +83,11 @@ export function getProxy(vm: any): any {
  */
 export function getVueCtor(vm: any): any {
   const internal = getInternal(vm)
-  if (internal?.appContext)
-    return undefined // Vue 3 内部实例
+  if (internal?.appContext) return undefined // Vue 3 内部实例
   const ctor = internal?.$options?._base || internal?.constructor
-  return ctor && typeof ctor.set === 'function' && typeof ctor.delete === 'function'
+  return ctor &&
+    typeof ctor.set === 'function' &&
+    typeof ctor.delete === 'function'
     ? ctor
     : undefined
 }
@@ -98,13 +99,17 @@ export function getVueCtor(vm: any): any {
  * 声明过的键**才是响应式的——新增键必须 `Vue.set`，否则视图不更新（静默失效，
  * 最难查的一类 bug）。
  */
-export function setReactive(vm: any, target: any, key: string, value: unknown): void {
+export function setReactive(
+  vm: any,
+  target: any,
+  key: string,
+  value: unknown,
+): void {
   const Vue = getVueCtor(vm)
   if (!Vue) {
     if (Array.isArray(target) && /^\d+$/.test(key))
       target.splice(Number(key), 1, value)
-    else
-      target[key] = value
+    else target[key] = value
     return
   }
 

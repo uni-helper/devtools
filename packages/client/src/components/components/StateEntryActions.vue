@@ -10,7 +10,11 @@ import {
   isReadOnlyCustomValue,
   isStateEntryInputEditable,
 } from '../../utils/state-entry'
-const props = defineProps<{ entry: StateEntry; depth: number; editing: boolean }>()
+const props = defineProps<{
+  entry: StateEntry
+  depth: number
+  editing: boolean
+}>()
 const emit = defineEmits<{ edit: []; expand: [] }>()
 const stateEditError = defineModel<string>('error')
 const storedGlobalName = defineModel<string>('storedGlobalName')
@@ -68,7 +72,9 @@ function isStateEntryEditable(entry: StateEntry): boolean {
 }
 
 function isBooleanStateEntry(entry: StateEntry): boolean {
-  return entry.editable && getDisplayValue(getEntryValue(entry)).kind === 'boolean'
+  return (
+    entry.editable && getDisplayValue(getEntryValue(entry)).kind === 'boolean'
+  )
 }
 
 function getBooleanStateEntryValue(entry: StateEntry): boolean {
@@ -93,7 +99,8 @@ async function quickEditStateEntry(entry: StateEntry, value: unknown) {
 async function incrementStateEntry(entry: StateEntry, offset: 1 | -1) {
   const value = getDisplayValue(getEntryValue(entry))
   if (value.kind === 'number') {
-    const current = typeof value.value === 'number' ? value.value : Number(value.value)
+    const current =
+      typeof value.value === 'number' ? value.value : Number(value.value)
     await quickEditStateEntry(entry, current + offset)
     return
   }
@@ -123,7 +130,11 @@ async function addChildStateEntry(entry: StateEntry) {
 
 function stateEntryGlobalStorageAvailable(entry: StateEntry): boolean {
   const value = getEntryValue(entry)
-  if ('handle' in getDisplayValue(value) || getCustomEncodedValue(value)?.handle) return true
+  if (
+    'handle' in getDisplayValue(value) ||
+    getCustomEncodedValue(value)?.handle
+  )
+    return true
   return entry.meta?.inspectorId == null
 }
 
@@ -169,7 +180,8 @@ async function copyText(value: string, type: 'path' | 'value') {
 }
 
 function encodedValueToText(value: EncodedValue): string {
-  if (value.kind === 'custom') return value.display ?? encodedValueToText(value.value)
+  if (value.kind === 'custom')
+    return value.display ?? encodedValueToText(value.value)
 
   switch (value.kind) {
     case 'null':
@@ -192,13 +204,17 @@ function encodedValueToText(value: EncodedValue): string {
     }
     case 'object': {
       const suffix = value.entries > value.preview.length ? ', ...' : ''
-      const entries = value.preview.map((item) => `${item.key}: ${encodedValueToText(item.value)}`)
+      const entries = value.preview.map(
+        (item) => `${item.key}: ${encodedValueToText(item.value)}`,
+      )
       return `${value.name} { ${entries.join(', ')}${suffix} }`
     }
     case 'map':
     case 'set': {
       const suffix = value.size > value.preview.length ? ', ...' : ''
-      const entries = value.preview.map((item) => `${item.key}: ${encodedValueToText(item.value)}`)
+      const entries = value.preview.map(
+        (item) => `${item.key}: ${encodedValueToText(item.value)}`,
+      )
       return `${formatValue(value)} { ${entries.join(', ')}${suffix} }`
     }
     case 'component':
@@ -210,7 +226,9 @@ function encodedValueToText(value: EncodedValue): string {
   }
 }
 
-function getCustomActions(entry: StateEntry): { icon?: string; tooltip?: string }[] {
+function getCustomActions(
+  entry: StateEntry,
+): { icon?: string; tooltip?: string }[] {
   const value = getEntryValue(entry)
   return getCustomEncodedValue(value)?.actions ?? []
 }
@@ -236,7 +254,10 @@ async function openCustomFile(entry: StateEntry) {
 }
 </script>
 <template>
-  <div class="ml-auto shrink-0 flex pl-1" :class="editing ? '' : 'op0 group-hover/state-row:op100'">
+  <div
+    class="ml-auto shrink-0 flex pl-1"
+    :class="editing ? '' : 'op0 group-hover/state-row:op100'"
+  >
     <button
       v-if="getCustomFile(entry) && openInEditorAvailable"
       v-tooltip.bottom="'Open file'"
@@ -277,7 +298,9 @@ async function openCustomFile(entry: StateEntry) {
         :model-value="getBooleanStateEntryValue(entry)"
         size="sm"
         @click.stop
-        @update:model-value="(value: boolean) => quickEditStateEntry(entry, value)"
+        @update:model-value="
+          (value: boolean) => quickEditStateEntry(entry, value)
+        "
       />
       <template v-else-if="stateEntryIncrementAvailable(entry)">
         <button
@@ -333,7 +356,9 @@ async function openCustomFile(entry: StateEntry) {
     <button
       v-if="stateEntryGlobalStorageAvailable(entry)"
       v-tooltip.bottom="
-        storedGlobalName ? `Stored as ${storedGlobalName}` : 'Store as global variable'
+        storedGlobalName
+          ? `Stored as ${storedGlobalName}`
+          : 'Store as global variable'
       "
       class="h-5 w-5 shrink-0 rounded-1 border-0 bg-transparent p-0.5 color-muted flex items-center justify-center hover:bg-active hover:color-base"
       type="button"

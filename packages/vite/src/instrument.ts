@@ -50,8 +50,7 @@ export function injectPlainRenderHook(code: string): string | null {
     return null
   const re = /\[\s*["']render["']\s*,\s*([A-Za-z_$][\w$]*)\s*\]/
   const match = code.match(re)
-  if (!match)
-    return null
+  if (!match) return null
   const wrapped = code.replace(re, `["render", ${RENDER_HOOK_FN}(${match[1]})]`)
   return `${RENDER_HOOK_IMPORT_LINE}\n${wrapped}`
 }
@@ -63,17 +62,16 @@ export function resolveVirtualEntryFile(id: string): string | undefined {
     : id.startsWith(UNI_PAGE_PREFIX)
       ? UNI_PAGE_PREFIX
       : undefined
-  if (!prefix)
-    return undefined
+  if (!prefix) return undefined
 
   // Node 的 base64 解码接受 base64url 变体（无 padding）
-  const decoded = Buffer.from(id.slice(prefix.length), 'base64').toString('utf8')
-  if (!decoded)
-    return undefined
+  const decoded = Buffer.from(id.slice(prefix.length), 'base64').toString(
+    'utf8',
+  )
+  if (!decoded) return undefined
 
   const inputDir = process.env.UNI_INPUT_DIR
-  if (!inputDir)
-    return decoded
+  if (!inputDir) return decoded
   return path.relative(inputDir, path.resolve(inputDir, decoded)) || decoded
 }
 
@@ -81,12 +79,15 @@ export function resolveVirtualEntryFile(id: string): string | undefined {
  * 虚拟入口注入 `__file` 守卫（createComponent/createPage 之前）。
  * 入口代码形态固定，直接锚定末尾的全局对象调用；守卫带 marker 防重复注入。
  */
-export function injectEntryFileGuard(code: string, file: string): string | null {
-  if (code.includes(FILE_MARKER))
-    return null
-  const call = code.match(/([A-Za-z_$][\w$]*)\.create(?:Component|Page)\(\s*([A-Za-z_$][\w$]*)\s*\)[\s;]*$/)
-  if (!call || call.index === undefined)
-    return null
+export function injectEntryFileGuard(
+  code: string,
+  file: string,
+): string | null {
+  if (code.includes(FILE_MARKER)) return null
+  const call = code.match(
+    /([A-Za-z_$][\w$]*)\.create(?:Component|Page)\(\s*([A-Za-z_$][\w$]*)\s*\)[\s;]*$/,
+  )
+  if (!call || call.index === undefined) return null
   const target = call[2]!
   const guard = `/* ${FILE_MARKER} */ if (${target} && !${target}.__file) { ${target}.__file = ${JSON.stringify(file)}; }\n`
   return code.slice(0, call.index) + guard + code.slice(call.index)
@@ -94,24 +95,21 @@ export function injectEntryFileGuard(code: string, file: string): string | null 
 
 /** 收集声明模式里的绑定名（Identifier / 解构 / rest / 带默认值） */
 function collectDeclaredNames(pattern: any, out: Set<string>): void {
-  if (!pattern || typeof pattern !== 'object')
-    return
+  if (!pattern || typeof pattern !== 'object') return
   switch (pattern.type) {
     case 'Identifier':
       out.add(pattern.name)
       break
     case 'ObjectPattern':
       for (const prop of pattern.properties ?? []) {
-        if (prop.type === 'Property')
-          collectDeclaredNames(prop.value, out)
+        if (prop.type === 'Property') collectDeclaredNames(prop.value, out)
         else if (prop.type === 'RestElement')
           collectDeclaredNames(prop.argument, out)
       }
       break
     case 'ArrayPattern':
       for (const el of pattern.elements ?? []) {
-        if (el)
-          collectDeclaredNames(el, out)
+        if (el) collectDeclaredNames(el, out)
       }
       break
     case 'AssignmentPattern':
@@ -125,15 +123,12 @@ function collectDeclaredNames(pattern: any, out: Set<string>): void {
 
 /** AST 深遍历（跳过位置字段；对形状不符的输入安全失败） */
 function visit(node: unknown, visitFn: (node: any) => void): void {
-  if (!node || typeof node !== 'object')
-    return
+  if (!node || typeof node !== 'object') return
   if (Array.isArray(node)) {
-    for (const item of node)
-      visit(item, visitFn)
+    for (const item of node) visit(item, visitFn)
     return
   }
-  if (typeof (node as any).type !== 'string')
-    return
+  if (typeof (node as any).type !== 'string') return
   visitFn(node)
   for (const key of Object.keys(node)) {
     if (key !== 'type' && key !== 'start' && key !== 'end' && key !== 'loc')
@@ -163,31 +158,31 @@ export function injectSetupBindings(
   code: string,
   parse: (source: string) => any,
 ): string | null {
-  if (!code.includes('setup') || code.includes(BINDINGS_PROP))
-    return null
+  if (!code.includes('setup') || code.includes(BINDINGS_PROP)) return null
 
   let ast: any
   try {
     ast = parse(code)
-  }
-  catch {
+  } catch {
     return null
   }
 
   const captures: SetupCapture[] = []
 
   visit(ast, (node) => {
-    if (node.type !== 'Property' || node.computed)
-      return
+    if (node.type !== 'Property' || node.computed) return
     const key = node.key
-    if (!key || key.type !== 'Identifier' || key.name !== 'setup')
-      return
+    if (!key || key.type !== 'Identifier' || key.name !== 'setup') return
     const fn = node.value
-    if (!fn || (fn.type !== 'FunctionExpression' && fn.type !== 'ArrowFunctionExpression') || fn.async)
+    if (
+      !fn ||
+      (fn.type !== 'FunctionExpression' &&
+        fn.type !== 'ArrowFunctionExpression') ||
+      fn.async
+    )
       return
     const body = fn.body
-    if (!body || body.type !== 'BlockStatement')
-      return
+    if (!body || body.type !== 'BlockStatement') return
 
     const names = new Set<string>()
     let renderReturn: any
@@ -195,23 +190,28 @@ export function injectSetupBindings(
       if (stmt.type === 'VariableDeclaration') {
         for (const decl of stmt.declarations ?? [])
           collectDeclaredNames(decl.id, names)
-      }
-      else if (stmt.type === 'FunctionDeclaration' || stmt.type === 'ClassDeclaration') {
-        if (stmt.id)
-          names.add(stmt.id.name)
-      }
-      else if (stmt.type === 'ReturnStatement' && !renderReturn) {
+      } else if (
+        stmt.type === 'FunctionDeclaration' ||
+        stmt.type === 'ClassDeclaration'
+      ) {
+        if (stmt.id) names.add(stmt.id.name)
+      } else if (stmt.type === 'ReturnStatement' && !renderReturn) {
         const arg = stmt.argument
-        if (arg && (arg.type === 'FunctionExpression' || arg.type === 'ArrowFunctionExpression') && !arg.async)
+        if (
+          arg &&
+          (arg.type === 'FunctionExpression' ||
+            arg.type === 'ArrowFunctionExpression') &&
+          !arg.async
+        )
           renderReturn = stmt
       }
     }
-    if (!renderReturn || names.size === 0)
-      return
+    if (!renderReturn || names.size === 0) return
 
-    const bindingNames = [...names].filter(name => !name.startsWith('__') && !name.startsWith('$'))
-    if (bindingNames.length === 0)
-      return
+    const bindingNames = [...names].filter(
+      (name) => !name.startsWith('__') && !name.startsWith('$'),
+    )
+    if (bindingNames.length === 0) return
     captures.push({
       returnStart: renderReturn.start,
       returnEnd: renderReturn.end,
@@ -221,8 +221,7 @@ export function injectSetupBindings(
     })
   })
 
-  if (captures.length === 0)
-    return null
+  if (captures.length === 0) return null
 
   // 从后往前替换，保持前序替换点偏移有效；嵌套 setup（setup 体内再定义
   // 带 setup 的对象字面量）会产生重叠替换区间，只保留最外层，内层静默放弃
@@ -230,13 +229,11 @@ export function injectSetupBindings(
   const ordered = captures
     .sort((a, b) => b.returnStart - a.returnStart)
     .filter((capture) => {
-      if (capture.returnEnd > cursor)
-        return false
+      if (capture.returnEnd > cursor) return false
       cursor = capture.returnStart
       return true
     })
-  if (ordered.length === 0)
-    return null
+  if (ordered.length === 0) return null
 
   let out = code
   for (const capture of ordered) {
@@ -244,7 +241,10 @@ export function injectSetupBindings(
     // 渲染钩子包装：渲染即调度树推送（钩子保 length 2，绑定量挂回包装层，
     // 探针读 internal.render[BINDINGS_PROP] 不受影响）
     const replacement = `return Object.assign(${RENDER_HOOK_FN}(${arg}), { ${BINDINGS_PROP}: { ${capture.names.join(', ')} } });`
-    out = out.slice(0, capture.returnStart) + replacement + out.slice(capture.returnEnd)
+    out =
+      out.slice(0, capture.returnStart) +
+      replacement +
+      out.slice(capture.returnEnd)
   }
   return `${RENDER_HOOK_IMPORT_LINE}\n${out}`
 }

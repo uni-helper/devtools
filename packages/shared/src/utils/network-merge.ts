@@ -13,11 +13,17 @@
  */
 import type { NetworkRecord } from '../types.ts'
 
-export function isNetworkRecordCompletion(existing: NetworkRecord, incoming: NetworkRecord): boolean {
+export function isNetworkRecordCompletion(
+  existing: NetworkRecord,
+  incoming: NetworkRecord,
+): boolean {
   return existing.duration === undefined && incoming.duration !== undefined
 }
 
-export function mergeNetworkRecords(existing: NetworkRecord[], incoming: NetworkRecord[]): NetworkRecord[] {
+export function mergeNetworkRecords(
+  existing: NetworkRecord[],
+  incoming: NetworkRecord[],
+): NetworkRecord[] {
   const byId = new Map<number, NetworkRecord>()
   for (const rec of existing) {
     if (rec && typeof rec.id === 'number' && Number.isFinite(rec.id)) {

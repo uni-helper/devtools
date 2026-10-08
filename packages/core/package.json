@@ -1,8 +1,9 @@
 {
   "name": "@uni-helper/devtools-core",
-  "type": "module",
   "version": "0.0.1",
   "description": "Uni DevTools node 侧：DevframeDefinition（含 agent 元数据）+ WebSocket 中继 + Vite Inspect 托管",
+  "type": "module",
+  "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
     "./relay": "./src/relay.ts",
@@ -10,7 +11,6 @@
     "./inspect-serve": "./src/inspect-serve.ts",
     "./sidecar": "./src/sidecar.ts"
   },
-  "types": "./src/index.ts",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "test": "vitest run",

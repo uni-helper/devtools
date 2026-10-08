@@ -85,7 +85,7 @@
 | CLI                | `createCac(def).parse()`，自带 `dev` / `build` / `mcp` 子命令                                                                             | 数行代码获得 CLI，v1 预留 2 周纯属浪费            |
 | 静态报告           | `createBuild`（static 函数自动 dump，query 可选 `dump`）                                                                                  | 生成自包含 HTML 报告                              |
 | AI/Agent           | RPC 函数声明 `agent: { description }` + `jsonSerializable: true`；`mcp: 'auto'` 自动挂 `<base>__mcp`                                      | 零额外代码暴露给编码代理                          |
-| 页内通道           | `devframe/in-page-channel`（server-free，页面脚本 ↔ 面板）                                                                               | H5 场景后续可用的官方优化路径                     |
+| 页内通道           | `devframe/in-page-channel`（server-free，页面脚本 ↔ 面板）                                                                                | H5 场景后续可用的官方优化路径                     |
 
 ### 2.3 不存在的能力（v1 虚构，已剔除）
 
@@ -150,18 +150,21 @@ v1 把 RPC handler 写成直接运行在 uni 运行时内（`getCurrentAdapter()
 import { createBirpc } from 'birpc'
 import { config } from 'virtual:uni-devtools-agent' // { wsUrl, token } 编译期注入
 
-const socket = uni.connectSocket({ url: `${config.wsUrl}?devframe_auth_token=${config.token}` })
+const socket = uni.connectSocket({
+  url: `${config.wsUrl}?devframe_auth_token=${config.token}`,
+})
 
 const rpc = createBirpc(
   {
     // node 侧可调用的采集函数（复用 packages/kit 现有逻辑）
     'uni-devtools:agent:getComponentTree': () => kit.getComponentTree(),
-    'uni-devtools:agent:getComponentState': id => kit.getComponentState(id),
-    'uni-devtools:agent:updateComponentState': ({ id, path, value }) => kit.updateState(id, path, value),
+    'uni-devtools:agent:getComponentState': (id) => kit.getComponentState(id),
+    'uni-devtools:agent:updateComponentState': ({ id, path, value }) =>
+      kit.updateState(id, path, value),
   },
   {
-    post: data => socket.send({ data }),
-    on: fn => socket.onMessage(e => fn(e.data)),
+    post: (data) => socket.send({ data }),
+    on: (fn) => socket.onMessage((e) => fn(e.data)),
   },
 )
 ```
@@ -192,16 +195,21 @@ export default function createUniDevtools() {
       const uni = ctx.scope('uni-helper-devtools') // 自动命名空间 uni-helper-devtools:*
 
       // relay 型 RPC：面板/AI 调用 → 转发探针执行
-      uni.rpc.register(defineRpcFunction({
-        name: 'get-component-tree', // → uni-helper-devtools:get-component-tree
-        type: 'query',
-        jsonSerializable: true, // 面板 JSON 序列化；暴露给 agent API 时必需
-        args: [v.object({ pageId: v.optional(v.string()) })], // 官方推荐单一对象参数
-        agent: { description: 'Get the uni-app component tree of the running page. Safe to call freely.' },
-        setup: () => ({
-          handler: args => agentHub.call('getComponentTree', args), // agentHub 维护已连接探针
+      uni.rpc.register(
+        defineRpcFunction({
+          name: 'get-component-tree', // → uni-helper-devtools:get-component-tree
+          type: 'query',
+          jsonSerializable: true, // 面板 JSON 序列化；暴露给 agent API 时必需
+          args: [v.object({ pageId: v.optional(v.string()) })], // 官方推荐单一对象参数
+          agent: {
+            description:
+              'Get the uni-app component tree of the running page. Safe to call freely.',
+          },
+          setup: () => ({
+            handler: (args) => agentHub.call('getComponentTree', args), // agentHub 维护已连接探针
+          }),
         }),
-      }))
+      )
 
       // ... get-component-state / update-component-state（type: 'action'）
       //     get-pinia-stores / get-page-stack / get-performance-metrics 等，同模式
@@ -296,7 +304,7 @@ packages/
 
 | #   | 约束                                                                                                                                                                    | 原因（事后无法修补的 v1 教训）                                                                                                               |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **传输层唯一 WebSocket（`uni.connectSocket`）**，代码中禁止出现 `plus.bridge`/native-bridge 概念                                                                        | `plus.bridge` 是端内 JS↔原生 IPC，跨不了网络；App 真机连开发机同样走 WLAN WebSocket                                                         |
+| 1   | **传输层唯一 WebSocket（`uni.connectSocket`）**，代码中禁止出现 `plus.bridge`/native-bridge 概念                                                                        | `plus.bridge` 是端内 JS↔原生 IPC，跨不了网络；App 真机连开发机同样走 WLAN WebSocket                                                          |
 | 2   | **探针平台无关**：不 import `window`/`document`/`location`/`BroadcastChannel` 等浏览器专属 API；发现机制跳过 `__connection.json`，地址与 token 一律由虚拟模块编译期注入 | `devframe/client` 在 mp/App 沙箱不可用；探针是我们自己的代码，保持环境中立即可全端复用                                                       |
 | 3   | **地址不硬编码 `localhost`**：`resolveWsUrl()` 读取顺序 `UNI_DEVTOOLS_HOST` 环境变量 → `os.networkInterfaces()` 局域网 IP → `localhost` 兜底                            | 微信开发者工具模拟器连 localhost 可通（本轮够用）；真机预览/App 真机时 localhost 指向设备自身，必须 LAN IP。地址机制现在做对，以后只是换配置 |
 | 4   | **鉴权用预共享 token 静默握手**（`clientAuthTokens` + `?devframe_auth_token=`），不依赖 OTP 交互                                                                        | 真机 App 是无地址栏的静默客户端，OTP 输入不可行；token 机制全端一致                                                                          |
@@ -414,7 +422,7 @@ v1（commit 68b83eb）经双人独立评审判定"不建议执行"，本版为�
 | --- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | 1   | 虚构包名 `@devframe/*` 系列、顶层 `adapter/rpc/ui/cli` 定义结构、`subscription<T>` API | 全部替换为官方真实 API（`devframe`、`defineRpcFunction`、`ctx.scope().rpc.register`、streaming/sharedState） |
 | 2   | 虚构浏览器扩展/Electron 输出形态                                                       | 删除；输出形态收敛为官方部署矩阵（CLI/静态报告/MCP/embedded/Vite）                                           |
-| 3   | 拓扑错误：RPC handler 直接跑在 uni 运行时                                              | 修正为三角色拓扑（面板 SPA ↔ node 侧 relay ↔ Runtime Agent），Agent 客户端为本方案核心新组件               |
+| 3   | 拓扑错误：RPC handler 直接跑在 uni 运行时                                              | 修正为三角色拓扑（面板 SPA ↔ node 侧 relay ↔ Runtime Agent），Agent 客户端为本方案核心新组件                 |
 | 4   | `plus.bridge` 作 App 传输（根本性错误）                                                | 传输层唯一 WebSocket；App 仅保留设计约束（§4），不做实现                                                     |
 | 5   | OTP 鉴权将阻断无界面客户端（v1 完全未考虑鉴权）                                        | `createInteractiveAuth` + `clientAuthTokens` 静默握手                                                        |
 | 6   | 硬编码 `ws://localhost:5173`、生产 fallback 远端服务器                                 | 虚拟模块编译期注入，地址解析顺序环境变量 → LAN IP → localhost；删除远端 fallback                             |

@@ -19,8 +19,13 @@ const props = defineProps<{
 
 const STATE_FIELDS_LIMIT_SIZE = 30
 
-const { editComponentState, expandEntryValue, formatValue, getEntryKey, getEntryValue } =
-  useDevtoolsClient()
+const {
+  editComponentState,
+  expandEntryValue,
+  formatValue,
+  getEntryKey,
+  getEntryValue,
+} = useDevtoolsClient()
 
 const collapsed = ref(true)
 const visibleLimit = ref(STATE_FIELDS_LIMIT_SIZE)
@@ -37,7 +42,9 @@ const childEntries = computed(() =>
 )
 const totalChildren = computed(() => getValueItemCount(entryValue.value))
 const hasExpandableEntry = computed(() => hasExpandableValue(entryValue.value))
-const hasMoreChildren = computed(() => totalChildren.value > childEntries.value.length)
+const hasMoreChildren = computed(
+  () => totalChildren.value > childEntries.value.length,
+)
 
 watch(
   () => props.entry.value,
@@ -58,7 +65,10 @@ async function toggleStateEntry() {
 }
 
 async function ensureExpandedValue() {
-  if (getValuePreview(entryValue.value).length === 0 && hasExpandableValue(entryValue.value))
+  if (
+    getValuePreview(entryValue.value).length === 0 &&
+    hasExpandableValue(entryValue.value)
+  )
     await expandEntryValue(props.entry, visibleLimit.value)
 }
 
@@ -153,7 +163,10 @@ function cancelStateEntryEdit() {
 
 async function submitStateEntryEdit(entry: StateEntry) {
   try {
-    const value = parseEditText(getDisplayValue(getEntryValue(entry)), editingStateText.value)
+    const value = parseEditText(
+      getDisplayValue(getEntryValue(entry)),
+      editingStateText.value,
+    )
     await editComponentState(entry, value)
     cancelStateEntryEdit()
   } catch (err) {
@@ -180,7 +193,8 @@ function getStateEntryEditInputWidth(entry: StateEntry): string {
 
 function getStateValueClass(value: EncodedValue): string {
   const custom = getCustomEncodedValue(value)
-  if (custom) return `custom-state-type ${custom.type ? `custom-${custom.type}` : ''}`
+  if (custom)
+    return `custom-state-type ${custom.type ? `custom-${custom.type}` : ''}`
   value = getDisplayValue(value)
 
   switch (value.kind) {
@@ -234,13 +248,17 @@ function getStateValueClass(value: EncodedValue): string {
             class="font-state-field h-25px rounded-1 border border-#8883 bg-white/90 px-1 text-3.5 color-base outline-none focus:border-primary-500/60 dark:bg-#181818"
             :class="[
               getStateEntryEditInputWidth(entry),
-              !isStateEntryEditValid(entry) || stateEditError ? 'border-red-500/70!' : '',
+              !isStateEntryEditValid(entry) || stateEditError
+                ? 'border-red-500/70!'
+                : '',
             ]"
             type="text"
             autofocus
             @input="stateEditError = undefined"
             @click.stop
-            @keydown.enter.prevent="isStateEntryEditValid(entry) && submitStateEntryEdit(entry)"
+            @keydown.enter.prevent="
+              isStateEntryEditValid(entry) && submitStateEntryEdit(entry)
+            "
             @keydown.esc.prevent="cancelStateEntryEdit"
           />
           <button
@@ -302,7 +320,10 @@ function getStateValueClass(value: EncodedValue): string {
       />
     </div>
 
-    <div v-if="hasExpandableEntry && !collapsed" class="font-state-field text-3.5">
+    <div
+      v-if="hasExpandableEntry && !collapsed"
+      class="font-state-field text-3.5"
+    >
       <StateEntryRow
         v-for="child in childEntries"
         :key="getEntryKey(child)"
@@ -315,7 +336,10 @@ function getStateValueClass(value: EncodedValue): string {
         type="button"
         @click.stop="showMoreChildren"
       >
-        <span class="i-carbon-overflow-menu-horizontal text-4" aria-hidden="true" />
+        <span
+          class="i-carbon-overflow-menu-horizontal text-4"
+          aria-hidden="true"
+        />
         Show more
       </button>
     </div>

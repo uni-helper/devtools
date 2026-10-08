@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import type { ComponentStateSnapshotMessage, EncodedValue, StateEntry } from '@vue/devtools-kit'
+import type {
+  ComponentStateSnapshotMessage,
+  EncodedValue,
+  StateEntry,
+} from '@vue/devtools-kit'
 import StateEntryRow from '../components/StateEntryRow.vue'
 import DevtoolsIcon from './DevtoolsIcon.vue'
 import { computed, nextTick, ref, watch } from 'vue'
@@ -69,7 +73,9 @@ const filteredStateSections = computed(() => {
   return sections
     .map((section) => ({
       ...section,
-      entries: section.entries.filter((entry) => matchesStateEntryFilter(entry, filter)),
+      entries: section.entries.filter((entry) =>
+        matchesStateEntryFilter(entry, filter),
+      ),
     }))
     .filter((section) => section.entries.length > 0)
 })
@@ -89,7 +95,10 @@ watch(
 )
 
 function updateFilter(event: Event) {
-  emit('update:filter', event.target instanceof HTMLInputElement ? event.target.value : '')
+  emit(
+    'update:filter',
+    event.target instanceof HTMLInputElement ? event.target.value : '',
+  )
 }
 
 function isStateSectionExpanded(sectionId: string): boolean {
@@ -105,7 +114,8 @@ function toggleStateSection(sectionId: string) {
 
 function matchesStateEntryFilter(entry: StateEntry, filter: string): boolean {
   return (
-    entry.key.toLowerCase().includes(filter) || matchesEncodedValue(getEntryValue(entry), filter)
+    entry.key.toLowerCase().includes(filter) ||
+    matchesEncodedValue(getEntryValue(entry), filter)
   )
 }
 
@@ -143,7 +153,9 @@ function matchesEncodedValue(
           matchesEncodedValue(entry.value, filter, seenHandles),
       )
     case 'component':
-      return includesFilter(value.name, filter) || includesFilter(value.id, filter)
+      return (
+        includesFilter(value.name, filter) || includesFilter(value.id, filter)
+      )
     case 'dom':
       return (
         includesFilter(value.tag, filter) ||
@@ -157,7 +169,10 @@ function matchesEncodedValue(
         includesFilter(value.stack, filter)
       )
     case 'function':
-      return includesFilter(value.name, filter) || includesFilter(value.sourcePreview, filter)
+      return (
+        includesFilter(value.name, filter) ||
+        includesFilter(value.sourcePreview, filter)
+      )
     case 'symbol':
       return includesFilter(value.description, filter)
     default:
@@ -165,10 +180,15 @@ function matchesEncodedValue(
   }
 }
 
-function matchesUnknownRecord(value: Record<string, unknown> | undefined, filter: string): boolean {
+function matchesUnknownRecord(
+  value: Record<string, unknown> | undefined,
+  filter: string,
+): boolean {
   if (!value) return false
   return Object.entries(value).some(
-    ([key, item]) => key.toLowerCase().includes(filter) || includesFilter(String(item), filter),
+    ([key, item]) =>
+      key.toLowerCase().includes(filter) ||
+      includesFilter(String(item), filter),
   )
 }
 
@@ -218,14 +238,20 @@ function includesFilter(value: string | undefined, filter: string): boolean {
         v-tooltip.bottom="action.tooltip || 'Run node action'"
         class="h-7 w-7 shrink-0 rounded-1 border-0 bg-transparent color-muted flex items-center justify-center hover:bg-active hover:color-base"
         type="button"
-        :aria-label="action.ariaLabel || action.tooltip || 'Run inspector node action'"
+        :aria-label="
+          action.ariaLabel || action.tooltip || 'Run inspector node action'
+        "
         @click="emit('node-action', index)"
       >
         <DevtoolsIcon :icon="action.icon" class="text-4" />
       </button>
     </div>
 
-    <div v-if="selectedNodeId" ref="stateContainer" class="min-h-0 flex-1 overflow-auto px-1 pb-3">
+    <div
+      v-if="selectedNodeId"
+      ref="stateContainer"
+      class="min-h-0 flex-1 overflow-auto px-1 pb-3"
+    >
       <div v-if="loading && !state" class="py-8 text-center color-muted">
         {{ loadingText }}
       </div>
@@ -244,7 +270,9 @@ function includesFilter(value: string | undefined, filter: string): boolean {
             <span class="font-state-field text-3.5 text-#a3a3a3">
               {{ section.label }}
             </span>
-            <span v-if="section.partial" class="ml-2 color-muted text-11px">partial</span>
+            <span v-if="section.partial" class="ml-2 color-muted text-11px"
+              >partial</span
+            >
           </div>
 
           <div v-if="isStateSectionExpanded(section.id)">
@@ -260,7 +288,10 @@ function includesFilter(value: string | undefined, filter: string): boolean {
               type="button"
               @click="emit('show-more', section.id)"
             >
-              <span class="i-carbon-overflow-menu-horizontal text-4" aria-hidden="true" />
+              <span
+                class="i-carbon-overflow-menu-horizontal text-4"
+                aria-hidden="true"
+              />
               {{ showMoreText }}
             </button>
           </div>
@@ -272,7 +303,10 @@ function includesFilter(value: string | undefined, filter: string): boolean {
       </div>
     </div>
 
-    <div v-else class="min-h-0 flex-1 flex items-center justify-center color-muted">
+    <div
+      v-else
+      class="min-h-0 flex-1 flex items-center justify-center color-muted"
+    >
       {{ selectPrompt ?? noSelectionText }}
     </div>
 

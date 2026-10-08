@@ -13,9 +13,10 @@
 `packages/adapter/src/uni-devtools-rpc.ts:82` 定义了模块级布尔开关：
 
 ```ts
-export const mockMode = typeof window !== 'undefined'
-  ? new URLSearchParams(window.location?.search ?? '').has('mock')
-  : false
+export const mockMode =
+  typeof window !== 'undefined'
+    ? new URLSearchParams(window.location?.search ?? '').has('mock')
+    : false
 ```
 
 用途唯一且正当：面板 URL 带 `?mock` 时，所有 query/command 改从 `fixtures.ts` 的内存假数据取值，
@@ -106,12 +107,21 @@ export const mockMode = typeof window !== 'undefined'
  * MockBackend 用 satisfies + 未知方法运行时 throw 双保险（见 §3.3）。
  */
 export type ProbeMethod =
-  | 'get-component-tree' | 'get-component-state' | 'update-component-state'
+  | 'get-component-tree'
+  | 'get-component-state'
+  | 'update-component-state'
   | 'get-component-render-code'
-  | 'get-pinia-stores' | 'get-pinia-state' | 'update-pinia-state'
-  | 'get-network-records' | 'clear-network-records'
-  | 'get-registered-routes' | 'get-router-info' | 'navigate-to'
-  | 'open-in-editor' | 'get-inspect-status' | 'recompute-component-state'
+  | 'get-pinia-stores'
+  | 'get-pinia-state'
+  | 'update-pinia-state'
+  | 'get-network-records'
+  | 'clear-network-records'
+  | 'get-registered-routes'
+  | 'get-router-info'
+  | 'navigate-to'
+  | 'open-in-editor'
+  | 'get-inspect-status'
+  | 'recompute-component-state'
 
 export type ProbePushKey = 'component-tree' | 'network-records'
 
@@ -140,7 +150,10 @@ export interface ProbeBackend {
   /** 探针方法面（拉取 + 写回）；未知方法实现方必须 throw（fail loud） */
   call(method: ProbeMethod, ...args: unknown[]): Promise<unknown>
   /** push 通道（与 node 侧 sharedState key 对应） */
-  subscribe(key: ProbePushKey, cb: (snapshot: unknown) => void): ProbeSubscription
+  subscribe(
+    key: ProbePushKey,
+    cb: (snapshot: unknown) => void,
+  ): ProbeSubscription
   /** 幂等；任何时刻可调用（含 connect / subscribe 尚未 settle 时） */
   dispose(): void
 }
@@ -153,23 +166,23 @@ unknown 传输、其形状由 `mapping/` 层冻结并测试守护，方法表再
 
 ### 3.3 方法面对照表（mock 分支的去向）
 
-| 探针方法 | mock 实现（现分支位置） | 备注 |
-| --- | --- | --- |
-| `get-component-tree` | `mockComponentTree()`（L271 `pullTreeOnce`） | |
-| `get-component-state` | `mockComponentState()`（L581） | |
-| `update-component-state` | `mockUpdateComponentState()`（L719） | 深路径/remove 的 NOT_SUPPORTED 校验（L717-718）移入 mock 实现内 throw，面板看到 `status:0` + 文案不变 |
-| `get-component-render-code` | `mockGetComponentRenderCode()`（L685） | 未知 id 返回 undefined，两侧语义本就一致 |
-| `get-pinia-stores` | `mockPiniaStores()`（L522 / L545） | |
-| `get-pinia-state` | `mockPiniaState()`（L551 / L561） | |
-| `update-pinia-state` | `mockUpdatePiniaState()`（L777） | 键不存在 throw 的语义与真实探针一致，统一走共享 catch |
-| `get-network-records` | `mockNetworkRecords()`（L285） | |
-| `clear-network-records` | `mockClearNetworkRecords()`（L304） | |
-| `get-registered-routes` | 路由 fixtures（原 `mockRouterSnapshot().routes`，L649） | |
-| `get-router-info` | mock `currentRoute`（L588 `router:snapshot` 整分支消失） | 共享回落逻辑（appId 兜底 / 首条路由兜底）对 mock 同样成立，结果等价 |
-| `navigate-to` | 返回 `{ ok: true }`（L833 假成功） | |
-| `open-in-editor` | throw（L817） | 统一走真实路径的 catch → `status:0` |
-| `get-inspect-status` | 返回 `{ available: false }`（L482） | capabilities 查询由此变模式无关 |
-| `recompute-component-state` | no-op（L857 分支消失） | version 递增 + 失效事件的共享逻辑保留在路由器 |
+| 探针方法                    | mock 实现（现分支位置）                                  | 备注                                                                                                  |
+| --------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `get-component-tree`        | `mockComponentTree()`（L271 `pullTreeOnce`）             |                                                                                                       |
+| `get-component-state`       | `mockComponentState()`（L581）                           |                                                                                                       |
+| `update-component-state`    | `mockUpdateComponentState()`（L719）                     | 深路径/remove 的 NOT_SUPPORTED 校验（L717-718）移入 mock 实现内 throw，面板看到 `status:0` + 文案不变 |
+| `get-component-render-code` | `mockGetComponentRenderCode()`（L685）                   | 未知 id 返回 undefined，两侧语义本就一致                                                              |
+| `get-pinia-stores`          | `mockPiniaStores()`（L522 / L545）                       |                                                                                                       |
+| `get-pinia-state`           | `mockPiniaState()`（L551 / L561）                        |                                                                                                       |
+| `update-pinia-state`        | `mockUpdatePiniaState()`（L777）                         | 键不存在 throw 的语义与真实探针一致，统一走共享 catch                                                 |
+| `get-network-records`       | `mockNetworkRecords()`（L285）                           |                                                                                                       |
+| `clear-network-records`     | `mockClearNetworkRecords()`（L304）                      |                                                                                                       |
+| `get-registered-routes`     | 路由 fixtures（原 `mockRouterSnapshot().routes`，L649）  |                                                                                                       |
+| `get-router-info`           | mock `currentRoute`（L588 `router:snapshot` 整分支消失） | 共享回落逻辑（appId 兜底 / 首条路由兜底）对 mock 同样成立，结果等价                                   |
+| `navigate-to`               | 返回 `{ ok: true }`（L833 假成功）                       |                                                                                                       |
+| `open-in-editor`            | throw（L817）                                            | 统一走真实路径的 catch → `status:0`                                                                   |
+| `get-inspect-status`        | 返回 `{ available: false }`（L482）                      | capabilities 查询由此变模式无关                                                                       |
+| `recompute-component-state` | no-op（L857 分支消失）                                   | version 递增 + 失效事件的共享逻辑保留在路由器                                                         |
 
 `MockBackend` 的方法分发用 `satisfies Record<ProbeMethod, Handler>`（或 switch + exhaustive
 default throw）获得**编译期穷举检查**；未知方法运行时 throw
@@ -187,9 +200,9 @@ default throw）获得**编译期穷举检查**；未知方法运行时 throw
 
 ### 3.4 push 通道对照
 
-| key | 真实实现 | mock 实现 |
-| --- | --- | --- |
-| `component-tree` | `sharedState('component-tree').on('updated')` → `applyTreeSnapshot` | `connect()` 后立即推一次 `mockComponentTree()` |
+| key               | 真实实现                                                                               | mock 实现                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `component-tree`  | `sharedState('component-tree').on('updated')` → `applyTreeSnapshot`                    | `connect()` 后立即推一次 `mockComponentTree()`                                              |
 | `network-records` | `sharedState('network-records').on('updated')` → `handleNetworkSnapshot`（含格式校验） | 心跳推 `mockTickNetworkRecords()`，**包装成 `{ records, latestId, updatedAt }` 共享态形状** |
 
 包装成共享态形状是有意为之：现在 mock 直接 `applyNetworkRecords` 绕过了
@@ -210,23 +223,37 @@ export interface MockBackendOptions {
 
 ```ts
 async function initConnection(): Promise<void> {
-  backend = options.backend
-    ?? (options.mock ? createMockBackend() : createDevframeBackend())
-  await backend.connect(options.authToken)          // mock：立即 resolve；真实：连接 + socket 等待
-  if (disposed) { backend.dispose(); return }       // 竞态检查点 1
+  backend =
+    options.backend ??
+    (options.mock ? createMockBackend() : createDevframeBackend())
+  await backend.connect(options.authToken) // mock：立即 resolve；真实：连接 + socket 等待
+  if (disposed) {
+    backend.dispose()
+    return
+  } // 竞态检查点 1
   emitConnection('connected')
-  unsubLost = backend.onConnectionLost(() => {      // mock 永不触发
+  unsubLost = backend.onConnectionLost(() => {
+    // mock 永不触发
     resetConnectionState()
     emitConnection('closed')
-    scheduleReconnect()                             // 重连 = 重新 initConnection，新建 backend
+    scheduleReconnect() // 重连 = 重新 initConnection，新建 backend
   })
   // 订阅走两段式 ProbeSubscription（§3.2）：
   const treeSub = backend.subscribe('component-tree', applyTreeSnapshotPayload)
-  void treeSub.ready.then(() => { if (disposed) treeSub.unsubscribe() }).catch(
-    /* 建立失败：退化为主动拉取（现语义不变） */
+  void treeSub.ready
+    .then(() => {
+      if (disposed) treeSub.unsubscribe()
+    })
+    .catch(/* 建立失败：退化为主动拉取（现语义不变） */)
+  const netSub = backend.subscribe(
+    'network-records',
+    handleNetworkSnapshotPayload,
   )
-  const netSub = backend.subscribe('network-records', handleNetworkSnapshotPayload)
-  void netSub.ready.then(() => { if (disposed) netSub.unsubscribe() }).catch(/* 同上 */)
+  void netSub.ready
+    .then(() => {
+      if (disposed) netSub.unsubscribe()
+    })
+    .catch(/* 同上 */)
 }
 ```
 
@@ -247,17 +274,17 @@ async function initConnection(): Promise<void> {
 
 ## 4. 改动清单（按文件）
 
-| 文件 | 动作 | 内容 |
-| --- | --- | --- |
-| `packages/adapter/src/backend.ts` | 新增 | `ProbeMethod` / `ProbePushKey` / `ProbeSubscription` / `ProbeBackend` 类型 |
-| `packages/adapter/src/devframe-backend.ts` | 新增 | 真实实现：从 `initConnection` 抽出传输部分（connectDevframe、socket 等待、`connection:status` 监听、两个 sharedState 订阅）；dispose 幂等 |
-| `packages/adapter/src/mock-backend.ts` | 新增 | fixtures 按方法名分发（`satisfies` 穷举）+ 路由 fixtures（吸收 `mockRouterSnapshot`）+ 可注人心跳 + push 包装；dispose 幂等 |
-| `packages/adapter/src/uni-devtools-rpc.ts` | 修改 | 删 `mockMode`、`mockRouterSnapshot`、19 处分支；签名变 `connectUniRpcClient(options?: { mock?: boolean, authToken?: string, backend?: ProbeBackend })`（`backend` 供测试注入，优先于 `mock`）；`initConnection` 按 §3.5 重写 |
-| `packages/adapter/src/index.ts` | 修改 | 删 `export * as fixtures` / `export *`（已确认无外部消费者）；导出 `ProbeBackend` 等类型 |
-| `packages/adapter/src/mapping/*` | **不动** | 已核对零 mock 依赖（§2 非目标） |
-| `packages/adapter/src/fixtures.ts` | 不动 | 纯数据，原样保留（`mockResetNetworkRecords` 当前无消费者，可顺手删或留待测试用） |
-| `packages/client/src/composables/devtools-connection.ts` | 修改 | `getRpcClient()` 一行：`connectUniRpcClient({ mock: isMockPanelUrl() })` |
-| `packages/client/src/main.ts` | 修改 | 角标改用 `isMockPanelUrl()`，删 `import { mockMode }` |
+| 文件                                                     | 动作     | 内容                                                                                                                                                                                                                         |
+| -------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/adapter/src/backend.ts`                        | 新增     | `ProbeMethod` / `ProbePushKey` / `ProbeSubscription` / `ProbeBackend` 类型                                                                                                                                                   |
+| `packages/adapter/src/devframe-backend.ts`               | 新增     | 真实实现：从 `initConnection` 抽出传输部分（connectDevframe、socket 等待、`connection:status` 监听、两个 sharedState 订阅）；dispose 幂等                                                                                    |
+| `packages/adapter/src/mock-backend.ts`                   | 新增     | fixtures 按方法名分发（`satisfies` 穷举）+ 路由 fixtures（吸收 `mockRouterSnapshot`）+ 可注人心跳 + push 包装；dispose 幂等                                                                                                  |
+| `packages/adapter/src/uni-devtools-rpc.ts`               | 修改     | 删 `mockMode`、`mockRouterSnapshot`、19 处分支；签名变 `connectUniRpcClient(options?: { mock?: boolean, authToken?: string, backend?: ProbeBackend })`（`backend` 供测试注入，优先于 `mock`）；`initConnection` 按 §3.5 重写 |
+| `packages/adapter/src/index.ts`                          | 修改     | 删 `export * as fixtures` / `export *`（已确认无外部消费者）；导出 `ProbeBackend` 等类型                                                                                                                                     |
+| `packages/adapter/src/mapping/*`                         | **不动** | 已核对零 mock 依赖（§2 非目标）                                                                                                                                                                                              |
+| `packages/adapter/src/fixtures.ts`                       | 不动     | 纯数据，原样保留（`mockResetNetworkRecords` 当前无消费者，可顺手删或留待测试用）                                                                                                                                             |
+| `packages/client/src/composables/devtools-connection.ts` | 修改     | `getRpcClient()` 一行：`connectUniRpcClient({ mock: isMockPanelUrl() })`                                                                                                                                                     |
+| `packages/client/src/main.ts`                            | 修改     | 角标改用 `isMockPanelUrl()`，删 `import { mockMode }`                                                                                                                                                                        |
 
 **`?mock` 参数解析的归属**：新增 3 行纯函数 `isMockPanelUrl()`（读 `location.search` 是否含
 `mock`）放 `@uni-helper/devtools-shared`——参数名单一来源，connection 接线与角标共用；
@@ -303,14 +330,14 @@ string error 的处理两侧相同）。
 
 ## 6. 测试计划
 
-| 层 | 内容 |
-| --- | --- |
-| `test/mapping/*`（现有） | 冻结不动 |
-| `test/mock-backend.test.ts`（新增） | 方法面逐个驱动：tree/state 形状、`update-component-state` 平铺键写回 + 深路径/remove NOT_SUPPORTED、`update-pinia-state` 未知键 throw、network 心跳 pending 结算（`networkTickInterval: 10` + `vi.useFakeTimers`，不真实等待）、clear、**未知方法 fail loud**、push 快照过 `validateNetworkSnapshot`、**编辑会话内保持/刷新重置语义**（§3.3） |
-| `test/uni-devtools-rpc.test.ts`（新增/改造 tree.test.ts） | **注入脚本化 ProbeBackend**（不再 `vi.mock('devframe/client')`），冻结协议语义：appId 过滤、Pinia 聚合根、version 递增失效事件、订阅失败退化拉取 |
-| 同上文件内：错误一致性用例 | backend.call throw → 编辑命令 resolve `{status:0, error}`（§5.1 契约），mock/真实两模式断言一致 |
-| `test/lifecycle.test.ts`（新增） | dispose 竞态（评审 P0-1/P1-4）：`connect`/`subscribe` 挂起期间 `dispose()` → fake timers 下无存活定时器（心跳/重连均未泄漏）、不触发 `scheduleReconnect`、二次 dispose 幂等；`unsubscribe()` 在 ready 前调用安全 |
-| `test/integration/mock-e2e.test.ts`（新增，adapter 级） | `connectUniRpcClient({ mock: true })` 全链路：五域 query → 数据形状；编辑 → 失效事件 version 递增；network 心跳推送驱动 `uniNetwork.subscribe` 监听者；openInEditor / 深路径编辑错误路径 |
+| 层                                                        | 内容                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test/mapping/*`（现有）                                  | 冻结不动                                                                                                                                                                                                                                                                                                                                      |
+| `test/mock-backend.test.ts`（新增）                       | 方法面逐个驱动：tree/state 形状、`update-component-state` 平铺键写回 + 深路径/remove NOT_SUPPORTED、`update-pinia-state` 未知键 throw、network 心跳 pending 结算（`networkTickInterval: 10` + `vi.useFakeTimers`，不真实等待）、clear、**未知方法 fail loud**、push 快照过 `validateNetworkSnapshot`、**编辑会话内保持/刷新重置语义**（§3.3） |
+| `test/uni-devtools-rpc.test.ts`（新增/改造 tree.test.ts） | **注入脚本化 ProbeBackend**（不再 `vi.mock('devframe/client')`），冻结协议语义：appId 过滤、Pinia 聚合根、version 递增失效事件、订阅失败退化拉取                                                                                                                                                                                              |
+| 同上文件内：错误一致性用例                                | backend.call throw → 编辑命令 resolve `{status:0, error}`（§5.1 契约），mock/真实两模式断言一致                                                                                                                                                                                                                                               |
+| `test/lifecycle.test.ts`（新增）                          | dispose 竞态（评审 P0-1/P1-4）：`connect`/`subscribe` 挂起期间 `dispose()` → fake timers 下无存活定时器（心跳/重连均未泄漏）、不触发 `scheduleReconnect`、二次 dispose 幂等；`unsubscribe()` 在 ready 前调用安全                                                                                                                              |
+| `test/integration/mock-e2e.test.ts`（新增，adapter 级）   | `connectUniRpcClient({ mock: true })` 全链路：五域 query → 数据形状；编辑 → 失效事件 version 递增；network 心跳推送驱动 `uniNetwork.subscribe` 监听者；openInEditor / 深路径编辑错误路径                                                                                                                                                      |
 
 **UI 级 E2E 的边界（评审 P2-8 部分采纳）**：评审建议的"完整 client + 角标 + 五域 tab"
 E2E 不做 vitest 挂载——把官方面板整 UI 拉进 jsdom 成本高、断言脆，性价比低于现有
@@ -347,15 +374,15 @@ adapter 级集成测试 + 手工冒烟。角标与 tab 布局回归保留在手�
 
 ## 8. 风险与缓解
 
-| 风险 | 缓解 |
-| --- | --- |
-| 漂移风险转移为"方法面漂移"（node 加方法 mock 未跟） | `ProbeMethod` 联合类型编译期穷举 + MockBackend 未知方法 fail loud（§3.3），测试枚举方法全表 |
-| dispose 竞态（connect/subscribe 挂起期间调用） | `ProbeSubscription.unsubscribe()` 同步幂等（ready 前调用 = 标记待退订）；两个 backend `dispose()` 幂等且对未 settle 状态安全；每个 await 边界后复查 `disposed`；`test/lifecycle.test.ts` 冻结（§3.5、§6） |
-| 编辑错误展示不一致（§5.1 现存缺陷回归或修不彻底） | 共享 catch 契约 + 错误一致性测试冻结 |
-| 重连语义回归 | backend 实例随 `initConnection` 重建、旧实例 dispose，与现有"官方连接层 dispose 旧 client"的生命周期注释一致；tree.test.ts 的断线重连用例保持通过 |
-| mock push 形状不满足校验导致面板空白 | §3.4 包装 + 测试显式断言过 `validateNetworkSnapshot` |
-| bundle 体积（fixtures） | 现状已如此、非回归；Phase 4 可选摇掉 |
-| 版本兼容（删 `mockMode` 导出的对外影响） | 已核实：client `private: true`、adapter 0.0.1 未发布（无 changesets / release 流程），二者同仓 `workspace:*` 锁定，**无独立升级场景**；未来若公开发布 adapter，需在 changelog 将本导出变更标注为 breaking |
+| 风险                                                | 缓解                                                                                                                                                                                                      |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 漂移风险转移为"方法面漂移"（node 加方法 mock 未跟） | `ProbeMethod` 联合类型编译期穷举 + MockBackend 未知方法 fail loud（§3.3），测试枚举方法全表                                                                                                               |
+| dispose 竞态（connect/subscribe 挂起期间调用）      | `ProbeSubscription.unsubscribe()` 同步幂等（ready 前调用 = 标记待退订）；两个 backend `dispose()` 幂等且对未 settle 状态安全；每个 await 边界后复查 `disposed`；`test/lifecycle.test.ts` 冻结（§3.5、§6） |
+| 编辑错误展示不一致（§5.1 现存缺陷回归或修不彻底）   | 共享 catch 契约 + 错误一致性测试冻结                                                                                                                                                                      |
+| 重连语义回归                                        | backend 实例随 `initConnection` 重建、旧实例 dispose，与现有"官方连接层 dispose 旧 client"的生命周期注释一致；tree.test.ts 的断线重连用例保持通过                                                         |
+| mock push 形状不满足校验导致面板空白                | §3.4 包装 + 测试显式断言过 `validateNetworkSnapshot`                                                                                                                                                      |
+| bundle 体积（fixtures）                             | 现状已如此、非回归；Phase 4 可选摇掉                                                                                                                                                                      |
+| 版本兼容（删 `mockMode` 导出的对外影响）            | 已核实：client `private: true`、adapter 0.0.1 未发布（无 changesets / release 流程），二者同仓 `workspace:*` 锁定，**无独立升级场景**；未来若公开发布 adapter，需在 changelog 将本导出变更标注为 breaking |
 
 ## 9. 验收标准
 
@@ -374,30 +401,30 @@ mock `connect()` 是同步内存操作，定时器/订阅泄漏由 `test/lifecyc
 
 ## 10. 评审意见处置记录（v1.1）
 
-| 评审点 | 处置 | 落点 / 理由 |
-| --- | --- | --- |
-| P0-1 subscribe 生命周期语义 | **采纳** | 两段式 `ProbeSubscription`，退订同步幂等、reject 后 no-op（§3.2、§3.5） |
-| P0-2 真实路径错误一致性 | **采纳并升级定性** | 核实为现存缺陷：真实路径 reject 绕过 UI 错误横幅（§5.1 事实链），统一 catch 是行为修正；新增错误一致性测试（§6） |
-| P0-3 mapping 是否依赖 mock | **已核实：零依赖** | 全量 grep 仅命中 `fixtures.ts` 与 `uni-devtools-rpc.ts`，`mapping/` 无需改动（§2、§4） |
-| P1-4 dispose 竞态 | **采纳** | 幂等 dispose + await 边界检查点 + lifecycle 测试（§3.5、§8） |
-| P1-5 mock 状态管理说明 | **采纳** | §3.3 末补充会话内保持/刷新重置语义，并回答评审场景 |
-| P1-6 心跳可测试性 | **采纳** | `MockBackendOptions.networkTickInterval` + fake timers（§3.4、§6） |
-| P2-7 方法名类型约束 | **部分采纳** | 取方案 A（字面量联合 + satisfies 穷举）；方案 B（全类型映射）不采纳，理由见 §3.2 |
-| P2-8 集成测试 | **部分采纳** | 新增 adapter 级集成测试；UI 级 E2E（角标/tab）保留手工冒烟，理由见 §6 |
-| P2-9 Phase 4 异步影响 | **采纳，给更优解** | dynamic import 移入 async 的 `initConnection` 内部，`connectUniRpcClient` 保持同步签名，client 零配合（§7） |
-| Phase 4 需 client 配合的担忧 | **不成立** | 见上条，无需 client 侧异步化 |
-| 升级/向下兼容路径 | **已核实：无场景** | client `private:true`、adapter 未发布、`workspace:*` 锁定；公开发布时 changelog 标 breaking（§8） |
-| 验收补充：性能/内存硬指标 | **部分采纳** | 硬门槛降级为测量记录；内存泄漏由 lifecycle 测试程序化守护（§9） |
-| 验收补充：README | **采纳（可选）** | Phase 2 顺手补 adapter README（§9） |
+| 评审点                       | 处置               | 落点 / 理由                                                                                                      |
+| ---------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| P0-1 subscribe 生命周期语义  | **采纳**           | 两段式 `ProbeSubscription`，退订同步幂等、reject 后 no-op（§3.2、§3.5）                                          |
+| P0-2 真实路径错误一致性      | **采纳并升级定性** | 核实为现存缺陷：真实路径 reject 绕过 UI 错误横幅（§5.1 事实链），统一 catch 是行为修正；新增错误一致性测试（§6） |
+| P0-3 mapping 是否依赖 mock   | **已核实：零依赖** | 全量 grep 仅命中 `fixtures.ts` 与 `uni-devtools-rpc.ts`，`mapping/` 无需改动（§2、§4）                           |
+| P1-4 dispose 竞态            | **采纳**           | 幂等 dispose + await 边界检查点 + lifecycle 测试（§3.5、§8）                                                     |
+| P1-5 mock 状态管理说明       | **采纳**           | §3.3 末补充会话内保持/刷新重置语义，并回答评审场景                                                               |
+| P1-6 心跳可测试性            | **采纳**           | `MockBackendOptions.networkTickInterval` + fake timers（§3.4、§6）                                               |
+| P2-7 方法名类型约束          | **部分采纳**       | 取方案 A（字面量联合 + satisfies 穷举）；方案 B（全类型映射）不采纳，理由见 §3.2                                 |
+| P2-8 集成测试                | **部分采纳**       | 新增 adapter 级集成测试；UI 级 E2E（角标/tab）保留手工冒烟，理由见 §6                                            |
+| P2-9 Phase 4 异步影响        | **采纳，给更优解** | dynamic import 移入 async 的 `initConnection` 内部，`connectUniRpcClient` 保持同步签名，client 零配合（§7）      |
+| Phase 4 需 client 配合的担忧 | **不成立**         | 见上条，无需 client 侧异步化                                                                                     |
+| 升级/向下兼容路径            | **已核实：无场景** | client `private:true`、adapter 未发布、`workspace:*` 锁定；公开发布时 changelog 标 breaking（§8）                |
+| 验收补充：性能/内存硬指标    | **部分采纳**       | 硬门槛降级为测量记录；内存泄漏由 lifecycle 测试程序化守护（§9）                                                  |
+| 验收补充：README             | **采纳（可选）**   | Phase 2 顺手补 adapter README（§9）                                                                              |
 
 ## 11. 实施记录（2026-10-06）
 
-| Phase | 内容 | 验证 |
-| --- | --- | --- |
-| 1 | `backend.ts`（ProbeMethod / ProbeSubscription / ProbeBackend）+ `devframe-backend.ts`（连接生命周期、socket 等待、sharedState 订阅原样抽出）；路由器改面向接口，mock 分支暂留 | 现有 29 测试全绿、三包 typecheck 干净 |
-| 2 | `mock-backend.ts`（方法面分发 + 路由 fixtures + 可注入心跳 + push 包装）；删除 `mockMode` / `mockRouterSnapshot` / 全部 19 处分支；`connectUniRpcClient(options)`；编辑命令统一 `try/catch → { status: 0 }`（§5.1）；`isMockPanelUrl()` 进 `devtools-shared`（子路径导出 `./utils/mock-flag`，globalThis 取 location 以过探针包的 `no-restricted-globals` 规则）；client 接线 + 角标解耦；adapter index 删 fixtures 双重导出 | adapter / shared / client typecheck 干净，验收 grep 全过（路由器仅注释性提及 fixtures，client 仅角标自身逻辑） |
-| 3 | `test/mock-backend.test.ts`（10）、`test/uni-devtools-rpc.test.ts`（8，脚本化注入）、`test/lifecycle.test.ts`（5）、`test/integration/mock-e2e.test.ts`（5） | 8 文件 57 测试全绿 |
-| 4 | mock-backend 改 `initConnection` 内 dynamic import，`connectUniRpcClient` 保持同步签名 | client 构建通过；`dist/assets/mock-backend-*.js` 独立 chunk 9.1 kB，主 chunk 中 fixtures 标记（`api.example.com` 等）为 0 |
+| Phase | 内容                                                                                                                                                                                                                                                                                                                                                                                                                         | 验证                                                                                                                      |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `backend.ts`（ProbeMethod / ProbeSubscription / ProbeBackend）+ `devframe-backend.ts`（连接生命周期、socket 等待、sharedState 订阅原样抽出）；路由器改面向接口，mock 分支暂留                                                                                                                                                                                                                                                | 现有 29 测试全绿、三包 typecheck 干净                                                                                     |
+| 2     | `mock-backend.ts`（方法面分发 + 路由 fixtures + 可注入心跳 + push 包装）；删除 `mockMode` / `mockRouterSnapshot` / 全部 19 处分支；`connectUniRpcClient(options)`；编辑命令统一 `try/catch → { status: 0 }`（§5.1）；`isMockPanelUrl()` 进 `devtools-shared`（子路径导出 `./utils/mock-flag`，globalThis 取 location 以过探针包的 `no-restricted-globals` 规则）；client 接线 + 角标解耦；adapter index 删 fixtures 双重导出 | adapter / shared / client typecheck 干净，验收 grep 全过（路由器仅注释性提及 fixtures，client 仅角标自身逻辑）            |
+| 3     | `test/mock-backend.test.ts`（10）、`test/uni-devtools-rpc.test.ts`（8，脚本化注入）、`test/lifecycle.test.ts`（5）、`test/integration/mock-e2e.test.ts`（5）                                                                                                                                                                                                                                                                 | 8 文件 57 测试全绿                                                                                                        |
+| 4     | mock-backend 改 `initConnection` 内 dynamic import，`connectUniRpcClient` 保持同步签名                                                                                                                                                                                                                                                                                                                                       | client 构建通过；`dist/assets/mock-backend-*.js` 独立 chunk 9.1 kB，主 chunk 中 fixtures 标记（`api.example.com` 等）为 0 |
 
 两处与文档草图的实现偏差（均已在代码注释中就地说明）：
 

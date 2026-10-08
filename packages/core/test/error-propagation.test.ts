@@ -15,11 +15,21 @@ function createUniHost() {
   const handlers: Record<string, ((res: any) => void) | undefined> = {}
 
   const socketTask = {
-    onOpen: (fn: (res: any) => void) => { handlers.open = fn },
-    onMessage: (fn: (res: any) => void) => { handlers.message = fn },
-    onError: (fn: (res: any) => void) => { handlers.error = fn },
-    onClose: (fn: (res: any) => void) => { handlers.close = fn },
-    send: (opts: { data: string }) => { sent.push(opts.data) },
+    onOpen: (fn: (res: any) => void) => {
+      handlers.open = fn
+    },
+    onMessage: (fn: (res: any) => void) => {
+      handlers.message = fn
+    },
+    onError: (fn: (res: any) => void) => {
+      handlers.error = fn
+    },
+    onClose: (fn: (res: any) => void) => {
+      handlers.close = fn
+    },
+    send: (opts: { data: string }) => {
+      sent.push(opts.data)
+    },
     close: () => {},
   }
 
@@ -64,7 +74,11 @@ describe('探针出站：Error 摊平', () => {
     const handle = createUniSocketChannel({ wsUrl: 'ws://test/agent' })
     host.handlers.open?.({})
 
-    handle.channel.post({ t: 's', i: 2, r: { pages: [{ id: '1' }], n: 42, ok: true } })
+    handle.channel.post({
+      t: 's',
+      i: 2,
+      r: { pages: [{ id: '1' }], n: 42, ok: true },
+    })
 
     expect(JSON.parse(host.sent[0]!)).toEqual({
       t: 's',
@@ -77,7 +91,9 @@ describe('探针出站：Error 摊平', () => {
 })
 
 describe('relay 出站：跨进程错误文案还原', () => {
-  function registryWith(client: { $call: (method: string, ...args: any[]) => Promise<any> }) {
+  function registryWith(client: {
+    $call: (method: string, ...args: any[]) => Promise<any>
+  }) {
     const registry = new AgentRegistry({ timeout: 200 })
     registry.bind({ clients: [client] } as any)
     return registry
@@ -88,13 +104,15 @@ describe('relay 出站：跨进程错误文案还原', () => {
       $call: (method) => {
         if (method === 'uni-devtools:agent:ping')
           return Promise.resolve(Date.now())
-        return Promise.reject(new Error('Component with id "x" not found in registry'))
+        return Promise.reject(
+          new Error('Component with id "x" not found in registry'),
+        )
       },
     })
 
-    await expect(registry.callAgent('uni-devtools:agent:updateComponentState', {}))
-      .rejects
-      .toThrow(/Component with id "x" not found in registry/)
+    await expect(
+      registry.callAgent('uni-devtools:agent:updateComponentState', {}),
+    ).rejects.toThrow(/Component with id "x" not found in registry/)
   })
 
   it('摊平后的普通对象：认 .message，不退化成 [object Object]', async () => {
@@ -103,13 +121,15 @@ describe('relay 出站：跨进程错误文案还原', () => {
         if (method === 'uni-devtools:agent:ping')
           return Promise.resolve(Date.now())
         // 探针经 JSON 出口后的形态
-        return Promise.reject(new Error('[updateComponentState] Path "payload" is not navigable'))
+        return Promise.reject(
+          new Error('[updateComponentState] Path "payload" is not navigable'),
+        )
       },
     })
 
-    await expect(registry.callAgent('uni-devtools:agent:updateComponentState', {}))
-      .rejects
-      .toThrow(/Path "payload" is not navigable/)
+    await expect(
+      registry.callAgent('uni-devtools:agent:updateComponentState', {}),
+    ).rejects.toThrow(/Path "payload" is not navigable/)
   })
 
   it('确实没有 agent 时，保留原本的「未连接」文案', async () => {
@@ -117,8 +137,8 @@ describe('relay 出站：跨进程错误文案还原', () => {
       $call: () => Promise.reject(new Error('socket closed')),
     })
 
-    await expect(registry.callAgent('uni-devtools:agent:ping'))
-      .rejects
-      .toThrow(/No uni-devtools agent connected/)
+    await expect(registry.callAgent('uni-devtools:agent:ping')).rejects.toThrow(
+      /No uni-devtools agent connected/,
+    )
   })
 })

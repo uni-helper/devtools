@@ -6,7 +6,12 @@
  * 健康检查失败/stop 时 dispose 旧 client 并择机新建，模块级单例会让第二个
  * 实例永久瘫痪。
  */
-import type { ProbeBackend, ProbeConnectionStatus, ProbePushKey, ProbeSubscription } from './backend.ts'
+import type {
+  ProbeBackend,
+  ProbeConnectionStatus,
+  ProbePushKey,
+  ProbeSubscription,
+} from './backend.ts'
 import { connectDevframe } from 'devframe/client'
 
 /** 与 node 侧 `ctx.scope(NS)` 一致；改这里必须同步改 node 侧。 */
@@ -21,7 +26,10 @@ interface ScopedCtx {
     call: (method: string, ...args: unknown[]) => Promise<unknown>
     /** 正确入口是 scoped.rpc.sharedState(key, options)，与 node 侧对称；
      *  scope 对象本身没有 sharedState 属性（曾想当然写成 sharedState.get）。 */
-    sharedState: <T extends object>(key: string, options?: { initialValue?: T }) => Promise<SharedStateLike<T>>
+    sharedState: <T extends object>(
+      key: string,
+      options?: { initialValue?: T },
+    ) => Promise<SharedStateLike<T>>
   }
 }
 
@@ -39,9 +47,12 @@ const INITIAL_VALUE_BY_KEY: Record<ProbePushKey, object> = {
 
 /** standalone 直连时 token 附在面板 URL 上；hub iframe 场景为空。 */
 export function readAuthTokenFromUrl(): string | undefined {
-  if (typeof window === 'undefined')
-    return undefined
-  return new URLSearchParams(window.location?.search ?? '').get('devframe_auth_token') ?? undefined
+  if (typeof window === 'undefined') return undefined
+  return (
+    new URLSearchParams(window.location?.search ?? '').get(
+      'devframe_auth_token',
+    ) ?? undefined
+  )
 }
 
 export function createDevframeBackend(): ProbeBackend {
@@ -51,8 +62,7 @@ export function createDevframeBackend(): ProbeBackend {
   const statusHandlers = new Set<(status: ProbeConnectionStatus) => void>()
 
   function emitStatus(status: ProbeConnectionStatus): void {
-    for (const handler of [...statusHandlers])
-      handler(status)
+    for (const handler of [...statusHandlers]) handler(status)
   }
 
   return {
@@ -79,8 +89,7 @@ export function createDevframeBackend(): ProbeBackend {
             if (status === 'connected') {
               unsub?.()
               resolve()
-            }
-            else if (status !== 'connecting') {
+            } else if (status !== 'connecting') {
               unsub?.()
               reject(new Error(`devframe socket 连接失败: ${status}`))
             }
@@ -95,10 +104,8 @@ export function createDevframeBackend(): ProbeBackend {
       // 持续监听后续连接状态变更（如服务端断开等）；'connected' 透传给调用方
       // （connection 层的 runtime-changed 语义依赖它），断开由调用方清态重连
       client.events.on('connection:status', (status) => {
-        if (status === 'connected')
-          emitStatus('connected')
-        else if (status !== 'connecting')
-          emitStatus('closed')
+        if (status === 'connected') emitStatus('connected')
+        else if (status !== 'connecting') emitStatus('closed')
       })
     },
 
@@ -110,22 +117,22 @@ export function createDevframeBackend(): ProbeBackend {
     },
 
     async call(method, ...args) {
-      if (!scoped)
-        throw new Error('uni-devtools RPC 尚未连接')
+      if (!scoped) throw new Error('uni-devtools RPC 尚未连接')
       return await scoped.rpc.call(method, ...args)
     },
 
-    subscribe(key: ProbePushKey, cb: (snapshot: unknown) => void): ProbeSubscription {
+    subscribe(
+      key: ProbePushKey,
+      cb: (snapshot: unknown) => void,
+    ): ProbeSubscription {
       let unsub: (() => void) | undefined
       let cancelled = false
       const ready = (async () => {
-        if (!scoped)
-          throw new Error('uni-devtools RPC 尚未连接')
+        if (!scoped) throw new Error('uni-devtools RPC 尚未连接')
         const shared = await scoped.rpc.sharedState(key, {
           initialValue: INITIAL_VALUE_BY_KEY[key],
         })
-        if (cancelled || disposed)
-          return
+        if (cancelled || disposed) return
         unsub = shared.on('updated', cb)
       })()
       return {

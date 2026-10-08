@@ -11,7 +11,10 @@ import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
 import { collectComponentTree, getVueRuntimeVersion } from './tree.ts'
 
 interface PushDeps {
-  getActiveInstance: () => { rpc: any, socketHandle: { isConnected: () => boolean } } | null
+  getActiveInstance: () => {
+    rpc: any
+    socketHandle: { isConnected: () => boolean }
+  } | null
 }
 
 let deps: PushDeps | null = null
@@ -60,8 +63,7 @@ export async function pushComponentTreeNow(): Promise<void> {
   let treeJson: string
   try {
     treeJson = `${vueVersion ?? ''}:${JSON.stringify(pages)}`
-  }
-  catch {
+  } catch {
     treeJson = ''
   }
   if (treeJson === lastPushedTreeJson) {
@@ -71,8 +73,7 @@ export async function pushComponentTreeNow(): Promise<void> {
 
   try {
     await instance.rpc.$call(NODE_RPC.pushComponentTree, snapshot)
-  }
-  catch {
+  } catch {
     // 允许网络暂未就绪或未注册该方法时静默跳过
   }
 }
@@ -101,12 +102,13 @@ const pendingRenderedIds = new Set<string>()
  *
  * id 由调用方（render-hook）在渲染时解析——那时才拿得到组件实例。
  */
-export function scheduleNotifyComponentRendered(id: string | undefined, delay = 300): void {
-  if (!id)
-    return
+export function scheduleNotifyComponentRendered(
+  id: string | undefined,
+  delay = 300,
+): void {
+  if (!id) return
   pendingRenderedIds.add(id)
-  if (renderNotifyTimer !== null)
-    return
+  if (renderNotifyTimer !== null) return
   renderNotifyTimer = setTimeout(() => {
     renderNotifyTimer = null
     const ids = [...pendingRenderedIds]
@@ -116,16 +118,14 @@ export function scheduleNotifyComponentRendered(id: string | undefined, delay = 
 }
 
 async function notifyComponentRenderedNow(ids: string[]): Promise<void> {
-  if (ids.length === 0)
-    return
+  if (ids.length === 0) return
   const instance = deps?.getActiveInstance()
   if (!instance || !instance.socketHandle.isConnected()) {
     return
   }
   try {
     await instance.rpc.$call(NODE_RPC.notifyComponentRendered, { ids })
-  }
-  catch {
+  } catch {
     // 与树推送同语义：网络未就绪或方法未注册时静默跳过
   }
 }

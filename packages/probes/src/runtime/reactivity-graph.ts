@@ -56,8 +56,7 @@ export function buildReactivityGraph(
     const nodes = new Map<object, ReactivityGraphNode>()
 
     for (const key of Object.keys(setupSource)) {
-      if (!key || key[0] === '$' || key[0] === '_')
-        continue
+      if (!key || key[0] === '$' || key[0] === '_') continue
 
       try {
         const rawBinding = rawSetup?.[key]
@@ -66,12 +65,12 @@ export function buildReactivityGraph(
         // 判定优先用 raw 侧（proxyRefs 会解包 ref 导致属性读取丢掉 ref 标识）
         const infoRaw = getSetupBindingInfo(rawBinding)
         const infoProp = getSetupBindingInfo(binding)
-        const isRawReactive = infoRaw.ref || infoRaw.computed || infoRaw.reactive
+        const isRawReactive =
+          infoRaw.ref || infoRaw.computed || infoRaw.reactive
         const info = isRawReactive ? infoRaw : infoProp
 
         const type = getReactivityStateType(info)
-        if (!type)
-          continue
+        if (!type) continue
 
         const rawObj = asTraceObject(rawBinding)
         const propObj = asTraceObject(binding)
@@ -79,8 +78,7 @@ export function buildReactivityGraph(
           ? (rawObj ?? propObj)
           : (propObj ?? rawObj)
 
-        if (!reference)
-          continue
+        if (!reference) continue
 
         const deps = collectReactivityDependencies(reference, 'deps')
         const subs = collectReactivityDependencies(reference, 'subs')
@@ -92,10 +90,20 @@ export function buildReactivityGraph(
 
         upsertReactivityNode(nodes, reference, type, data)
         for (const dependency of deps) {
-          upsertReactivityNode(nodes, dependency.reference, dependency.type, dependency.data)
+          upsertReactivityNode(
+            nodes,
+            dependency.reference,
+            dependency.type,
+            dependency.data,
+          )
         }
         for (const dependency of subs) {
-          upsertReactivityNode(nodes, dependency.reference, dependency.type, dependency.data)
+          upsertReactivityNode(
+            nodes,
+            dependency.reference,
+            dependency.type,
+            dependency.data,
+          )
         }
 
         sources.push({
@@ -104,8 +112,7 @@ export function buildReactivityGraph(
           deps,
           subs,
         })
-      }
-      catch {
+      } catch {
         // 单个绑定失败不影响其他绑定
         continue
       }
@@ -115,8 +122,7 @@ export function buildReactivityGraph(
 
     for (const source of sources) {
       const sourceNode = nodes.get(source.reference)
-      if (!sourceNode)
-        continue
+      if (!sourceNode) continue
 
       for (const sub of source.subs) {
         const subNode = nodes.get(sub.reference)
@@ -135,8 +141,7 @@ export function buildReactivityGraph(
       nodes: [...nodes.values()],
       relationships: [...relationships.values()],
     }
-  }
-  catch {
+  } catch {
     return {
       nodes: [],
       relationships: [],
@@ -156,9 +161,8 @@ function upsertReactivityNode(
     ...data,
   }
 
-  const effectiveType = current?.type && current.type !== 'unknown'
-    ? current.type
-    : type
+  const effectiveType =
+    current?.type && current.type !== 'unknown' ? current.type : type
 
   nodes.set(reference, {
     id: current?.id ?? getReactivityNodeId(reference),
@@ -173,12 +177,10 @@ function upsertReactivityRelationship(
   from: string,
   to: string,
 ): void {
-  if (from === to)
-    return
+  if (from === to) return
 
   const id = `${from}->${to}`
-  if (relationships.has(id))
-    return
+  if (relationships.has(id)) return
 
   relationships.set(id, {
     id,
@@ -194,7 +196,8 @@ function collectReactivityDependencies(
   const dependencies: ReactivityDependency[] = []
   const itemKey = type === 'subs' ? 'sub' : 'dep'
   const nextKey = type === 'subs' ? 'nextSub' : 'nextDep'
-  const head = type === 'subs' ? readSubscribersHead(source) : readDepsHead(source)
+  const head =
+    type === 'subs' ? readSubscribersHead(source) : readDepsHead(source)
   const seen = new Set<object>()
 
   for (
@@ -205,8 +208,7 @@ function collectReactivityDependencies(
     seen.add(link)
 
     const reference = asTraceObject(readUnknownProperty(link, itemKey))
-    if (!reference)
-      continue
+    if (!reference) continue
 
     const reactivityType = getReactivityType(reference)
     dependencies.push({
@@ -286,12 +288,9 @@ function fallbackReactivityNodeLabel(type: ReactivityGraphNodeType): string {
 function getReactivityStateType(
   info: ReturnType<typeof getSetupBindingInfo>,
 ): ReactivityGraphNodeType | undefined {
-  if (info.computed)
-    return 'computed'
-  if (info.ref)
-    return 'ref'
-  if (info.reactive)
-    return 'reactive'
+  if (info.computed) return 'computed'
+  if (info.ref) return 'ref'
+  if (info.reactive) return 'reactive'
   return undefined
 }
 
@@ -299,24 +298,21 @@ function getReactivityType(reference: object): ReactivityGraphNodeType {
   const constructorName = getConstructorName(reference)
 
   // 官方 devtools-kit 3.6 构造器名
-  if (constructorName === 'SetupRenderEffect')
-    return 'render'
-  if (constructorName === 'RenderWatcherEffect' || constructorName === 'WatcherEffect')
+  if (constructorName === 'SetupRenderEffect') return 'render'
+  if (
+    constructorName === 'RenderWatcherEffect' ||
+    constructorName === 'WatcherEffect'
+  )
     return 'watch'
-  if (constructorName === 'ReactiveEffect')
-    return 'effect'
-  if (constructorName === 'Dep')
-    return 'reactive'
+  if (constructorName === 'ReactiveEffect') return 'effect'
+  if (constructorName === 'Dep') return 'reactive'
 
   // Vue 3.5 补充启发（按序尝试）
-  if (constructorName === 'Watcher')
-    return 'watch'
+  if (constructorName === 'Watcher') return 'watch'
   const cb = readUnknownProperty(reference, 'cb')
-  if (typeof cb === 'function')
-    return 'watch'
+  if (typeof cb === 'function') return 'watch'
   const fn = readUnknownProperty(reference, 'fn')
-  if (typeof fn === 'function' && hasBindingsProp(fn))
-    return 'render'
+  if (typeof fn === 'function' && hasBindingsProp(fn)) return 'render'
 
   const info = getSetupBindingInfo(reference)
   return getReactivityStateType(info) ?? 'unknown'
@@ -325,8 +321,7 @@ function getReactivityType(reference: object): ReactivityGraphNodeType {
 function hasBindingsProp(fn: unknown): boolean {
   try {
     return fn != null && (fn as any)[BINDINGS_PROP] !== undefined
-  }
-  catch {
+  } catch {
     return false
   }
 }
@@ -334,30 +329,30 @@ function hasBindingsProp(fn: unknown): boolean {
 function getConstructorName(value: unknown): string {
   try {
     return asTraceObject(value)?.constructor?.name ?? ''
-  }
-  catch {
+  } catch {
     return ''
   }
 }
 
 function readSubscribersHead(source: object): object | undefined {
   return (
-    asTraceObject(readUnknownProperty(source, 'subs'))
-    ?? asTraceObject(readUnknownProperty(source, '_subs'))
-    ?? asTraceObject(readUnknownProperty(readObject(source, 'dep'), 'subs'))
+    asTraceObject(readUnknownProperty(source, 'subs')) ??
+    asTraceObject(readUnknownProperty(source, '_subs')) ??
+    asTraceObject(readUnknownProperty(readObject(source, 'dep'), 'subs'))
   )
 }
 
 function readDepsHead(source: object): object | undefined {
   return (
-    asTraceObject(readUnknownProperty(source, 'deps'))
-    ?? asTraceObject(readUnknownProperty(source, '_deps'))
-    ?? asTraceObject(readUnknownProperty(readObject(source, 'effect'), 'deps'))
+    asTraceObject(readUnknownProperty(source, 'deps')) ??
+    asTraceObject(readUnknownProperty(source, '_deps')) ??
+    asTraceObject(readUnknownProperty(readObject(source, 'effect'), 'deps'))
   )
 }
 
 function asTraceObject(value: unknown): object | undefined {
-  return (typeof value === 'object' && value !== null) || typeof value === 'function'
+  return (typeof value === 'object' && value !== null) ||
+    typeof value === 'function'
     ? (value as object)
     : undefined
 }
@@ -365,22 +360,25 @@ function asTraceObject(value: unknown): object | undefined {
 function readUnknownProperty(target: unknown, key: string): unknown {
   try {
     return (target as any)?.[key]
-  }
-  catch {
+  } catch {
     return undefined
   }
 }
 
-function readObject(target: object | undefined, key: string): object | undefined {
-  if (!target)
-    return undefined
+function readObject(
+  target: object | undefined,
+  key: string,
+): object | undefined {
+  if (!target) return undefined
   const val = readUnknownProperty(target, key)
   return typeof val === 'object' && val !== null ? val : undefined
 }
 
-function readStringProperty(target: object | undefined, key: string): string | undefined {
-  if (!target)
-    return undefined
+function readStringProperty(
+  target: object | undefined,
+  key: string,
+): string | undefined {
+  if (!target) return undefined
   const val = readUnknownProperty(target, key)
   return typeof val === 'string' ? val : undefined
 }
@@ -388,8 +386,7 @@ function readStringProperty(target: object | undefined, key: string): string | u
 function hasOwn(target: object, key: PropertyKey): boolean {
   try {
     return Object.prototype.hasOwnProperty.call(target, key)
-  }
-  catch {
+  } catch {
     return false
   }
 }
@@ -409,61 +406,63 @@ function readReactivityValue(reference: object): unknown {
       return (reference as any)._value
     }
     return undefined
-  }
-  catch {
+  } catch {
     return undefined
   }
 }
 
 function readFunctionPreview(value: unknown): string | undefined {
   try {
-    return typeof value === 'function' ? truncate(value.toString(), 220) : undefined
-  }
-  catch {
+    return typeof value === 'function'
+      ? truncate(value.toString(), 220)
+      : undefined
+  } catch {
     return undefined
   }
 }
 
 function readComponentDisplayName(instance: object | undefined): string {
-  if (!instance)
-    return 'Anonymous component'
+  if (!instance) return 'Anonymous component'
   try {
     const type = readObject(instance, 'type')
-    const name
-      = (type && readStringProperty(type, 'name'))
-      ?? (type && readStringProperty(type, '__name'))
-      ?? readStringProperty(instance, 'name')
+    const name =
+      (type && readStringProperty(type, 'name')) ??
+      (type && readStringProperty(type, '__name')) ??
+      readStringProperty(instance, 'name')
     return name ?? 'Anonymous component'
-  }
-  catch {
+  } catch {
     return 'Anonymous component'
   }
 }
 
 function formatReactivityKey(value: unknown): string {
   try {
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'bigint'
+    ) {
       return String(value)
     }
     if (typeof value === 'symbol') {
       return value.description ? `Symbol(${value.description})` : 'Symbol'
     }
     return 'property'
-  }
-  catch {
+  } catch {
     return 'property'
   }
 }
 
 function formatReactivityValue(value: unknown): string {
   try {
-    if (typeof value === 'undefined')
-      return 'undefined'
-    if (value == null)
-      return String(value)
-    if (typeof value === 'string')
-      return `"${truncate(value, 80)}"`
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    if (typeof value === 'undefined') return 'undefined'
+    if (value == null) return String(value)
+    if (typeof value === 'string') return `"${truncate(value, 80)}"`
+    if (
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      typeof value === 'bigint'
+    ) {
       return String(value)
     }
     if (typeof value === 'symbol') {
@@ -471,24 +470,20 @@ function formatReactivityValue(value: unknown): string {
     }
     if (typeof value === 'function')
       return value.name ? `fn ${value.name}` : 'function'
-    if (Array.isArray(value))
-      return `Array(${value.length})`
-    if (value instanceof Date)
-      return value.toISOString()
+    if (Array.isArray(value)) return `Array(${value.length})`
+    if (value instanceof Date) return value.toISOString()
 
     if (typeof value === 'object') {
       try {
         const keys = Reflect.ownKeys(value).slice(0, 3).map(formatReactivityKey)
         return `${value.constructor?.name ?? 'Object'}${keys.length ? ` { ${keys.join(', ')} }` : ''}`
-      }
-      catch {
+      } catch {
         return 'Object'
       }
     }
 
     return Object.prototype.toString.call(value)
-  }
-  catch {
+  } catch {
     return 'unknown'
   }
 }

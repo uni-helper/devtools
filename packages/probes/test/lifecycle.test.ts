@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
  * lifecycle.ts 持有模块级单例与「进程级全局钩子已安装」标记，二者都不可从外部重置。
  * 因此每个用例用 vi.resetModules() + 动态 import 拿一份全新模块，保证用例间互不串状态。
  */
-async function freshLifecycle(): Promise<typeof import('../src/runtime/lifecycle')> {
+async function freshLifecycle(): Promise<
+  typeof import('../src/runtime/lifecycle')
+> {
   vi.resetModules()
   return import('../src/runtime/lifecycle')
 }
@@ -31,10 +33,12 @@ describe('initAgentPipeline 配置装配', () => {
   it('wsUrl 缺失时抛错，不留下任何定时器', async () => {
     const lifecycle = await freshLifecycle()
 
-    expect(() => lifecycle.initAgentPipeline({
-      clientFunctions: {},
-      getUni: () => undefined,
-    })).toThrow(/wsUrl is missing/)
+    expect(() =>
+      lifecycle.initAgentPipeline({
+        clientFunctions: {},
+        getUni: () => undefined,
+      }),
+    ).toThrow(/wsUrl is missing/)
 
     expect(vi.getTimerCount()).toBe(0)
     expect(lifecycle.getAgentInstance()).toBeNull()
@@ -121,7 +125,7 @@ describe('进程级全局事件钩子（只安装一次）', () => {
     lifecycle.initAgentPipeline(baseOptions())
     // navigateTo / redirectTo / reLaunch / switchTab / navigateBack
     expect(addInterceptor).toHaveBeenCalledTimes(5)
-    expect(addInterceptor.mock.calls.map(call => call[0])).toEqual([
+    expect(addInterceptor.mock.calls.map((call) => call[0])).toEqual([
       'navigateTo',
       'redirectTo',
       'reLaunch',
@@ -146,7 +150,7 @@ describe('进程级全局事件钩子（只安装一次）', () => {
 
     lifecycle.initAgentPipeline(baseOptions())
     expect(onAppRoute).toHaveBeenCalledTimes(1)
-    expect(hookOn.mock.calls.map(call => call[0])).toEqual([
+    expect(hookOn.mock.calls.map((call) => call[0])).toEqual([
       'component:added',
       'component:updated',
       'component:removed',

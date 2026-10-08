@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": false,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "printWidth": 80,
+  "trailingComma": "all",
+  "arrowParens": "always",
+  "ignorePatterns": [
+    "packages/core/assets/**",
+    "**/node_modules/**",
+    "playground/**"
+  ]
+}

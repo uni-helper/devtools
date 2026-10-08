@@ -13,7 +13,10 @@ export interface DevtoolsCommand {
   group: 'Navigation' | 'Actions' | 'Documentation'
   icon: string
   keywords?: string[]
-  action(): Promise<readonly DevtoolsCommand[] | void> | readonly DevtoolsCommand[] | void
+  action():
+    | Promise<readonly DevtoolsCommand[] | void>
+    | readonly DevtoolsCommand[]
+    | void
 }
 
 interface DevtoolsCommandsOptions {
@@ -29,22 +32,24 @@ export function useDevtoolsCommands(
   return computed(() => [
     // uni-devtools：被禁用的 tab（探针协议未就绪）不进命令面板——否则
     // Cmd+K 仍可跳转到置灰页面，打穿禁用防护（CR P1-4）。
-    ...options.tabs.value.filter(tab => !tab.disabled).flatMap<DevtoolsCommand>((tab) => {
-      if (!tab.path) return []
-      return [
-        {
-          id: `navigate:${tab.id}`,
-          title: `Open ${tab.title}`,
-          description: tab.description,
-          group: 'Navigation',
-          icon: tab.icon,
-          keywords: ['tab', tab.id],
-          action: async () => {
-            await router.push(tab.path!)
+    ...options.tabs.value
+      .filter((tab) => !tab.disabled)
+      .flatMap<DevtoolsCommand>((tab) => {
+        if (!tab.path) return []
+        return [
+          {
+            id: `navigate:${tab.id}`,
+            title: `Open ${tab.title}`,
+            description: tab.description,
+            group: 'Navigation',
+            icon: tab.icon,
+            keywords: ['tab', tab.id],
+            action: async () => {
+              await router.push(tab.path!)
+            },
           },
-        },
-      ]
-    }),
+        ]
+      }),
     {
       id: 'components:inspect',
       title: 'Inspect Component',

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { clearInstanceRegistry, collectComponentTree, getRegisteredInstance, getVueRuntimeVersion } from '../src/runtime/tree'
+import {
+  clearInstanceRegistry,
+  collectComponentTree,
+  getRegisteredInstance,
+  getVueRuntimeVersion,
+} from '../src/runtime/tree'
 
 const g = globalThis as any
 
@@ -27,8 +32,11 @@ describe('collectComponentTree', () => {
   })
 
   it('不同 route 共存时互不加后缀', () => {
-    g.getCurrentPages = () => [makePage('pages/index'), makePage('pages/hi', 'HiPage')]
-    const routes = collectComponentTree().map(page => page.route)
+    g.getCurrentPages = () => [
+      makePage('pages/index'),
+      makePage('pages/hi', 'HiPage'),
+    ]
+    const routes = collectComponentTree().map((page) => page.route)
     expect(routes).toEqual(['pages/index', 'pages/hi'])
   })
 
@@ -36,14 +44,19 @@ describe('collectComponentTree', () => {
     // 两个实例的根 uid 都是 1（Vue uid 按页面实例各自计数）——裸 route#uid 必撞车
     g.getCurrentPages = () => [makePage('pages/index'), makePage('pages/index')]
     const results = collectComponentTree()
-    expect(results.map(page => page.route)).toEqual(['pages/index', 'pages/index@2'])
+    expect(results.map((page) => page.route)).toEqual([
+      'pages/index',
+      'pages/index@2',
+    ])
     expect(results[0].components!.id).toBe('pages/index#1')
     expect(results[1].components!.id).toBe('pages/index@2#1')
 
     // 注册表两个 key 各自可达，状态读写不会串实例
     expect(getRegisteredInstance('pages/index#1')).toBeTruthy()
     expect(getRegisteredInstance('pages/index@2#1')).toBeTruthy()
-    expect(getRegisteredInstance('pages/index#1')).not.toBe(getRegisteredInstance('pages/index@2#1'))
+    expect(getRegisteredInstance('pages/index#1')).not.toBe(
+      getRegisteredInstance('pages/index@2#1'),
+    )
   })
 
   it('第三个同 route 实例序号递增', () => {
@@ -53,8 +66,13 @@ describe('collectComponentTree', () => {
       makePage('pages/index'),
       makePage('pages/index'),
     ]
-    const routes = collectComponentTree().map(page => page.route)
-    expect(routes).toEqual(['pages/index', 'pages/hi', 'pages/index@2', 'pages/index@3'])
+    const routes = collectComponentTree().map((page) => page.route)
+    expect(routes).toEqual([
+      'pages/index',
+      'pages/hi',
+      'pages/index@2',
+      'pages/index@3',
+    ])
   })
 
   it('缺少 uid 的组件在多次树快照刷新中保持稳定 ID（WeakMap 缓存）', () => {
@@ -113,9 +131,15 @@ describe('collectComponentTree', () => {
   it('uni-mp $children 残留的已销毁实例不进树（v-if 切换后新旧实例不重复）', () => {
     // uni-mp-vue 内核只在 mountComponent 时向父 ctx.$children push、卸载从不
     // 移除：v-if 切走时旧实例（isUnmounted）滞留链上，切回后同名新实例再追加
-    const deadChild = { $: { uid: 5, type: { name: 'TestComp' }, isUnmounted: true } }
+    const deadChild = {
+      $: { uid: 5, type: { name: 'TestComp' }, isUnmounted: true },
+    }
     const aliveChild = { $: { uid: 12, type: { name: 'TestComp' } } }
-    const deadVue2Child = { _uid: 6, $options: { name: 'HiCounter' }, _isDestroyed: true }
+    const deadVue2Child = {
+      _uid: 6,
+      $options: { name: 'HiCounter' },
+      _isDestroyed: true,
+    }
     const aliveVue2Child = { _uid: 13, $options: { name: 'HiCounter' } }
     const root = {
       $: {
@@ -130,9 +154,12 @@ describe('collectComponentTree', () => {
     const children = snapshot.components!.children!
 
     // 死实例及其子树被剪掉，仅存活实例可达——同名组件只出现一次
-    expect(children.map(node => node.id)).toEqual(['pages/index#12', 'pages/index#13'])
-    expect(children.filter(node => node.name === 'TestComp')).toHaveLength(1)
-    expect(children.filter(node => node.name === 'HiCounter')).toHaveLength(1)
+    expect(children.map((node) => node.id)).toEqual([
+      'pages/index#12',
+      'pages/index#13',
+    ])
+    expect(children.filter((node) => node.name === 'TestComp')).toHaveLength(1)
+    expect(children.filter((node) => node.name === 'HiCounter')).toHaveLength(1)
 
     // 死实例不进入实例注册表（状态读写不能命中已销毁实例）
     expect(getRegisteredInstance('pages/index#5')).toBeUndefined()

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getComponentState, updateComponentState } from '../src/runtime/state'
-import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree'
+import {
+  clearInstanceRegistry,
+  extractComponentNode,
+} from '../src/runtime/tree'
 
 /**
  * props 编辑在 mp 运行时下的写入路径。
@@ -12,7 +15,10 @@ import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree
  *
  * 这里用 Vue 2 形态的假实例（无 `.$`，字段直接挂在 vm 上）覆盖各条分支。
  */
-function createMpVm(props: Record<string, any>, options: { withScope?: boolean } = {}) {
+function createMpVm(
+  props: Record<string, any>,
+  options: { withScope?: boolean } = {},
+) {
   const { withScope = true } = options
   const setData = vi.fn()
 
@@ -20,7 +26,9 @@ function createMpVm(props: Record<string, any>, options: { withScope?: boolean }
     _uid: 'comp-props',
     _isDestroyed: false,
     $options: {
-      props: Object.fromEntries(Object.keys(props).map(key => [key, { type: null }])),
+      props: Object.fromEntries(
+        Object.keys(props).map((key) => [key, { type: null }]),
+      ),
     },
     $props: { ...props },
     $data: {},
@@ -52,7 +60,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     const { vm, setData } = createMpVm({ title: 'a', item: { qty: 1 } })
     register(vm)
 
-    const res = updateComponentState({ id: 'comp-props', section: 'props', path: ['title'], value: 'b' })
+    const res = updateComponentState({
+      id: 'comp-props',
+      section: 'props',
+      path: ['title'],
+      value: 'b',
+    })
 
     expect(res.ok).toBe(true)
     expect(setData).toHaveBeenCalledTimes(1)
@@ -66,7 +79,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     const { vm, setData } = createMpVm({ item: { qty: 1 } })
     register(vm)
 
-    updateComponentState({ id: 'comp-props', section: 'props', path: ['item', 'qty'], value: 5 })
+    updateComponentState({
+      id: 'comp-props',
+      section: 'props',
+      path: ['item', 'qty'],
+      value: 5,
+    })
 
     expect(setData).toHaveBeenCalledWith({ item: { qty: 5 } })
     expect(vm.$props.item.qty).toBe(5)
@@ -76,7 +94,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     const { vm, setData } = createMpVm({ tags: ['x', 'y'] })
     register(vm)
 
-    updateComponentState({ id: 'comp-props', section: 'props', path: ['tags', '0'], value: 'z' })
+    updateComponentState({
+      id: 'comp-props',
+      section: 'props',
+      path: ['tags', '0'],
+      value: 'z',
+    })
 
     expect(setData).toHaveBeenCalledWith({ tags: ['z', 'y'] })
     expect(vm.$props.tags[0]).toBe('z')
@@ -86,7 +109,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     const { vm, setData } = createMpVm({ list: [{ meta: { done: false } }] })
     register(vm)
 
-    updateComponentState({ id: 'comp-props', section: 'props', path: ['list', '0', 'meta', 'done'], value: true })
+    updateComponentState({
+      id: 'comp-props',
+      section: 'props',
+      path: ['list', '0', 'meta', 'done'],
+      value: true,
+    })
 
     expect(setData).toHaveBeenCalledWith({ list: [{ meta: { done: true } }] })
     expect(vm.$props.list[0].meta.done).toBe(true)
@@ -96,7 +124,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     const { vm, setData } = createMpVm({ title: 'a' }, { withScope: false })
     register(vm)
 
-    updateComponentState({ id: 'comp-props', section: 'props', path: ['title'], value: 'b' })
+    updateComponentState({
+      id: 'comp-props',
+      section: 'props',
+      path: ['title'],
+      value: 'b',
+    })
 
     expect(setData).not.toHaveBeenCalled()
     expect(vm.$props.title).toBe('b')
@@ -107,7 +140,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     vm.$scope = {}
     register(vm)
 
-    const res = updateComponentState({ id: 'comp-props', section: 'props', path: ['title'], value: 'b' })
+    const res = updateComponentState({
+      id: 'comp-props',
+      section: 'props',
+      path: ['title'],
+      value: 'b',
+    })
 
     expect(res.ok).toBe(true)
     expect(setData).not.toHaveBeenCalled()
@@ -118,7 +156,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     const { vm, setData } = createMpVm({ title: 'a' })
     register(vm)
 
-    updateComponentState({ id: 'comp-props', section: 'props', path: ['title'], remove: true })
+    updateComponentState({
+      id: 'comp-props',
+      section: 'props',
+      path: ['title'],
+      remove: true,
+    })
 
     expect(setData).not.toHaveBeenCalled()
   })
@@ -130,7 +173,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     }
     register(vm)
 
-    const res = updateComponentState({ id: 'comp-props', section: 'props', path: ['title'], value: 'b' })
+    const res = updateComponentState({
+      id: 'comp-props',
+      section: 'props',
+      path: ['title'],
+      value: 'b',
+    })
 
     expect(res.ok).toBe(true)
     expect(vm.$props.title).toBe('b')
@@ -141,7 +189,12 @@ describe('props 编辑：mp 下写宿主 properties', () => {
     register(vm)
 
     expect(() =>
-      updateComponentState({ id: 'comp-props', section: 'props', path: ['nope'], value: 1 }),
+      updateComponentState({
+        id: 'comp-props',
+        section: 'props',
+        path: ['nope'],
+        value: 1,
+      }),
     ).toThrow(/not found in props/)
     expect(setData).not.toHaveBeenCalled()
   })

@@ -11,26 +11,32 @@
  * 禁浏览器 API（globalThis 在既有探针代码中已验证可用）。
  */
 
-import { scheduleNotifyComponentRendered, schedulePushComponentTree } from './push.ts'
+import {
+  scheduleNotifyComponentRendered,
+  schedulePushComponentTree,
+} from './push.ts'
 import { getComponentIdOfInstance } from './tree.ts'
 
 export function __uniDevtoolsNotifyRender(renderFn: any): any {
-  if (typeof renderFn !== 'function')
-    return renderFn
+  if (typeof renderFn !== 'function') return renderFn
   // 必须转发全部实参：mp 运行时以 7 参调用 render（proxy, renderCache, props,
   // setupState, data, ctx），plain <script>/Options 组件的编译 render 是 6 参签名
   // 且使用 $setup/$data——只转发前两个会让其渲染即崩。前两个具名参 + rest 使
   // length 保持 2（函数式组件 render.length > 1 判定用，虽然本包装不作用于它，
   // 保守起见维持约定）。
-  const wrapped = function wrappedRender(this: any, _ctx: unknown, _cache: unknown, ...rest: unknown[]) {
+  const wrapped = function wrappedRender(
+    this: any,
+    _ctx: unknown,
+    _cache: unknown,
+    ...rest: unknown[]
+  ) {
     try {
       schedulePushComponentTree(300)
       // 树推送过不了「内容没变」那道门，值变了得单独上报，面板才知道要重拉状态。
       // `this` 是组件 proxy（见 tree.ts 的 getComponentIdOfInstance）；未采过树的
       // 实例（首次渲染早于首轮采集）解析不到 id，静默跳过。
       scheduleNotifyComponentRendered(getComponentIdOfInstance(this))
-    }
-    catch {
+    } catch {
       // 探针未初始化/推送异常绝不影响渲染
     }
     return renderFn.call(this, _ctx, _cache, ...rest)

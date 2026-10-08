@@ -6,14 +6,17 @@ import { version } from '../../package.json'
 
 const { apps, pageCount, selectedApp, totalComponents } = useDevtoolsClient()
 
-const vueVersion = computed(() => selectedApp.value?.version ?? apps.value[0]?.version ?? '-')
+const vueVersion = computed(
+  () => selectedApp.value?.version ?? apps.value[0]?.version ?? '-',
+)
 
 const target = globalThis as typeof globalThis & {
   chrome?: {
     devtools?: unknown
   }
 }
-const isInChromePanel = typeof target.chrome !== 'undefined' && !!target.chrome.devtools
+const isInChromePanel =
+  typeof target.chrome !== 'undefined' && !!target.chrome.devtools
 
 function isMacOS() {
   if (typeof navigator === 'undefined') return false
@@ -32,7 +35,10 @@ function isMacOS() {
         <div class="-mt-10 flex items-center justify-center">
           <DevToolsLogo class="h-18 color-base" />
         </div>
-        <div v-if="!isInChromePanel" class="-mt-1 mb-6 flex gap-1 text-center text-sm op40">
+        <div
+          v-if="!isInChromePanel"
+          class="-mt-1 mb-6 flex gap-1 text-center text-sm op40"
+        >
           <span>Vue DevTools</span>
           <code>v{{ version }}</code>
         </div>
@@ -84,18 +90,28 @@ function isMacOS() {
       >
         Press
         <template v-if="isMacOS()">
-          <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">
+          <kbd
+            class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+          >
             ⌘ Command
           </kbd>
           <span>+</span>
-          <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">K</kbd>
+          <kbd
+            class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >K</kbd
+          >
         </template>
         <template v-else>
-          <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">
+          <kbd
+            class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+          >
             Ctrl
           </kbd>
           <span>+</span>
-          <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">K</kbd>
+          <kbd
+            class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >K</kbd
+          >
         </template>
         to toggle Command Palette
       </div>
@@ -106,28 +122,40 @@ function isMacOS() {
         >
           Press
           <template v-if="isMacOS()">
-            <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
               ⇧ Shift
             </kbd>
             <span>+</span>
-            <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
               ⌥ Option
             </kbd>
             <span>+</span>
-            <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
               D
             </kbd>
           </template>
           <template v-else>
-            <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
               Shift
             </kbd>
             <span>+</span>
-            <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
               Alt
             </kbd>
             <span>+</span>
-            <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]">
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
               D
             </kbd>
           </template>

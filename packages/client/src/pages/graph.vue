@@ -55,7 +55,8 @@ const graphEmptyText = computed(() => {
       runtime ? ` — this runtime is Vue ${runtime}` : ''
     }.`
   }
-  if (!selectedComponent.value) return 'Select a component to inspect its reactivity graph.'
+  if (!selectedComponent.value)
+    return 'Select a component to inspect its reactivity graph.'
   if (componentStateLoading.value) return 'Loading reactivity graph...'
   return 'No data'
 })
@@ -138,7 +139,10 @@ onUnmounted(() => {
     <Splitpanes class="h-full min-h-0 overflow-hidden" :horizontal="horizontal">
       <Pane class="h-full min-h-0" min-size="16" :size="horizontal ? 34 : 18">
         <div class="h-full min-h-0 flex flex-col">
-          <div v-if="apps.length > 1" class="max-h-38 shrink-0 border-b border-base">
+          <div
+            v-if="apps.length > 1"
+            class="max-h-38 shrink-0 border-b border-base"
+          >
             <AppList />
           </div>
 
@@ -165,8 +169,14 @@ onUnmounted(() => {
       </Pane>
 
       <Pane class="h-full min-h-0" min-size="32">
-        <ReactivityGraph v-if="reactivityGraphEnabled && graph?.nodes.length" :graph="graph" />
-        <div v-else class="h-full min-h-0 flex items-center justify-center bg-subtle p-6">
+        <ReactivityGraph
+          v-if="reactivityGraphEnabled && graph?.nodes.length"
+          :graph="graph"
+        />
+        <div
+          v-else
+          class="h-full min-h-0 flex items-center justify-center bg-subtle p-6"
+        >
           <p class="m-0 max-w-78 text-center color-muted text-3.5 leading-5">
             {{ graphEmptyText }}
           </p>

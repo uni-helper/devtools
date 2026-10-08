@@ -4,7 +4,14 @@
  * 约束：纯 JSON 可序列化、无循环引用（浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
 
-import { getInternal, getOptions, getProxy, getUid, getVNode, isInstanceDestroyed } from './instance.ts'
+import {
+  getInternal,
+  getOptions,
+  getProxy,
+  getUid,
+  getVNode,
+  isInstanceDestroyed,
+} from './instance.ts'
 
 export interface ComponentTreeNode {
   id: string
@@ -29,8 +36,7 @@ const instanceRegistry: Map<string, any> = new Map()
 
 export function getRegisteredInstance(id: string): any | undefined {
   const instance = instanceRegistry.get(id)
-  if (!instance)
-    return undefined
+  if (!instance) return undefined
 
   if (isInstanceDestroyed(instance)) {
     instanceRegistry.delete(id)
@@ -86,8 +92,7 @@ function registerComponentId(vm: any, id: string): void {
 }
 
 export function getComponentIdOfInstance(vm: any): string | undefined {
-  if (typeof vm !== 'object' || vm === null)
-    return undefined
+  if (typeof vm !== 'object' || vm === null) return undefined
   return componentIdByInstance.get(vm)
 }
 
@@ -104,42 +109,42 @@ export function clearInstanceRegistry(): void {
  * （kit supportsReactivityGraphVueVersion）；同一运行时恒定，读到即缓存。
  */
 export function getVueRuntimeVersion(): string | undefined {
-  if (cachedVueVersion)
-    return cachedVueVersion
+  if (cachedVueVersion) return cachedVueVersion
 
   for (const vm of instanceRegistry.values()) {
     try {
       const internal = getInternal(vm)
       // Vue 3：appContext.app.version
       // Vue 2：Vue 构造函数挂在 $options._base（Vue.extend 写入）与 constructor（静态继承）上
-      const version = internal?.appContext?.app?.version
-        || internal?.$options?._base?.version
-        || internal?.constructor?.version
+      const version =
+        internal?.appContext?.app?.version ||
+        internal?.$options?._base?.version ||
+        internal?.constructor?.version
       if (typeof version === 'string' && version) {
         cachedVueVersion = version
         return version
       }
-    }
-    catch {
+    } catch {
       // 单实例读取失败换下一个
     }
   }
 
   // 实例注册表暂无节点时（如首次推送在组件遍历前/首屏过渡期），尝试从全局 getApp() 读取
   try {
-    const app = typeof getApp === 'function' ? getApp() : (globalThis as any).getApp?.()
+    const app =
+      typeof getApp === 'function' ? getApp() : (globalThis as any).getApp?.()
     const appVm = app?.$vm || app
     const internal = getInternal(appVm)
-    const version = internal?.appContext?.app?.version
-      || (app as any)?.appContext?.app?.version
-      || internal?.$options?._base?.version
-      || internal?.constructor?.version
+    const version =
+      internal?.appContext?.app?.version ||
+      (app as any)?.appContext?.app?.version ||
+      internal?.$options?._base?.version ||
+      internal?.constructor?.version
     if (typeof version === 'string' && version) {
       cachedVueVersion = version
       return version
     }
-  }
-  catch {
+  } catch {
     // 忽略异常继续尝试
   }
 
@@ -150,8 +155,7 @@ export function getVueRuntimeVersion(): string | undefined {
       cachedVueVersion = gVue.version
       return gVue.version
     }
-  }
-  catch {
+  } catch {
     // 降级静默
   }
 
@@ -160,8 +164,7 @@ export function getVueRuntimeVersion(): string | undefined {
 
 /** 文件路径 → 显示名（取 basename 去扩展名，如 `layouts/default.vue` → `default`） */
 function fileBasename(file: string | undefined): string | undefined {
-  if (!file)
-    return undefined
+  if (!file) return undefined
   const base = file.split('/').pop() || file
   const stripped = base.replace(/\.[^.]+$/, '')
   return stripped || undefined
@@ -174,18 +177,27 @@ function fileBasename(file: string | undefined): string | undefined {
  * 编译期写入端见 instrument.ts 的 injectEntryFileGuard（`__file` 兜底命名
  * 与本函数一致是冻结契约）。
  */
-export function getComponentDisplayName(typeObj: any, vnodeTag?: string): string | undefined {
-  return typeObj?.name
-    || typeObj?.__name
-    || typeObj?.displayName
-    || typeObj?.fileName
-    || fileBasename(typeObj?.__file || typeObj?.filePath)
-    || vnodeTag
+export function getComponentDisplayName(
+  typeObj: any,
+  vnodeTag?: string,
+): string | undefined {
+  return (
+    typeObj?.name ||
+    typeObj?.__name ||
+    typeObj?.displayName ||
+    typeObj?.fileName ||
+    fileBasename(typeObj?.__file || typeObj?.filePath) ||
+    vnodeTag
+  )
 }
 
-function collectComponentsFromVNode(vnode: any, out: any[], visited: Set<any>, depth = 0): void {
-  if (!vnode || depth > 20)
-    return
+function collectComponentsFromVNode(
+  vnode: any,
+  out: any[],
+  visited: Set<any>,
+  depth = 0,
+): void {
+  if (!vnode || depth > 20) return
 
   // 组件 vnode 只收集实例、不下探其子树——子组件的子树由其自身递归覆盖
   if (vnode.component) {
@@ -202,8 +214,7 @@ function collectComponentsFromVNode(vnode: any, out: any[], visited: Set<any>, d
         collectComponentsFromVNode(child, out, visited, depth + 1)
       }
     }
-  }
-  else if (Array.isArray(vnode.dynamicChildren)) {
+  } else if (Array.isArray(vnode.dynamicChildren)) {
     for (const child of vnode.dynamicChildren) {
       if (child && typeof child === 'object') {
         collectComponentsFromVNode(child, out, visited, depth + 1)
@@ -226,7 +237,8 @@ function findChildVMs(vm: any, internal: any, visited: Set<any>): any[] {
     return children
   }
 
-  const subTree = internal?.subTree || (internal?.$ && internal.$.subTree) || vm?.subTree
+  const subTree =
+    internal?.subTree || (internal?.$ && internal.$.subTree) || vm?.subTree
   if (subTree) {
     collectComponentsFromVNode(subTree, children, visited)
   }
@@ -270,9 +282,11 @@ export function extractComponentNode(
     const internal = getInternal(vm)
     const typeObj = getOptions(vm)
     const vnode = getVNode(vm)
-    const vnodeTag = vnode && typeof vnode.type === 'string' ? vnode.type : undefined
-    const rawName = getComponentDisplayName(typeObj, vnodeTag)
-      || (depth === 0 ? 'App' : 'Anonymous')
+    const vnodeTag =
+      vnode && typeof vnode.type === 'string' ? vnode.type : undefined
+    const rawName =
+      getComponentDisplayName(typeObj, vnodeTag) ||
+      (depth === 0 ? 'App' : 'Anonymous')
 
     // 过滤开发工具自身内置注入的组件
     if (rawName === 'UniDevTools') {
@@ -301,12 +315,17 @@ export function extractComponentNode(
       const childNodes: ComponentTreeNode[] = []
       for (const childVM of childVMs) {
         try {
-          const childNode = extractComponentNode(childVM, depth + 1, maxDepth, visited, idPrefix)
+          const childNode = extractComponentNode(
+            childVM,
+            depth + 1,
+            maxDepth,
+            visited,
+            idPrefix,
+          )
           if (childNode) {
             childNodes.push(childNode)
           }
-        }
-        catch {
+        } catch {
           // 单节点异常被隔离，不影响同级及上层树结构
         }
       }
@@ -316,8 +335,7 @@ export function extractComponentNode(
     }
 
     return node
-  }
-  catch {
+  } catch {
     return null
   }
 }
@@ -330,11 +348,9 @@ export function collectComponentTree(customPages?: any[]): PageComponentTree[] {
 
   if (customPages && Array.isArray(customPages)) {
     pages = customPages
-  }
-  else if (typeof getCurrentPages === 'function') {
+  } else if (typeof getCurrentPages === 'function') {
     pages = getCurrentPages()
-  }
-  else if (typeof (globalThis as any).getCurrentPages === 'function') {
+  } else if (typeof (globalThis as any).getCurrentPages === 'function') {
     pages = (globalThis as any).getCurrentPages()
   }
 
@@ -357,10 +373,11 @@ export function collectComponentTree(customPages?: any[]): PageComponentTree[] {
   const routeOccurrences = new Map<string, number>()
 
   for (const page of pages) {
-    if (!page)
-      continue
+    if (!page) continue
 
-    const rawRoute = String(page.route || page.__route__ || page.path || 'unknown')
+    const rawRoute = String(
+      page.route || page.__route__ || page.path || 'unknown',
+    )
     const seen = (routeOccurrences.get(rawRoute) ?? 0) + 1
     routeOccurrences.set(rawRoute, seen)
     const route = seen > 1 ? `${rawRoute}@${seen}` : rawRoute
@@ -370,8 +387,7 @@ export function collectComponentTree(customPages?: any[]): PageComponentTree[] {
 
     try {
       components = extractComponentNode(vm, 0, 10, visited, route)
-    }
-    catch {
+    } catch {
       components = null
     }
 

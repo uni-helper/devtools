@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
  *
  * 方法表无法从 birpc 客户端反查，因此 mock 掉 `devframe/rpc/client` 直接截获入参。
  */
-const { createRpcClientMock } = vi.hoisted(() => ({ createRpcClientMock: vi.fn() }))
+const { createRpcClientMock } = vi.hoisted(() => ({
+  createRpcClientMock: vi.fn(),
+}))
 
 vi.mock('devframe/rpc/client', () => ({
   createRpcClient: createRpcClientMock,
@@ -72,7 +74,9 @@ describe('入口 RPC 方法表', () => {
 
     vue3.initAgent(config())
 
-    expect(Object.keys(lastClientFunctions()).sort()).toEqual([...BASE_KEYS, ...VUE3_ONLY_KEYS].sort())
+    expect(Object.keys(lastClientFunctions()).sort()).toEqual(
+      [...BASE_KEYS, ...VUE3_ONLY_KEYS].sort(),
+    )
 
     vue3.disposeAgent()
   })
@@ -95,7 +99,9 @@ describe('入口 RPC 方法表', () => {
     const { vue3, vue2 } = await freshEntries()
 
     vue3.initAgent(config())
-    expect(Object.keys(lastClientFunctions()).sort()).toEqual([...BASE_KEYS, ...VUE3_ONLY_KEYS].sort())
+    expect(Object.keys(lastClientFunctions()).sort()).toEqual(
+      [...BASE_KEYS, ...VUE3_ONLY_KEYS].sort(),
+    )
     vue3.disposeAgent()
 
     vue2.initAgent(config())

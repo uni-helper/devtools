@@ -18,7 +18,10 @@ interface DevtoolsStateOptions {
   selectedAppId: Ref<string | undefined>
   selectedComponentId: Ref<string | undefined>
   error: Ref<string | undefined>
-  assertCommandSucceeded: (result: { status: 0 | 1; error?: unknown }, fallback: string) => void
+  assertCommandSucceeded: (
+    result: { status: 0 | 1; error?: unknown },
+    fallback: string,
+  ) => void
 }
 
 export function createDevtoolsState(options: DevtoolsStateOptions) {
@@ -58,9 +61,13 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
   const componentMountIds = new Map<string, string>()
   const componentSessionIds = new Map<string, string>()
 
-  watch([runtimeVersion, selectedAppId, selectedComponentId], resetComponentStateRequests, {
-    flush: 'sync',
-  })
+  watch(
+    [runtimeVersion, selectedAppId, selectedComponentId],
+    resetComponentStateRequests,
+    {
+      flush: 'sync',
+    },
+  )
 
   watch(selectedComponentId, (componentId) => {
     if (componentId) void fetchComponentState(componentId)
@@ -98,12 +105,15 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     if (!client) return
 
     const isNewMountOrSession = Boolean(
-      (options?.mountId && componentMountIds.get(componentId) && options.mountId !== componentMountIds.get(componentId)) ||
-      (options?.sessionId && componentSessionIds.get(componentId) && options.sessionId !== componentSessionIds.get(componentId)),
+      (options?.mountId &&
+        componentMountIds.get(componentId) &&
+        options.mountId !== componentMountIds.get(componentId)) ||
+      (options?.sessionId &&
+        componentSessionIds.get(componentId) &&
+        options.sessionId !== componentSessionIds.get(componentId)),
     )
 
-    if (options?.mountId)
-      componentMountIds.set(componentId, options.mountId)
+    if (options?.mountId) componentMountIds.set(componentId, options.mountId)
     if (options?.sessionId)
       componentSessionIds.set(componentId, options.sessionId)
 
@@ -112,8 +122,14 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     const mutation = stateMutations.get(key)
     if (mutation) {
       mutation.refresh = true
-      if (mutation.minimumVersion === 0 || minimumVersion - mutation.minimumVersion <= MAX_VERSION_DRIFT) {
-        mutation.minimumVersion = Math.max(mutation.minimumVersion, minimumVersion)
+      if (
+        mutation.minimumVersion === 0 ||
+        minimumVersion - mutation.minimumVersion <= MAX_VERSION_DRIFT
+      ) {
+        mutation.minimumVersion = Math.max(
+          mutation.minimumVersion,
+          minimumVersion,
+        )
       }
       return
     }
@@ -123,8 +139,7 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
       minimumVersion &&
       componentState.value?.componentId === componentId
     ) {
-      if (componentState.value.version >= minimumVersion)
-        return
+      if (componentState.value.version >= minimumVersion) return
       if (minimumVersion - componentState.value.version > MAX_VERSION_DRIFT)
         return
     }
@@ -181,32 +196,39 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
           const prevSessionId = componentSessionIds.get(componentId)
 
           const isMountOrSessionChanged = Boolean(
-            (snapshotMountId && prevMountId && snapshotMountId !== prevMountId) ||
-            (snapshotSessionId && prevSessionId && snapshotSessionId !== prevSessionId),
+            (snapshotMountId &&
+              prevMountId &&
+              snapshotMountId !== prevMountId) ||
+            (snapshotSessionId &&
+              prevSessionId &&
+              snapshotSessionId !== prevSessionId),
           )
 
           const isVersionReset = Boolean(
-            snapshot && (
-              isMountOrSessionChanged ||
+            snapshot &&
+            (isMountOrSessionChanged ||
               (requestedVersion > 0 && snapshot.version < requestedVersion) ||
               (componentState.value?.componentId === componentId &&
                 snapshot.version < componentState.value.version) ||
-              (request.minimumVersion - snapshot.version > MAX_VERSION_DRIFT)
-            ),
+              request.minimumVersion - snapshot.version > MAX_VERSION_DRIFT),
           )
 
-          if (snapshotMountId) componentMountIds.set(componentId, snapshotMountId)
-          if (snapshotSessionId) componentSessionIds.set(componentId, snapshotSessionId)
+          if (snapshotMountId)
+            componentMountIds.set(componentId, snapshotMountId)
+          if (snapshotSessionId)
+            componentSessionIds.set(componentId, snapshotSessionId)
 
           if (isVersionReset && snapshot) {
             request.minimumVersion = snapshot.version
             if (pendingStateRequest === request)
               pendingStateRequest.minimumVersion = snapshot.version
             const currentMutation = stateMutations.get(key)
-            if (currentMutation && currentMutation.minimumVersion > snapshot.version)
+            if (
+              currentMutation &&
+              currentMutation.minimumVersion > snapshot.version
+            )
               currentMutation.minimumVersion = snapshot.version
-          }
-          else if (
+          } else if (
             snapshot &&
             snapshot.version < request.minimumVersion &&
             request.minimumVersion > requestedVersion
@@ -236,7 +258,11 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     const client = getRpcClient()
     if (!client) return
     const key = componentStateRequestKey(componentId)
-    const mutation = stateMutations.get(key) ?? { pending: 0, refresh: false, minimumVersion: 0 }
+    const mutation = stateMutations.get(key) ?? {
+      pending: 0,
+      refresh: false,
+      minimumVersion: 0,
+    }
     if (pendingStateRequest?.key === key) {
       // Preserve the pending refresh even if the edit fails.
       mutation.refresh = true
@@ -306,10 +332,13 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
 
     const currentMax = Math.max(
       0,
-      ...(componentState.value?.sections.map((section) => section.entries.length) ?? []),
+      ...(componentState.value?.sections.map(
+        (section) => section.entries.length,
+      ) ?? []),
     )
     componentStateMaxEntries.value =
-      (componentStateMaxEntries.value ?? currentMax) + DEFAULT_STATE_SHOW_MORE_SIZE
+      (componentStateMaxEntries.value ?? currentMax) +
+      DEFAULT_STATE_SHOW_MORE_SIZE
     await fetchComponentState(componentId)
   }
 
@@ -329,7 +358,8 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     if (!expanded) return
 
     // Clearing a snapshot or selection also invalidates its in-flight expansions.
-    if (version !== expandedValuesVersion || getEntryKey(entry) !== entryKey) return
+    if (version !== expandedValuesVersion || getEntryKey(entry) !== entryKey)
+      return
 
     expandedValues.value = {
       ...expandedValues.value,
@@ -337,7 +367,9 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     }
   }
 
-  async function storeStateEntryAsGlobal(entry: StateEntry): Promise<string | undefined> {
+  async function storeStateEntryAsGlobal(
+    entry: StateEntry,
+  ): Promise<string | undefined> {
     const client = getRpcClient()
     if (!client) return
 
@@ -346,7 +378,9 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     const inspectorEntry = getInspectorEntryMeta(entry)
     const componentId = selectedComponentId.value
 
-    let payload: RuntimeQueryRequest<'values:storeAsGlobal'>['payload'] | undefined
+    let payload:
+      | RuntimeQueryRequest<'values:storeAsGlobal'>['payload']
+      | undefined
     if (displayHandle) {
       payload = { handle: displayHandle }
     } else if (!inspectorEntry && componentId && entry.path.length >= 1) {
@@ -385,7 +419,9 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     })
     if (result.status !== 1) {
       throw new Error(
-        typeof result.error === 'string' ? result.error : 'Unable to recompute computed value',
+        typeof result.error === 'string'
+          ? result.error
+          : 'Unable to recompute computed value',
       )
     }
 
@@ -411,7 +447,10 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
           componentId,
           sectionId,
           path,
-          stateType: typeof entry.meta?.stateType === 'string' ? entry.meta.stateType : undefined,
+          stateType:
+            typeof entry.meta?.stateType === 'string'
+              ? entry.meta.stateType
+              : undefined,
           value,
         },
       },
@@ -469,7 +508,10 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     )
   }
 
-  async function executeCustomStateAction(entry: StateEntry, actionIndex: number) {
+  async function executeCustomStateAction(
+    entry: StateEntry,
+    actionIndex: number,
+  ) {
     const client = getRpcClient()
     if (!client) return
 
@@ -486,8 +528,13 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
 
     const inspectorEntry = getInspectorEntryMeta(entry)
     if (inspectorEntry)
-      touchInspectorInvalidation(inspectorEntry.inspectorId, 'state', inspectorEntry.nodeId)
-    else if (selectedComponentId.value) await fetchComponentState(selectedComponentId.value)
+      touchInspectorInvalidation(
+        inspectorEntry.inspectorId,
+        'state',
+        inspectorEntry.nodeId,
+      )
+    else if (selectedComponentId.value)
+      await fetchComponentState(selectedComponentId.value)
   }
 
   async function editInspectorState(
@@ -513,7 +560,11 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
 
     assertCommandSucceeded(result, 'Unable to edit inspector state')
     clearExpandedValues()
-    touchInspectorInvalidation(inspectorEntry.inspectorId, 'state', inspectorEntry.nodeId)
+    touchInspectorInvalidation(
+      inspectorEntry.inspectorId,
+      'state',
+      inspectorEntry.nodeId,
+    )
   }
 
   async function deleteInspectorState(
@@ -538,7 +589,11 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
 
     assertCommandSucceeded(result, 'Unable to delete inspector state')
     clearExpandedValues()
-    touchInspectorInvalidation(inspectorEntry.inspectorId, 'state', inspectorEntry.nodeId)
+    touchInspectorInvalidation(
+      inspectorEntry.inspectorId,
+      'state',
+      inspectorEntry.nodeId,
+    )
   }
 
   function getEntryKey(entry: StateEntry): string {
@@ -548,7 +603,12 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
       : selectedComponentId.value
         ? ['component', selectedComponentId.value]
         : ['state']
-    return JSON.stringify([runtimeVersion.value, selectedAppId.value, ...scope, entry.path])
+    return JSON.stringify([
+      runtimeVersion.value,
+      selectedAppId.value,
+      ...scope,
+      entry.path,
+    ])
   }
 
   function getEntryValue(entry: StateEntry): EncodedValue {
@@ -587,7 +647,10 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     type: 'tree' | 'state',
     nodeId?: string,
   ) {
-    const current = inspectorInvalidations.value[inspectorId] ?? { tree: 0, state: 0 }
+    const current = inspectorInvalidations.value[inspectorId] ?? {
+      tree: 0,
+      state: 0,
+    }
     inspectorInvalidations.value = {
       ...inspectorInvalidations.value,
       [inspectorId]: {
@@ -658,7 +721,9 @@ export function createDevtoolsState(options: DevtoolsStateOptions) {
     return ''
   }
 
-  function getCustomEncodedValue(value: unknown): CustomEncodedValue | undefined {
+  function getCustomEncodedValue(
+    value: unknown,
+  ): CustomEncodedValue | undefined {
     if (
       value != null &&
       typeof value === 'object' &&

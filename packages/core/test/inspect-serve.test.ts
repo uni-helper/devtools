@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { INSPECT_MOUNT_PATH, INSPECT_OUTPUT_DIR, createInspectApp, isInspectAvailable } from '../src/inspect-serve.ts'
+import {
+  INSPECT_MOUNT_PATH,
+  INSPECT_OUTPUT_DIR,
+  createInspectApp,
+  isInspectAvailable,
+} from '../src/inspect-serve.ts'
 
 describe('inspect-serve: vite inspect 静态托管（devframe mountStaticHandler 接线）', () => {
   it('挂载前缀与落盘目录约定符合冻结契约', () => {
@@ -14,6 +19,8 @@ describe('inspect-serve: vite inspect 静态托管（devframe mountStaticHandler
 
   it('createInspectApp 构造完成挂载的 h3 app', () => {
     const app = createInspectApp()
-    expect(typeof (app as unknown as { handler: unknown }).handler).toBe('function')
+    expect(typeof (app as unknown as { handler: unknown }).handler).toBe(
+      'function',
+    )
   })
 })

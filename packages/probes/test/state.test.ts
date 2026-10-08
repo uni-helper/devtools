@@ -4,7 +4,10 @@ import {
   recomputeComponentState,
   updateComponentState,
 } from '../src/runtime/state'
-import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree'
+import {
+  clearInstanceRegistry,
+  extractComponentNode,
+} from '../src/runtime/tree'
 
 const BINDINGS_PROP = '__uni_devtools_bindings__'
 
@@ -234,11 +237,21 @@ describe('state: 组件状态面板全能力对齐官方', () => {
       extractComponentNode(vm, 0, 10, new Set(), '')
 
       // 顶层修改
-      updateComponentState({ id: 'edit-props', section: 'props', key: 'label', value: 'updated' })
+      updateComponentState({
+        id: 'edit-props',
+        section: 'props',
+        key: 'label',
+        value: 'updated',
+      })
       expect(vm.$.props.label).toBe('updated')
 
       // 深层嵌套修改
-      updateComponentState({ id: 'edit-props', section: 'props', path: ['config', 'color'], value: 'blue' })
+      updateComponentState({
+        id: 'edit-props',
+        section: 'props',
+        path: ['config', 'color'],
+        value: 'blue',
+      })
       expect(vm.$.props.config.color).toBe('blue')
     })
 
@@ -264,12 +277,22 @@ describe('state: 组件状态面板全能力对齐官方', () => {
       extractComponentNode(vm, 0, 10, new Set(), '')
 
       // 可写 computed
-      updateComponentState({ id: 'edit-computed', section: 'computed', key: 'writable', value: 20 })
+      updateComponentState({
+        id: 'edit-computed',
+        section: 'computed',
+        key: 'writable',
+        value: 20,
+      })
       expect(internalVal).toBe(20)
 
       // 无 setter computed 抛错如实冒泡
       expect(() => {
-        updateComponentState({ id: 'edit-computed', section: 'computed', key: 'readonlyComp', value: 50 })
+        updateComponentState({
+          id: 'edit-computed',
+          section: 'computed',
+          key: 'readonlyComp',
+          value: 50,
+        })
       }).toThrow()
     })
 
@@ -288,10 +311,20 @@ describe('state: 组件状态面板全能力对齐官方', () => {
       }
       extractComponentNode(vm, 0, 10, new Set(), '')
 
-      updateComponentState({ id: 'edit-setup', section: 'setup', key: 'count', value: 2 })
+      updateComponentState({
+        id: 'edit-setup',
+        section: 'setup',
+        key: 'count',
+        value: 2,
+      })
       expect(countRef.value).toBe(2)
 
-      updateComponentState({ id: 'edit-setup', section: 'setup', path: ['nested', 'nested', 'title'], value: 'new' })
+      updateComponentState({
+        id: 'edit-setup',
+        section: 'setup',
+        path: ['nested', 'nested', 'title'],
+        value: 'new',
+      })
       expect(nestedRef.value.nested.title).toBe('new')
     })
   })
@@ -420,8 +453,15 @@ describe('state: 组件状态面板全能力对齐官方', () => {
   describe('6. Reactivity Graph 集成（随 get-component-state 搭车下发）', () => {
     it('mp 插桩闭包绑定：ref → render 边随 state 快照产出', () => {
       const renderFn: any = () => {}
-      const renderEffect = { fn: renderFn, instance: { type: { name: 'GraphComp' } } }
-      const countRef = { __v_isRef: true, value: 7, subs: { sub: renderEffect, nextSub: null } }
+      const renderEffect = {
+        fn: renderFn,
+        instance: { type: { name: 'GraphComp' } },
+      }
+      const countRef = {
+        __v_isRef: true,
+        value: 7,
+        subs: { sub: renderEffect, nextSub: null },
+      }
       // render 闭包绑定与 renderEffect.fn 是同一函数：3.5 启发靠 fn 上的标记识别 render
       renderFn[BINDINGS_PROP] = { count: countRef }
 
@@ -440,8 +480,8 @@ describe('state: 组件状态面板全能力对齐官方', () => {
 
       const graph = state.reactivityGraph!
       expect(graph.nodes).toHaveLength(2)
-      const refNode = graph.nodes.find(n => n.type === 'ref')
-      const renderNode = graph.nodes.find(n => n.type === 'render')
+      const refNode = graph.nodes.find((n) => n.type === 'ref')
+      const renderNode = graph.nodes.find((n) => n.type === 'render')
       expect(refNode?.label).toBe('count')
       expect(renderNode?.label).toBe('GraphComp render')
       expect(graph.relationships).toHaveLength(1)

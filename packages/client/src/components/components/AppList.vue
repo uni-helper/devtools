@@ -2,7 +2,8 @@
 import type { DevtoolsExtensionFrameDescriptor } from '@vue/devtools-kit/client'
 import { useDevtoolsClient } from '../../composables/devtools-client'
 
-const { activeFrameId, apps, frames, selectApp, selectFrame, selectedAppId } = useDevtoolsClient()
+const { activeFrameId, apps, frames, selectApp, selectFrame, selectedAppId } =
+  useDevtoolsClient()
 
 function frameLabel(frame: DevtoolsExtensionFrameDescriptor): string {
   if (frame.main) return 'Top frame'

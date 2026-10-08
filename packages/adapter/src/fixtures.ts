@@ -1,4 +1,10 @@
-import type { ComponentStateResult, ComponentTreeResult, GetPiniaStoresResult, PiniaStateResult, NetworkRecord } from '@uni-helper/devtools-shared'
+import type {
+  ComponentStateResult,
+  ComponentTreeResult,
+  GetPiniaStoresResult,
+  PiniaStateResult,
+  NetworkRecord,
+} from '@uni-helper/devtools-shared'
 
 /**
  * 面板的假数据，只在显式 mock 模式（URL 带 `?mock`）下使用。
@@ -28,7 +34,12 @@ const tree: ComponentTreeResult = {
             type: 'component',
             file: '/src/components/AppHeader.vue',
             children: [
-              { id: 'pages/index/index#3', name: 'UserAvatar', type: 'component', file: '/src/components/UserAvatar.vue' },
+              {
+                id: 'pages/index/index#3',
+                name: 'UserAvatar',
+                type: 'component',
+                file: '/src/components/UserAvatar.vue',
+              },
             ],
           },
           {
@@ -37,8 +48,17 @@ const tree: ComponentTreeResult = {
             type: 'component',
             file: '/src/components/CounterCard.vue',
             children: [
-              { id: 'pages/index/index#5', name: 'ActionButton', type: 'component', file: '/src/components/ActionButton.vue' },
-              { id: 'pages/index/index#6', name: 'Anonymous', type: 'component' },
+              {
+                id: 'pages/index/index#5',
+                name: 'ActionButton',
+                type: 'component',
+                file: '/src/components/ActionButton.vue',
+              },
+              {
+                id: 'pages/index/index#6',
+                name: 'Anonymous',
+                type: 'component',
+              },
             ],
           },
         ],
@@ -52,7 +72,12 @@ const tree: ComponentTreeResult = {
         type: 'page',
         file: '/src/pages/settings/settings.vue',
         children: [
-          { id: 'pages/settings/settings#21', name: 'FormSwitch', type: 'component', file: '/src/components/FormSwitch.vue' },
+          {
+            id: 'pages/settings/settings#21',
+            name: 'FormSwitch',
+            type: 'component',
+            file: '/src/components/FormSwitch.vue',
+          },
         ],
       },
     },
@@ -60,7 +85,6 @@ const tree: ComponentTreeResult = {
 }
 
 const stateById: Record<string, ComponentStateResult> = {
-
   'pages/index/index#4': {
     id: 'pages/index/index#4',
     name: 'CounterCard',
@@ -79,7 +103,12 @@ const stateById: Record<string, ComponentStateResult> = {
       count: { stateType: 'ref', value: 3 },
       isRunning: { value: true },
       config: {
-        value: { step: 2, max: 99, labels: ['少', '中', '多'], nested: { deep: { flag: false } } },
+        value: {
+          step: 2,
+          max: 99,
+          labels: ['少', '中', '多'],
+          nested: { deep: { flag: false } },
+        },
       },
       items: {
         stateType: 'ref',
@@ -93,22 +122,57 @@ const stateById: Record<string, ComponentStateResult> = {
       updatedAt: { value: '2026-09-30T12:00:00.000Z' },
     },
     computed: {
-      doubleCount: { stateType: 'computed', value: 6, raw: '() => count.value * 2' },
+      doubleCount: {
+        stateType: 'computed',
+        value: 6,
+        raw: '() => count.value * 2',
+      },
     },
     setupOther: {
-      onReset: { fn: true, fnName: 'onReset', fnSource: 'const onReset = () => { count.value = 0 }' },
+      onReset: {
+        fn: true,
+        fnName: 'onReset',
+        fnSource: 'const onReset = () => { count.value = 0 }',
+      },
     },
     // Graph tab 冒烟数据：count → render / count → doubleCount → render
     reactivityGraph: {
       nodes: [
-        { id: 'reactivity-1', type: 'ref', label: 'count', data: { key: 'count', value: '3' } },
-        { id: 'reactivity-2', type: 'computed', label: 'doubleCount', data: { key: 'doubleCount', value: '6' } },
-        { id: 'reactivity-3', type: 'render', label: 'CounterCard render', data: { instanceName: 'CounterCard' } },
+        {
+          id: 'reactivity-1',
+          type: 'ref',
+          label: 'count',
+          data: { key: 'count', value: '3' },
+        },
+        {
+          id: 'reactivity-2',
+          type: 'computed',
+          label: 'doubleCount',
+          data: { key: 'doubleCount', value: '6' },
+        },
+        {
+          id: 'reactivity-3',
+          type: 'render',
+          label: 'CounterCard render',
+          data: { instanceName: 'CounterCard' },
+        },
       ],
       relationships: [
-        { id: 'reactivity-1->reactivity-3', from: 'reactivity-1', to: 'reactivity-3' },
-        { id: 'reactivity-1->reactivity-2', from: 'reactivity-1', to: 'reactivity-2' },
-        { id: 'reactivity-2->reactivity-3', from: 'reactivity-2', to: 'reactivity-3' },
+        {
+          id: 'reactivity-1->reactivity-3',
+          from: 'reactivity-1',
+          to: 'reactivity-3',
+        },
+        {
+          id: 'reactivity-1->reactivity-2',
+          from: 'reactivity-1',
+          to: 'reactivity-2',
+        },
+        {
+          id: 'reactivity-2->reactivity-3',
+          from: 'reactivity-2',
+          to: 'reactivity-3',
+        },
       ],
     },
   },
@@ -135,12 +199,16 @@ const stateById: Record<string, ComponentStateResult> = {
 export function mockComponentState(id: string): ComponentStateResult {
   const state = stateById[id]
   return state
-    ? JSON.parse(JSON.stringify(state)) as ComponentStateResult
+    ? (JSON.parse(JSON.stringify(state)) as ComponentStateResult)
     : { id, name: `Component#${id}`, data: {}, setup: {} }
 }
 
 /** mock 写回：改内存里的同一份状态，语义对齐探针（data 直写、setup 写 binding.value）。 */
-export function mockUpdateComponentState(params: { id: string, key: string, value: unknown }): { ok: true, key: string, value: unknown } {
+export function mockUpdateComponentState(params: {
+  id: string
+  key: string
+  value: unknown
+}): { ok: true; key: string; value: unknown } {
   const state = stateById[params.id]
   if (state) {
     if (state.props && params.key in state.props)
@@ -163,40 +231,53 @@ export function mockComponentTree(): ComponentTreeResult {
 // Pinia（W4）：mock 两个 store，语义对齐探针（state 顶层键 + getters 只读）
 // ---------------------------------------------------------------------------
 
-const piniaStores = [
-  { id: 'counter' },
-  { id: 'user' },
-]
+const piniaStores = [{ id: 'counter' }, { id: 'user' }]
 
-const piniaStateById: Record<string, { state: Record<string, unknown>, getters: Record<string, unknown> }> = {
+const piniaStateById: Record<
+  string,
+  { state: Record<string, unknown>; getters: Record<string, unknown> }
+> = {
   counter: {
     state: { count: 0, step: 1, history: [] as unknown[] },
     getters: { double: 0, isZero: true },
   },
   user: {
-    state: { name: 'uni-helper', tags: ['devtools', 'mp'], profile: { city: 'Shanghai' } },
+    state: {
+      name: 'uni-helper',
+      tags: ['devtools', 'mp'],
+      profile: { city: 'Shanghai' },
+    },
     getters: { greeting: 'Hello, uni-helper' },
   },
 }
 
 export function mockPiniaStores(): GetPiniaStoresResult {
-  return { stores: piniaStores.map(store => ({ id: store.id })) }
+  return { stores: piniaStores.map((store) => ({ id: store.id })) }
 }
 
 export function mockPiniaState(id: string): PiniaStateResult {
   const data = piniaStateById[id]
-  if (!data)
-    return { id, state: {}, getters: {} }
+  if (!data) return { id, state: {}, getters: {} }
   // 深拷贝语义同 mockComponentState（真实传输层每次全新对象）
-  return { id, state: JSON.parse(JSON.stringify(data.state)), getters: JSON.parse(JSON.stringify(data.getters)) }
+  return {
+    id,
+    state: JSON.parse(JSON.stringify(data.state)),
+    getters: JSON.parse(JSON.stringify(data.getters)),
+  }
 }
 
-export function mockUpdatePiniaState(params: { id: string, key: string, value: unknown }): { ok: true, id: string, key: string } {
+export function mockUpdatePiniaState(params: {
+  id: string
+  key: string
+  value: unknown
+}): { ok: true; id: string; key: string } {
   const data = piniaStateById[params.id]
   // 语义对齐探针 updatePiniaState：键不存在抛错（getters 不是可写 state），
   // 不静默假装成功——mock 与真实链路行为不一致会掩盖面板侧 bug
   if (!data || !(params.key in data.state))
-    throw new Error(`[updatePiniaState] Key "${params.key}" not found on store "${params.id}"`)
+    throw new Error(
+      `[updatePiniaState] Key "${params.key}" not found on store "${params.id}"`,
+    )
   data.state[params.key] = params.value
   return { ok: true, id: params.id, key: params.key }
 }
@@ -206,8 +287,7 @@ export function mockUpdatePiniaState(params: { id: string, key: string, value: u
  * 真实链路为探针 render.toString()（解插桩包装层），此处手造 uni mp 编译形态。
  */
 export function mockGetComponentRenderCode(id: string): string | undefined {
-  if (id !== 'pages/index/index#4')
-    return undefined
+  if (id !== 'pages/index/index#4') return undefined
   return [
     'import { resolveComponent as _resolveComponent, createVNode as _createVNode, toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"',
     '',
@@ -275,7 +355,7 @@ function createInitialMockNetworkRecords(): NetworkRecord[] {
       statusText: 'Created',
       requestHeaders: {
         'content-type': 'application/json',
-        'authorization': 'Bearer token-abc-123',
+        authorization: 'Bearer token-abc-123',
       },
       responseHeaders: {
         'content-type': 'application/json; charset=utf-8',
@@ -373,7 +453,8 @@ function createInitialMockNetworkRecords(): NetworkRecord[] {
         batchId: 'batch_777',
         itemsCount: 500,
       },
-      responseBody: '{"status":"ok","processed":500,"details":[{"line":0,"msg":"log snippet 0"},{"line":1,"msg":"log snippet 1"},"... [truncated]"]}',
+      responseBody:
+        '{"status":"ok","processed":500,"details":[{"line":0,"msg":"log snippet 0"},{"line":1,"msg":"log snippet 1"},"... [truncated]"]}',
       requestBodyTruncated: false,
       responseBodyTruncated: true,
       responseSize: 65536,
@@ -416,9 +497,12 @@ export function mockResetNetworkRecords(): void {
 /** mock 心跳（1s 间隔由适配器驱动）：在途演示记录超时后就地结算并返回最新快照 */
 export function mockTickNetworkRecords(): NetworkRecord[] {
   const pending = mockNetworkStore.find(
-    rec => rec.id === MOCK_PENDING_RECORD_ID && rec.duration == null,
+    (rec) => rec.id === MOCK_PENDING_RECORD_ID && rec.duration == null,
   )
-  if (pending && Date.now() - mockPendingCreatedAt >= MOCK_PENDING_SETTLES_AFTER_MS) {
+  if (
+    pending &&
+    Date.now() - mockPendingCreatedAt >= MOCK_PENDING_SETTLES_AFTER_MS
+  ) {
     pending.status = 200
     pending.ok = true
     pending.responseHeaders = { 'content-type': 'application/json' }
@@ -428,4 +512,3 @@ export function mockTickNetworkRecords(): NetworkRecord[] {
   }
   return mockNetworkRecords()
 }
-

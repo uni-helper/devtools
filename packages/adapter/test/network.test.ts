@@ -1,9 +1,15 @@
 import type { NetworkRecord } from '@uni-helper/devtools-shared'
 import { describe, expect, it, vi } from 'vitest'
 import { mergeRecordsById } from '../src/mapping/network.ts'
-import { handleNetworkSnapshot, validateNetworkSnapshot } from '../src/uni-devtools-rpc.ts'
+import {
+  handleNetworkSnapshot,
+  validateNetworkSnapshot,
+} from '../src/uni-devtools-rpc.ts'
 
-const rec = (id: number, overrides: Partial<NetworkRecord> = {}): NetworkRecord => ({
+const rec = (
+  id: number,
+  overrides: Partial<NetworkRecord> = {},
+): NetworkRecord => ({
   id,
   type: 'request',
   method: 'GET',
@@ -22,13 +28,17 @@ describe('网络记录合并', () => {
       500,
     )
 
-    expect(merged.map(r => r.id)).toEqual([1, 2, 3])
+    expect(merged.map((r) => r.id)).toEqual([1, 2, 3])
     expect(merged[1]).toMatchObject({ id: 2, status: 500, ok: false })
   })
 
   it('超过容量上限只保留最新记录', () => {
-    const merged = mergeRecordsById([rec(1), rec(2), rec(3)], [rec(4), rec(5), rec(6)], 4)
-    expect(merged.map(r => r.id)).toEqual([3, 4, 5, 6])
+    const merged = mergeRecordsById(
+      [rec(1), rec(2), rec(3)],
+      [rec(4), rec(5), rec(6)],
+      4,
+    )
+    expect(merged.map((r) => r.id)).toEqual([3, 4, 5, 6])
   })
 })
 
@@ -42,17 +52,47 @@ describe('网络快照格式校验 (validateNetworkSnapshot)', () => {
   })
 
   it('records 字段非数组时应校验失败', () => {
-    expect(validateNetworkSnapshot({ records: 'not an array', latestId: 1, updatedAt: 1000 }).valid).toBe(false)
-    expect(validateNetworkSnapshot({ records: 123, latestId: 1, updatedAt: 1000 }).valid).toBe(false)
-    expect(validateNetworkSnapshot({ records: null, latestId: 1, updatedAt: 1000 }).valid).toBe(false)
-    expect(validateNetworkSnapshot({ latestId: 1, updatedAt: 1000 }).valid).toBe(false)
+    expect(
+      validateNetworkSnapshot({
+        records: 'not an array',
+        latestId: 1,
+        updatedAt: 1000,
+      }).valid,
+    ).toBe(false)
+    expect(
+      validateNetworkSnapshot({ records: 123, latestId: 1, updatedAt: 1000 })
+        .valid,
+    ).toBe(false)
+    expect(
+      validateNetworkSnapshot({ records: null, latestId: 1, updatedAt: 1000 })
+        .valid,
+    ).toBe(false)
+    expect(
+      validateNetworkSnapshot({ latestId: 1, updatedAt: 1000 }).valid,
+    ).toBe(false)
   })
 
   it('缺少必需字段 latestId 或 updatedAt 时应校验失败', () => {
-    expect(validateNetworkSnapshot({ records: [rec(1)], updatedAt: 1000 }).valid).toBe(false)
-    expect(validateNetworkSnapshot({ records: [rec(1)], latestId: '1', updatedAt: 1000 }).valid).toBe(false)
-    expect(validateNetworkSnapshot({ records: [rec(1)], latestId: 1 }).valid).toBe(false)
-    expect(validateNetworkSnapshot({ records: [rec(1)], latestId: 1, updatedAt: '1000' }).valid).toBe(false)
+    expect(
+      validateNetworkSnapshot({ records: [rec(1)], updatedAt: 1000 }).valid,
+    ).toBe(false)
+    expect(
+      validateNetworkSnapshot({
+        records: [rec(1)],
+        latestId: '1',
+        updatedAt: 1000,
+      }).valid,
+    ).toBe(false)
+    expect(
+      validateNetworkSnapshot({ records: [rec(1)], latestId: 1 }).valid,
+    ).toBe(false)
+    expect(
+      validateNetworkSnapshot({
+        records: [rec(1)],
+        latestId: 1,
+        updatedAt: '1000',
+      }).valid,
+    ).toBe(false)
   })
 
   it('格式完整的快照应校验通过', () => {
@@ -79,7 +119,12 @@ describe('网络快照更新处理 (handleNetworkSnapshot)', () => {
     // 1. undefined 快照
     expect(handleNetworkSnapshot(undefined, applyFn)).toBe(false)
     // 2. records 为字符串的畸形快照
-    expect(handleNetworkSnapshot({ records: 'corrupted-string', latestId: 0, updatedAt: 0 }, applyFn)).toBe(false)
+    expect(
+      handleNetworkSnapshot(
+        { records: 'corrupted-string', latestId: 0, updatedAt: 0 },
+        applyFn,
+      ),
+    ).toBe(false)
     // 3. 缺少字段
     expect(handleNetworkSnapshot({ records: [] }, applyFn)).toBe(false)
 
@@ -124,7 +169,7 @@ describe('网络快照更新处理 (handleNetworkSnapshot)', () => {
     const valid1 = { records: [rec(1)], latestId: 1, updatedAt: 2000 }
     handleNetworkSnapshot(valid1, applyFn)
     expect(applied).toHaveLength(1)
-    expect(applied[0].map(r => r.id)).toEqual([1])
+    expect(applied[0].map((r) => r.id)).toEqual([1])
 
     // 第三次：再次遇到畸形快照（跳过）
     handleNetworkSnapshot(null, applyFn)
@@ -134,7 +179,7 @@ describe('网络快照更新处理 (handleNetworkSnapshot)', () => {
     const valid2 = { records: [rec(1), rec(2)], latestId: 2, updatedAt: 3000 }
     handleNetworkSnapshot(valid2, applyFn)
     expect(applied).toHaveLength(2)
-    expect(applied[1].map(r => r.id)).toEqual([1, 2])
+    expect(applied[1].map((r) => r.id)).toEqual([1, 2])
 
     warnSpy.mockRestore()
   })

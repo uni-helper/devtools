@@ -3,8 +3,16 @@
  * 与真实探针的语义对齐点（读时深拷贝、编辑写回内存、键不存在抛错）见
  * fixtures.ts 各函数注释；方法面与 node 侧 RPC 一一对应（backend.ts ProbeMethod）。
  */
-import type { ProbeBackend, ProbeMethod, ProbePushKey, ProbeSubscription } from './backend.ts'
-import type { GetRegisteredRoutesResult, RouterInfoResult } from '@uni-helper/devtools-shared'
+import type {
+  ProbeBackend,
+  ProbeMethod,
+  ProbePushKey,
+  ProbeSubscription,
+} from './backend.ts'
+import type {
+  GetRegisteredRoutesResult,
+  RouterInfoResult,
+} from '@uni-helper/devtools-shared'
 import { probeNotSupported } from './backend.ts'
 import {
   mockClearNetworkRecords,
@@ -29,8 +37,16 @@ export interface MockBackendOptions {
  * 的共享回落逻辑按此产出与旧 mock 早退分支等价的快照（name = path 去首斜杠）。
  */
 const MOCK_ROUTES: GetRegisteredRoutesResult['routes'] = [
-  { path: '/pages/index/index', name: 'pages/index/index', meta: { title: '首页', type: 'home' } },
-  { path: '/pages/settings/settings', name: 'pages/settings/settings', meta: { title: '设置', type: 'page' } },
+  {
+    path: '/pages/index/index',
+    name: 'pages/index/index',
+    meta: { title: '首页', type: 'home' },
+  },
+  {
+    path: '/pages/settings/settings',
+    name: 'pages/settings/settings',
+    meta: { title: '设置', type: 'page' },
+  },
 ]
 
 const MOCK_CURRENT_ROUTE: RouterInfoResult = {
@@ -46,13 +62,22 @@ function idOf(payload: Payload): string {
 
 const handlers: Record<ProbeMethod, (payload: Payload) => unknown> = {
   'get-component-tree': () => mockComponentTree(),
-  'get-component-state': payload => mockComponentState(idOf(payload)),
+  'get-component-state': (payload) => mockComponentState(idOf(payload)),
   // 真实探针对深路径逐段解 ref 下钻、支持 remove；mock 数据是平铺顶层键，如实报不支持
   'update-component-state': (payload) => {
-    const p = payload as { id?: string, path?: string[], value?: unknown, remove?: boolean }
+    const p = payload as {
+      id?: string
+      path?: string[]
+      value?: unknown
+      remove?: boolean
+    }
     if (!p?.path || p.path.length !== 1 || p.remove)
       throw new Error(probeNotSupported('mock 平铺数据的嵌套路径/删除'))
-    return mockUpdateComponentState({ id: p.id ?? '', key: p.path[0]!, value: p.value })
+    return mockUpdateComponentState({
+      id: p.id ?? '',
+      key: p.path[0]!,
+      value: p.value,
+    })
   },
   'get-component-render-code': (payload) => {
     // 真实探针返回 GetComponentRenderCodeResult { code? }；未知 id 如实为空
@@ -60,11 +85,15 @@ const handlers: Record<ProbeMethod, (payload: Payload) => unknown> = {
     return code == null ? {} : { code }
   },
   'get-pinia-stores': () => mockPiniaStores(),
-  'get-pinia-state': payload => mockPiniaState(idOf(payload)),
+  'get-pinia-state': (payload) => mockPiniaState(idOf(payload)),
   // mockUpdatePiniaState 对键不存在/getters 抛错，语义对齐真实探针
   'update-pinia-state': (payload) => {
-    const p = payload as { id?: string, key?: string, value?: unknown }
-    return mockUpdatePiniaState({ id: p?.id ?? '', key: p?.key ?? '', value: p?.value })
+    const p = payload as { id?: string; key?: string; value?: unknown }
+    return mockUpdatePiniaState({
+      id: p?.id ?? '',
+      key: p?.key ?? '',
+      value: p?.value,
+    })
   },
   // 真实探针返回 GetNetworkRecordsResult { records }；pull 侧按 res.records 读取
   'get-network-records': () => ({ records: mockNetworkRecords() }),
@@ -82,7 +111,9 @@ const handlers: Record<ProbeMethod, (payload: Payload) => unknown> = {
   'recompute-component-state': () => ({}),
 }
 
-export function createMockBackend(options: MockBackendOptions = {}): ProbeBackend {
+export function createMockBackend(
+  options: MockBackendOptions = {},
+): ProbeBackend {
   const tickInterval = options.networkTickInterval ?? 1000
   let tickTimer: ReturnType<typeof setInterval> | undefined
   let disposed = false
@@ -90,16 +121,14 @@ export function createMockBackend(options: MockBackendOptions = {}): ProbeBacken
 
   /** 心跳推送：包装成 node 侧 sharedState 同款共享态形状，面板侧走同一套校验。 */
   function pushNetworkSnapshot(): void {
-    if (networkListeners.size === 0)
-      return
+    if (networkListeners.size === 0) return
     const records = mockTickNetworkRecords()
     const snapshot = {
       records,
       latestId: records.reduce((max, r) => Math.max(max, r.id), 0),
       updatedAt: Date.now(),
     }
-    for (const cb of [...networkListeners])
-      cb(snapshot)
+    for (const cb of [...networkListeners]) cb(snapshot)
   }
 
   return {
@@ -113,12 +142,14 @@ export function createMockBackend(options: MockBackendOptions = {}): ProbeBacken
 
     async call(method, ...args) {
       const handler = handlers[method]
-      if (!handler)
-        throw new Error(`mock 后端暂不支持 ${method}`)
+      if (!handler) throw new Error(`mock 后端暂不支持 ${method}`)
       return await handler(args[0] as Payload)
     },
 
-    subscribe(key: ProbePushKey, cb: (snapshot: unknown) => void): ProbeSubscription {
+    subscribe(
+      key: ProbePushKey,
+      cb: (snapshot: unknown) => void,
+    ): ProbeSubscription {
       if (key === 'component-tree') {
         // 静态树：连接即推一次（对齐真实 sharedState 首推语义）
         cb(mockComponentTree())

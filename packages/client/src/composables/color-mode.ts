@@ -13,7 +13,10 @@ export function useDevtoolsColorMode() {
   let colorSchemeMedia: MediaQueryList | undefined
   let hostThemeObserver: MutationObserver | undefined
 
-  function applyColorScheme(scheme: ColorScheme, options: { persist?: boolean } = {}) {
+  function applyColorScheme(
+    scheme: ColorScheme,
+    options: { persist?: boolean } = {},
+  ) {
     dark.value = scheme === 'dark'
     document.documentElement.classList.toggle('dark', dark.value)
     document.documentElement.classList.toggle('light', !dark.value)
@@ -63,7 +66,11 @@ export function useDevtoolsColorMode() {
 }
 
 function resolveColorScheme(): ColorScheme {
-  return readStoredColorScheme() ?? resolveHostColorScheme() ?? resolveSystemColorScheme()
+  return (
+    readStoredColorScheme() ??
+    resolveHostColorScheme() ??
+    resolveSystemColorScheme()
+  )
 }
 
 function readStoredColorScheme(): ColorScheme | undefined {
@@ -100,7 +107,9 @@ function resolveHostColorScheme(): ColorScheme | undefined {
 }
 
 function resolveSystemColorScheme(): ColorScheme {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light'
 }
 
 function observeHostTheme(onChange: () => void): MutationObserver | undefined {

@@ -33,7 +33,9 @@ describe('getProjectRoot & isInsideProjectRoot', () => {
 
   it('isInsideProjectRoot 允许项目根内文件', () => {
     const root = '/my/project'
-    expect(isInsideProjectRoot('/my/project/src/components/A.vue', root)).toBe(true)
+    expect(isInsideProjectRoot('/my/project/src/components/A.vue', root)).toBe(
+      true,
+    )
     expect(isInsideProjectRoot('/my/project/package.json', root)).toBe(true)
   })
 
@@ -41,6 +43,8 @@ describe('getProjectRoot & isInsideProjectRoot', () => {
     const root = '/my/project'
     expect(isInsideProjectRoot('/etc/passwd', root)).toBe(false)
     expect(isInsideProjectRoot('/my/other-project/file.vue', root)).toBe(false)
-    expect(isInsideProjectRoot(resolve(root, '../../etc/passwd'), root)).toBe(false)
+    expect(isInsideProjectRoot(resolve(root, '../../etc/passwd'), root)).toBe(
+      false,
+    )
   })
 })

@@ -42,7 +42,10 @@ watch(
     if (typeof window === 'undefined') return
 
     try {
-      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+      window.localStorage.setItem(
+        SETTINGS_STORAGE_KEY,
+        JSON.stringify(settings),
+      )
     } catch {}
   },
   { deep: true },
@@ -65,7 +68,8 @@ function applySettings(next: DevtoolsClientSettings) {
   settings.scrollableSidebar = next.scrollableSidebar
   settings.reduceMotion = next.reduceMotion
   settings.highlightUpdates = next.highlightUpdates
-  settings.tabSettings.hiddenTabCategories = next.tabSettings.hiddenTabCategories
+  settings.tabSettings.hiddenTabCategories =
+    next.tabSettings.hiddenTabCategories
   settings.tabSettings.hiddenTabs = next.tabSettings.hiddenTabs
   settings.tabSettings.pinnedTabs = next.tabSettings.pinnedTabs
 }
@@ -97,9 +101,15 @@ function normalizeSettings(value: unknown): DevtoolsClientSettings {
     },
     scale: toNumber(value.scale, defaults.scale),
     expandSidebar: toBoolean(value.expandSidebar, defaults.expandSidebar),
-    scrollableSidebar: toBoolean(value.scrollableSidebar, defaults.scrollableSidebar),
+    scrollableSidebar: toBoolean(
+      value.scrollableSidebar,
+      defaults.scrollableSidebar,
+    ),
     reduceMotion: toBoolean(value.reduceMotion, defaults.reduceMotion),
-    highlightUpdates: toBoolean(value.highlightUpdates, defaults.highlightUpdates),
+    highlightUpdates: toBoolean(
+      value.highlightUpdates,
+      defaults.highlightUpdates,
+    ),
   }
 }
 

@@ -15,11 +15,14 @@ export const BASE = '/__uni-devtools/'
  */
 export function resolveAdvertisedHost(): string {
   const fromEnv = process.env.UNI_DEVTOOLS_HOST
-  if (fromEnv)
-    return fromEnv
+  if (fromEnv) return fromEnv
   for (const infos of Object.values(os.networkInterfaces())) {
     for (const info of infos ?? []) {
-      if (info.family === 'IPv4' && !info.internal && /^(?:192\.168|10\.|172\.(?:1[6-9]|2\d|3[01]))\./.test(info.address))
+      if (
+        info.family === 'IPv4' &&
+        !info.internal &&
+        /^(?:192\.168|10\.|172\.(?:1[6-9]|2\d|3[01]))\./.test(info.address)
+      )
         return info.address
     }
   }
@@ -30,12 +33,17 @@ export interface UniDevtoolsServerOptions {
   host?: string
   port?: number
   clientAssets?: string
-  onStarted?: (info: { port: number, panelUrl: string, wsUrl: string, devToken: string }) => void | Promise<void>
+  onStarted?: (info: {
+    port: number
+    panelUrl: string
+    wsUrl: string
+    devToken: string
+  }) => void | Promise<void>
 }
 
 export interface UniDevtoolsServerInstance {
   devToken: string
-  ready: Promise<{ panelUrl: string, wsUrl: string } | null>
+  ready: Promise<{ panelUrl: string; wsUrl: string } | null>
   close?: () => Promise<void>
 }
 
@@ -44,7 +52,9 @@ export interface UniDevtoolsServerInstance {
  * server，configureServer 不会执行），因此 devframe 采用 sidecar 模式自建
  * HTTP+WS 端口，与旧插件在 configResolved 自建 Polka 服务器的做法同构。
  */
-export function startUniDevtoolsServer(options: UniDevtoolsServerOptions = {}): UniDevtoolsServerInstance {
+export function startUniDevtoolsServer(
+  options: UniDevtoolsServerOptions = {},
+): UniDevtoolsServerInstance {
   const devToken = randomToken()
   const registry = new AgentRegistry()
   const panelDir = resolveClientAssets(options.clientAssets)
@@ -59,7 +69,11 @@ export function startUniDevtoolsServer(options: UniDevtoolsServerOptions = {}): 
   //   `ws://localhost` 指向设备自身。devframe 会把 0.0.0.0 规范成 localhost，
   //   所以这里的 URL 自己拼，不取 started.origin。
   const advertisedHost = options.host ?? resolveAdvertisedHost()
-  const port = options.port ?? (process.env.UNI_DEVTOOLS_PORT ? Number(process.env.UNI_DEVTOOLS_PORT) : undefined)
+  const port =
+    options.port ??
+    (process.env.UNI_DEVTOOLS_PORT
+      ? Number(process.env.UNI_DEVTOOLS_PORT)
+      : undefined)
 
   // Vite Inspect 静态托管：把 vite-plugin-inspect 的 build 产物目录（自包含
   // client UI + reports）挂到 sidecar 的 inspect 路径下供面板 iframe（官方
@@ -85,44 +99,46 @@ export function startUniDevtoolsServer(options: UniDevtoolsServerOptions = {}): 
     // 小程序 connectSocket 不发 Origin 头，默认 loopback-only 检查会拒绝升级；
     // token 鉴权仍守门
     allowedOrigins: false,
-    auth: ((ctx: any) => createInteractiveAuth(ctx, {
-      clientAuthTokens: [devToken],
-      banner: () => {},
-    })) as any,
+    auth: ((ctx: any) =>
+      createInteractiveAuth(ctx, {
+        clientAuthTokens: [devToken],
+        banner: () => {},
+      })) as any,
     onPeerConnect: registry.connect,
     onPeerDisconnect: registry.disconnect,
-  }).then(async (started) => {
-    serverHandle = started
-    registry.bind(started.rpcGroup as any)
-    const advertisedOrigin = `http://${advertisedHost}:${started.port}`
-    const wsUrl = `${advertisedOrigin.replace(/^http/, 'ws')}${BASE}__ws`
-    const panelUrl = `${advertisedOrigin}${BASE}?devframe_auth_token=${devToken}`
-    console.log(`\n  Uni DevTools 面板 (带鉴权 token，浏览器打开):`)
-    console.log(`  ${panelUrl}`)
-    console.log(`  探针 WebSocket:            ${wsUrl}\n`)
-
-    if (options.onStarted) {
-      await options.onStarted({
-        port: started.port,
-        panelUrl,
-        wsUrl,
-        devToken,
-      })
-    }
-
-    return { panelUrl, wsUrl }
-  }).catch((err) => {
-    console.error('[uni-devtools] devframe init failed:', err)
-    return null
   })
+    .then(async (started) => {
+      serverHandle = started
+      registry.bind(started.rpcGroup as any)
+      const advertisedOrigin = `http://${advertisedHost}:${started.port}`
+      const wsUrl = `${advertisedOrigin.replace(/^http/, 'ws')}${BASE}__ws`
+      const panelUrl = `${advertisedOrigin}${BASE}?devframe_auth_token=${devToken}`
+      console.log(`\n  Uni DevTools 面板 (带鉴权 token，浏览器打开):`)
+      console.log(`  ${panelUrl}`)
+      console.log(`  探针 WebSocket:            ${wsUrl}\n`)
+
+      if (options.onStarted) {
+        await options.onStarted({
+          port: started.port,
+          panelUrl,
+          wsUrl,
+          devToken,
+        })
+      }
+
+      return { panelUrl, wsUrl }
+    })
+    .catch((err) => {
+      console.error('[uni-devtools] devframe init failed:', err)
+      return null
+    })
   /* eslint-enable no-console */
 
   return {
     devToken,
     ready,
     close: async () => {
-      if (serverHandle?.close)
-        await serverHandle.close()
+      if (serverHandle?.close) await serverHandle.close()
     },
   }
 }

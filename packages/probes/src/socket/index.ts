@@ -27,14 +27,12 @@ function wireReplacer(_key: string, value: unknown): unknown {
  * 出站保持纯 JSON —— 服务端 deserialize 两种都接受。
  */
 function decodeWireFrame(raw: unknown): any {
-  if (typeof raw !== 'string')
-    return raw
+  if (typeof raw !== 'string') return raw
   if (raw.startsWith(STRUCTURED_CLONE_PREFIX))
     return structuredCloneParse(raw.slice(STRUCTURED_CLONE_PREFIX.length))
   try {
     return JSON.parse(raw)
-  }
-  catch {
+  } catch {
     return undefined
   }
 }
@@ -69,26 +67,46 @@ declare const tt: any
 declare const swan: any
 
 function resolveUni(): any {
-  if (typeof uni !== 'undefined' && uni && typeof uni.connectSocket === 'function') {
+  if (
+    typeof uni !== 'undefined' &&
+    uni &&
+    typeof uni.connectSocket === 'function'
+  ) {
     return uni
   }
   const g = typeof globalThis !== 'undefined' ? (globalThis as any) : {}
   if (g.uni && typeof g.uni.connectSocket === 'function') {
     return g.uni
   }
-  if (typeof wx !== 'undefined' && wx && typeof wx.connectSocket === 'function') {
+  if (
+    typeof wx !== 'undefined' &&
+    wx &&
+    typeof wx.connectSocket === 'function'
+  ) {
     return wx
   }
   if (g.wx && typeof g.wx.connectSocket === 'function') {
     return g.wx
   }
-  if (typeof my !== 'undefined' && my && typeof my.connectSocket === 'function') {
+  if (
+    typeof my !== 'undefined' &&
+    my &&
+    typeof my.connectSocket === 'function'
+  ) {
     return my
   }
-  if (typeof tt !== 'undefined' && tt && typeof tt.connectSocket === 'function') {
+  if (
+    typeof tt !== 'undefined' &&
+    tt &&
+    typeof tt.connectSocket === 'function'
+  ) {
     return tt
   }
-  if (typeof swan !== 'undefined' && swan && typeof swan.connectSocket === 'function') {
+  if (
+    typeof swan !== 'undefined' &&
+    swan &&
+    typeof swan.connectSocket === 'function'
+  ) {
     return swan
   }
   return undefined
@@ -97,9 +115,8 @@ function resolveUni(): any {
 export function createUniSocketChannel(
   optionsOrUrl: string | UniSocketChannelOptions,
 ): UniSocketChannelHandle {
-  const options: UniSocketChannelOptions = typeof optionsOrUrl === 'string'
-    ? { wsUrl: optionsOrUrl }
-    : optionsOrUrl
+  const options: UniSocketChannelOptions =
+    typeof optionsOrUrl === 'string' ? { wsUrl: optionsOrUrl } : optionsOrUrl
 
   const {
     wsUrl,
@@ -121,12 +138,13 @@ export function createUniSocketChannel(
   const sendQueue: any[] = []
 
   function connect() {
-    if (isDisposed)
-      return
+    if (isDisposed) return
 
     const uniObj = resolveUni()
     if (!uniObj || typeof uniObj.connectSocket !== 'function') {
-      console.warn('[uni-devtools-agent] No mini-program socket provider found (neither uni nor wx/my/tt)')
+      console.warn(
+        '[uni-devtools-agent] No mini-program socket provider found (neither uni nor wx/my/tt)',
+      )
       return
     }
 
@@ -140,8 +158,7 @@ export function createUniSocketChannel(
           handleDisconnect(err)
         },
       })
-    }
-    catch (err) {
+    } catch (err) {
       console.error('[uni-devtools-agent] connectSocket throw:', err)
       handleDisconnect(err)
       return
@@ -161,17 +178,14 @@ export function createUniSocketChannel(
       })
       socketTask.onError((err: any) => {
         console.error('[uni-devtools-agent] WebSocket error:', err)
-        if (onError)
-          onError(err)
+        if (onError) onError(err)
         handleDisconnect(err)
       })
       socketTask.onClose((res: any) => {
-        if (onClose)
-          onClose(res)
+        if (onClose) onClose(res)
         handleDisconnect(res)
       })
-    }
-    else if (uniObj.onSocketOpen) {
+    } else if (uniObj.onSocketOpen) {
       uniObj.onSocketOpen(() => {
         handleOpen()
       })
@@ -184,13 +198,11 @@ export function createUniSocketChannel(
         }
       })
       uniObj.onSocketError((err: any) => {
-        if (onError)
-          onError(err)
+        if (onError) onError(err)
         handleDisconnect(err)
       })
       uniObj.onSocketClose((res: any) => {
-        if (onClose)
-          onClose(res)
+        if (onClose) onClose(res)
         handleDisconnect(res)
       })
     }
@@ -217,7 +229,8 @@ export function createUniSocketChannel(
   }
 
   function doSend(data: any) {
-    const rawData = typeof data === 'string' ? data : JSON.stringify(data, wireReplacer)
+    const rawData =
+      typeof data === 'string' ? data : JSON.stringify(data, wireReplacer)
     if (socketTask && typeof socketTask.send === 'function') {
       socketTask.send({
         data: rawData,
@@ -226,8 +239,7 @@ export function createUniSocketChannel(
           handleDisconnect(err)
         },
       })
-    }
-    else {
+    } else {
       const uniObj = resolveUni()
       if (uniObj?.sendSocketMessage) {
         uniObj.sendSocketMessage({
@@ -243,15 +255,17 @@ export function createUniSocketChannel(
 
   function handleDisconnect(_reason?: any) {
     isOpen = false
-    if (isDisposed)
-      return
+    if (isDisposed) return
 
     if (!reconnectTimer) {
       reconnectAttempt++
       if (onReconnect) {
         onReconnect(reconnectAttempt)
       }
-      const backoff = Math.min(initialBackoffMs * 1.5 ** (reconnectAttempt - 1), maxBackoffMs)
+      const backoff = Math.min(
+        initialBackoffMs * 1.5 ** (reconnectAttempt - 1),
+        maxBackoffMs,
+      )
       reconnectTimer = setTimeout(() => {
         reconnectTimer = null
         connect()
@@ -264,12 +278,10 @@ export function createUniSocketChannel(
 
   const channel: BirpcChannel = {
     post: (data: any) => {
-      if (isDisposed)
-        return
+      if (isDisposed) return
       if (isOpen) {
         doSend(data)
-      }
-      else {
+      } else {
         // 未 open 时缓存，避免丢消息
         sendQueue.push(data)
       }
@@ -291,16 +303,13 @@ export function createUniSocketChannel(
     if (socketTask && typeof socketTask.close === 'function') {
       try {
         socketTask.close({})
-      }
-      catch {}
-    }
-    else {
+      } catch {}
+    } else {
       const uniObj = resolveUni()
       if (uniObj?.closeSocket) {
         try {
           uniObj.closeSocket({})
-        }
-        catch {}
+        } catch {}
       }
     }
   }

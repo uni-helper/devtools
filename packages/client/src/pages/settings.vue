@@ -13,8 +13,11 @@ const { categorizedTabs: categories } = useDevtoolsTabCatalog()
 const { dark, setDarkMode } = useDevtoolsColorMode()
 const { settings, resetDevtoolsSettings } = useDevtoolsSettings()
 
-const { scale, expandSidebar, scrollableSidebar, highlightUpdates } = toRefs(settings)
-const { hiddenTabCategories, hiddenTabs, pinnedTabs } = toRefs(settings.tabSettings)
+const { scale, expandSidebar, scrollableSidebar, highlightUpdates } =
+  toRefs(settings)
+const { hiddenTabCategories, hiddenTabs, pinnedTabs } = toRefs(
+  settings.tabSettings,
+)
 
 const scaleOptions = [
   ['Tiny', 12 / 15],
@@ -67,7 +70,8 @@ function setListValue(list: Ref<string[]>, name: string, enabled: boolean) {
     return
   }
 
-  if (!enabled && exists) list.value = list.value.filter((item) => item !== name)
+  if (!enabled && exists)
+    list.value = list.value.filter((item) => item !== name)
 }
 </script>
 
@@ -95,9 +99,13 @@ function setListValue(list: Ref<string[]>, name: string, enabled: boolean) {
                 :model-value="!hiddenTabCategories.includes(name)"
                 class="flex-row-reverse py-1 pl-2 pr-1 hover:bg-active"
                 :aria-label="`Toggle ${name} tabs`"
-                @update:model-value="(value: boolean) => toggleTabCategory(name, value)"
+                @update:model-value="
+                  (value: boolean) => toggleTabCategory(name, value)
+                "
               >
-                <span class="flex flex-auto items-center justify-start gap-2 capitalize op75">
+                <span
+                  class="flex flex-auto items-center justify-start gap-2 capitalize op75"
+                >
                   {{ name }}
                 </span>
               </Switch>
@@ -110,7 +118,9 @@ function setListValue(list: Ref<string[]>, name: string, enabled: boolean) {
                   class="flex-row-reverse py-1 pl-2 pr-1 hover:bg-active"
                   :class="tab.hidden ? 'op35' : ''"
                   :aria-label="`Toggle ${tab.title}`"
-                  @update:model-value="(value: boolean) => toggleTab(tab.id, value)"
+                  @update:model-value="
+                    (value: boolean) => toggleTab(tab.id, value)
+                  "
                 >
                   <span
                     class="min-w-0 flex flex-auto items-center justify-start gap-2 pr-4 text-sm"
@@ -136,7 +146,9 @@ function setListValue(list: Ref<string[]>, name: string, enabled: boolean) {
                         class="settings-icon-button"
                         type="button"
                         aria-label="Move pinned tab down"
-                        :disabled="pinnedTabs.indexOf(tab.id) === pinnedTabs.length - 1"
+                        :disabled="
+                          pinnedTabs.indexOf(tab.id) === pinnedTabs.length - 1
+                        "
                         title="Move down"
                         @click.stop.prevent="pinMove(tab.id, 1)"
                       >
@@ -145,11 +157,17 @@ function setListValue(list: Ref<string[]>, name: string, enabled: boolean) {
                     </template>
 
                     <button
-                      v-tooltip.bottom="pinnedTabs.includes(tab.id) ? 'Unpin tab' : 'Pin tab'"
+                      v-tooltip.bottom="
+                        pinnedTabs.includes(tab.id) ? 'Unpin tab' : 'Pin tab'
+                      "
                       class="settings-icon-button"
                       type="button"
-                      :aria-label="pinnedTabs.includes(tab.id) ? 'Unpin tab' : 'Pin tab'"
-                      :title="pinnedTabs.includes(tab.id) ? 'Unpin tab' : 'Pin tab'"
+                      :aria-label="
+                        pinnedTabs.includes(tab.id) ? 'Unpin tab' : 'Pin tab'
+                      "
+                      :title="
+                        pinnedTabs.includes(tab.id) ? 'Unpin tab' : 'Pin tab'
+                      "
                       @click.stop.prevent="togglePinTab(tab.id)"
                     >
                       <div
@@ -192,7 +210,11 @@ function setListValue(list: Ref<string[]>, name: string, enabled: boolean) {
                 class="settings-select"
                 :aria-label="`UI Scale: ${scale}`"
               >
-                <option v-for="[label, value] of scaleOptions" :key="label" :value="value">
+                <option
+                  v-for="[label, value] of scaleOptions"
+                  :key="label"
+                  :value="value"
+                >
                   {{ label }}
                 </option>
               </select>

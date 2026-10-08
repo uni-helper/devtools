@@ -32,7 +32,9 @@ watch(
   async (open) => {
     if (open) {
       returnFocus =
-        document.activeElement instanceof HTMLElement ? document.activeElement : undefined
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : undefined
       await nextTick()
       if (!dialog.value?.open) dialog.value?.showModal()
       await nextTick()
@@ -84,14 +86,25 @@ function onDialogClick(event: MouseEvent) {
     @close="onClose"
   >
     <div class="h-full flex flex-col">
-      <h2 :id="titleId" class="m-0 border-b border-base px-4 py-3 text-base font-650">
+      <h2
+        :id="titleId"
+        class="m-0 border-b border-base px-4 py-3 text-base font-650"
+      >
         {{ title }}
       </h2>
-      <div :id="descriptionId" class="flex flex-auto items-center px-4 py-3 color-muted">
+      <div
+        :id="descriptionId"
+        class="flex flex-auto items-center px-4 py-3 color-muted"
+      >
         {{ description }}
       </div>
       <div class="flex justify-end gap-2 border-t border-base px-4 py-3">
-        <button ref="cancelButton" class="settings-button" type="button" @click="close">
+        <button
+          ref="cancelButton"
+          class="settings-button"
+          type="button"
+          @click="close"
+        >
           {{ cancelLabel }}
         </button>
         <button

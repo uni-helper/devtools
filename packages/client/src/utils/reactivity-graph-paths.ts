@@ -1,4 +1,7 @@
-import type { ReactivityGraphNode, ReactivityRelationship } from '@vue/devtools-kit'
+import type {
+  ReactivityGraphNode,
+  ReactivityRelationship,
+} from '@vue/devtools-kit'
 
 export interface RelationshipPathResult {
   nodeIds: Set<string>
@@ -16,7 +19,9 @@ export function emptyRelationshipPath(): RelationshipPathResult {
   }
 }
 
-export function indexGraphRelationships(relationships: ReactivityRelationship[]) {
+export function indexGraphRelationships(
+  relationships: ReactivityRelationship[],
+) {
   const bySource = new Map<string, ReactivityRelationship[]>()
   for (const relationship of relationships) {
     const edges = bySource.get(relationship.from) ?? []
@@ -30,8 +35,12 @@ export function getRootPathNodeIds(
   nodes: ReactivityGraphNode[],
   relationships: ReactivityRelationship[],
 ) {
-  const subscribed = new Set(relationships.map((relationship) => relationship.to))
-  return new Set(nodes.filter((node) => !subscribed.has(node.id)).map((node) => node.id))
+  const subscribed = new Set(
+    relationships.map((relationship) => relationship.to),
+  )
+  return new Set(
+    nodes.filter((node) => !subscribed.has(node.id)).map((node) => node.id),
+  )
 }
 
 export function getReachablePathNodeIds(

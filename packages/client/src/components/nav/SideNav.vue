@@ -29,14 +29,22 @@ const sidebarScrollable = computed(() => settings.scrollableSidebar)
         :triggers="['click']"
       >
         <button
-          v-tooltip.right="{ content: 'DevTools menu', disabled: sidebarExpanded }"
+          v-tooltip.right="{
+            content: 'DevTools menu',
+            disabled: sidebarExpanded,
+          }"
           class="relative h-10 w-full box-border select-none flex items-center justify-center gap-2 border-0 bg-transparent p-2 color-muted hover:bg-active hover:color-base"
           :class="sidebarExpanded ? 'rounded pl-2.5' : 'rounded-xl'"
           type="button"
           aria-label="DevTools menu"
         >
           <span class="i-logos-vue h-6 w-6 shrink-0" aria-hidden="true" />
-          <span v-if="sidebarExpanded" class="min-w-0 truncate text-lg font-650"> DevTools </span>
+          <span
+            v-if="sidebarExpanded"
+            class="min-w-0 truncate text-lg font-650"
+          >
+            DevTools
+          </span>
           <span v-if="sidebarExpanded" class="flex-auto" />
           <span
             v-if="sidebarExpanded"

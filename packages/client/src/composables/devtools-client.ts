@@ -32,7 +32,8 @@ export type {
   ComponentTreeNodeSnapshot as ComponentSnapshot,
 } from '@vue/devtools-kit'
 
-export type CustomInspectorSnapshot = InspectorsSnapshotResult['inspectors'][number]
+export type CustomInspectorSnapshot =
+  InspectorsSnapshotResult['inspectors'][number]
 
 const emptyRouterSnapshot: RouterSnapshotMessage = { routes: [] }
 
@@ -49,10 +50,13 @@ let refreshVersion = 0
 const lastUpdatedAt = ref<number>()
 const capabilities = ref<DevtoolsCapabilitiesMessage>({ openInEditor: false })
 const selectedApp = computed(
-  () => apps.value.find((app) => app.id === selectedAppId.value) ?? apps.value[0],
+  () =>
+    apps.value.find((app) => app.id === selectedAppId.value) ?? apps.value[0],
 )
 const selectedComponent = computed(() =>
-  components.value.find((component) => component.id === selectedComponentId.value),
+  components.value.find(
+    (component) => component.id === selectedComponentId.value,
+  ),
 )
 const pageCount = computed(() => {
   if (!apps.value.length) return 0
@@ -61,7 +65,9 @@ const pageCount = computed(() => {
 const reactivityGraphEnabled = computed(() =>
   supportsReactivityGraphVueVersion(selectedApp.value?.version),
 )
-const totalComponents = computed(() => apps.value.reduce((sum, app) => sum + app.componentCount, 0))
+const totalComponents = computed(() =>
+  apps.value.reduce((sum, app) => sum + app.componentCount, 0),
+)
 const openInEditorAvailable = computed(() => capabilities.value.openInEditor)
 const inspectEnabled = computed(() => capabilities.value.inspect === true)
 
@@ -110,13 +116,19 @@ const componentInspecting = ref(false)
 const componentTreeLoader = createComponentTreeLoader({
   getClient: getRpcClient,
   getAppId: () => selectedAppId.value,
-  getParentId: (id) => components.value.find((node) => node.id === id)?.parentId,
+  getParentId: (id) =>
+    components.value.find((node) => node.id === id)?.parentId,
   apply: applyComponentTreePatches,
   onError: (err) => {
-    error.value = formatCommandError(err, 'Unable to expand component tree node')
+    error.value = formatCommandError(
+      err,
+      'Unable to expand component tree node',
+    )
   },
 })
-watch([selectedAppId, runtimeVersion], () => componentTreeLoader.cancel(), { flush: 'sync' })
+watch([selectedAppId, runtimeVersion], () => componentTreeLoader.cancel(), {
+  flush: 'sync',
+})
 const {
   componentState,
   componentStateLoading,
@@ -163,15 +175,18 @@ watch(components, (nodes) => {
 })
 
 const { settings } = useDevtoolsSettings()
-watch([connected, () => settings.highlightUpdates], ([isConnected, highlightUpdates]) => {
-  if (!isConnected) return
-  void getRpcClient()
-    ?.command({
-      type: 'components:setHighlightUpdates',
-      payload: { enabled: highlightUpdates },
-    })
-    .catch(() => {})
-})
+watch(
+  [connected, () => settings.highlightUpdates],
+  ([isConnected, highlightUpdates]) => {
+    if (!isConnected) return
+    void getRpcClient()
+      ?.command({
+        type: 'components:setHighlightUpdates',
+        payload: { enabled: highlightUpdates },
+      })
+      .catch(() => {})
+  },
+)
 
 export function useDevtoolsClient() {
   return {
@@ -271,7 +286,8 @@ async function refreshData() {
   componentTreeLoader.cancel()
   const version = ++refreshVersion
   const requestedAppId = selectedAppId.value
-  const isCurrent = () => version === refreshVersion && requestedAppId === selectedAppId.value
+  const isCurrent = () =>
+    version === refreshVersion && requestedAppId === selectedAppId.value
   const client = getRpcClient()
   if (!client) {
     connected.value = false
@@ -291,18 +307,21 @@ async function refreshData() {
   try {
     const [appSnapshot, nextCapabilities, pluginSnapshot] = await Promise.all([
       client.query({ type: 'apps:snapshot' }),
-      client.query({ type: 'devtools:capabilities' }).catch(() => ({ openInEditor: false })),
+      client
+        .query({ type: 'devtools:capabilities' })
+        .catch(() => ({ openInEditor: false })),
       client.query({ type: 'plugins:snapshot' }),
     ])
     if (!isCurrent()) return
     const appId = appSnapshot.apps.some((app) => app.id === requestedAppId)
       ? requestedAppId
       : appSnapshot.apps[0]?.id
-    const [componentSnapshot, nextRouter, inspectorSnapshot] = await Promise.all([
-      client.query({ type: 'components:treeSnapshot', appId }),
-      fetchRouterSnapshot(client, appId),
-      fetchInspectorsSnapshot(client, appId),
-    ])
+    const [componentSnapshot, nextRouter, inspectorSnapshot] =
+      await Promise.all([
+        client.query({ type: 'components:treeSnapshot', appId }),
+        fetchRouterSnapshot(client, appId),
+        fetchInspectorsSnapshot(client, appId),
+      ])
     if (!isCurrent()) return
 
     // Commit one consistent snapshot; no awaited work may publish an older selection.
@@ -320,7 +339,8 @@ async function refreshData() {
     void syncTimelineSettings(client)
     clearConnectionRetryTimer()
     scheduleConnectionHealthCheck()
-    if (selectedComponentId.value) void fetchComponentState(selectedComponentId.value)
+    if (selectedComponentId.value)
+      void fetchComponentState(selectedComponentId.value)
   } catch (err) {
     if (!isCurrent()) return
     error.value = err instanceof Error ? err.message : String(err)
@@ -345,7 +365,9 @@ async function fetchRouterSnapshot(
   }
 }
 
-async function getMatchedRoutes(path: string): Promise<RouterRouteRecordSnapshot[]> {
+async function getMatchedRoutes(
+  path: string,
+): Promise<RouterRouteRecordSnapshot[]> {
   const client = getRpcClient()
   if (!client) return []
 
@@ -381,7 +403,8 @@ async function navigateRoute(path: string) {
   if (!client) return
   const appId = selectedAppId.value
   const version = refreshVersion
-  const isCurrent = () => version === refreshVersion && appId === selectedAppId.value
+  const isCurrent = () =>
+    version === refreshVersion && appId === selectedAppId.value
   const result = await client.command({
     type: 'router:navigate',
     appId,
@@ -444,7 +467,8 @@ function attachRuntimeEvents(client: DevtoolsRpcClient) {
       touchInspectorInvalidation(event.inspectorId, 'tree')
       // Vue Router invalidates its inspector tree after page-side navigation.
       // Pages consumes a separate snapshot and must refresh it as well.
-      if (event.inspectorId.startsWith('router-inspector:')) void refreshRouterSnapshot(client)
+      if (event.inspectorId.startsWith('router-inspector:'))
+        void refreshRouterSnapshot(client)
     }
 
     if (event.type === 'inspectors:stateInvalidated' && event.inspectorId) {
@@ -490,7 +514,11 @@ async function fetchInspectorTree(
   return snapshot.rootNodes ?? []
 }
 
-async function updatePluginSetting(pluginId: string, key: string, value: unknown) {
+async function updatePluginSetting(
+  pluginId: string,
+  key: string,
+  value: unknown,
+) {
   const client = getRpcClient()
   if (!client) return
 
@@ -528,7 +556,11 @@ async function callInspectorAction(inspectorId: string, actionIndex: number) {
   assertCommandSucceeded(result, 'Unable to run inspector action')
 }
 
-async function callInspectorNodeAction(inspectorId: string, nodeId: string, actionIndex: number) {
+async function callInspectorNodeAction(
+  inspectorId: string,
+  nodeId: string,
+  actionIndex: number,
+) {
   const client = getRpcClient()
   if (!client || !nodeId) return
 
@@ -544,7 +576,9 @@ async function callInspectorNodeAction(inspectorId: string, nodeId: string, acti
   assertCommandSucceeded(result, 'Unable to run inspector node action')
 }
 
-async function inspectComponentInPage(): Promise<ComponentInspectionResult | undefined> {
+async function inspectComponentInPage(): Promise<
+  ComponentInspectionResult | undefined
+> {
   const client = getRpcClient()
   if (!client) return
 
@@ -669,10 +703,15 @@ async function cancelComponentInspection() {
 
 /** uni-devtools：Vite RPC 已摘除（见 devtools-connection.ts），仅类型收窄保留调用形状。 */
 function callViteRpc(rpc: unknown, name: string, ...args: unknown[]) {
-  return ((rpc as { call: (name: string, ...args: unknown[]) => Promise<unknown> }).call)(name, ...args)
+  return (
+    rpc as { call: (name: string, ...args: unknown[]) => Promise<unknown> }
+  ).call(name, ...args)
 }
 
-function assertCommandSucceeded(result: { status: 0 | 1; error?: unknown }, fallback: string) {
+function assertCommandSucceeded(
+  result: { status: 0 | 1; error?: unknown },
+  fallback: string,
+) {
   if (result.status === 1) return
   const message = formatCommandError(result.error, fallback)
   error.value = message
@@ -706,7 +745,8 @@ function selectApp(appId: string) {
 }
 
 async function expandComponentTreeNode(componentId: string) {
-  if (capabilities.value.pagedComponentTree) return componentTreeLoader.expand(componentId)
+  if (capabilities.value.pagedComponentTree)
+    return componentTreeLoader.expand(componentId)
   const client = getRpcClient()
   if (!client || !selectedAppId.value) return
   const result = await client.command({

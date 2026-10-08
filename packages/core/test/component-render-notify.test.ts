@@ -46,7 +46,11 @@ async function setupDevframe() {
     connected: true,
     callAgent: vi.fn(async (method: string, args: any) => {
       if (method === AGENT_RPC.getComponentState)
-        return { id: args?.id, name: 'CounterCard', setup: { count: { value: 1 } } }
+        return {
+          id: args?.id,
+          name: 'CounterCard',
+          setup: { count: { value: 1 } },
+        }
       return {}
     }),
   }
@@ -55,7 +59,8 @@ async function setupDevframe() {
   const def = createUniDevtoolsDevframe(registry as any)
   await def.setup!({ rpc: {}, scope: () => scope } as any)
 
-  const invoke = (name: string, payload: unknown) => functions.get(name)!.setup().handler(payload)
+  const invoke = (name: string, payload: unknown) =>
+    functions.get(name)!.setup().handler(payload)
   const rendered = () => sharedStates.get('rendered-components').value()
 
   return { registry, invoke, rendered }
@@ -65,16 +70,23 @@ describe('组件重渲染上报', () => {
   it('把重渲染的组件 id 原样写入 sharedState', async () => {
     const ctx = await setupDevframe()
 
-    await ctx.invoke('notify-component-rendered', { ids: ['pages/index/index#4', 'pages/index/index#9'] })
+    await ctx.invoke('notify-component-rendered', {
+      ids: ['pages/index/index#4', 'pages/index/index#9'],
+    })
 
-    expect(ctx.rendered().ids).toEqual(['pages/index/index#4', 'pages/index/index#9'])
+    expect(ctx.rendered().ids).toEqual([
+      'pages/index/index#4',
+      'pages/index/index#9',
+    ])
   })
 
   it('面板在看哪个组件不影响上报（node 不持有选中态）', async () => {
     const ctx = await setupDevframe()
     await ctx.invoke('get-component-state', { id: 'pages/index/index#4' })
 
-    await ctx.invoke('notify-component-rendered', { ids: ['pages/index/index#9'] })
+    await ctx.invoke('notify-component-rendered', {
+      ids: ['pages/index/index#9'],
+    })
 
     expect(ctx.rendered().ids).toEqual(['pages/index/index#9'])
   })
@@ -82,9 +94,13 @@ describe('组件重渲染上报', () => {
   it('同一批 id 重复上报也推进 seq（订阅方据此识别为新事件）', async () => {
     const ctx = await setupDevframe()
 
-    await ctx.invoke('notify-component-rendered', { ids: ['pages/index/index#4'] })
+    await ctx.invoke('notify-component-rendered', {
+      ids: ['pages/index/index#4'],
+    })
     const first = ctx.rendered().seq
-    await ctx.invoke('notify-component-rendered', { ids: ['pages/index/index#4'] })
+    await ctx.invoke('notify-component-rendered', {
+      ids: ['pages/index/index#4'],
+    })
 
     expect(ctx.rendered().seq).toBeGreaterThan(first)
   })

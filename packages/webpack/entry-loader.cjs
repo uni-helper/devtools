@@ -24,7 +24,11 @@ function shouldInjectAgentEntry(...args) {
     return false
   }
 
-  if (code && (code.includes(INJECT_MARKER) || code.includes('@uni-helper/devtools-probes/vue2'))) {
+  if (
+    code &&
+    (code.includes(INJECT_MARKER) ||
+      code.includes('@uni-helper/devtools-probes/vue2'))
+  ) {
     return false
   }
 

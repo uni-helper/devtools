@@ -1,16 +1,16 @@
 {
   "name": "@uni-helper/devtools",
-  "type": "module",
   "version": "0.0.1",
   "description": "Uni DevTools 门面包：聚合探针 / node 中继 / Vite·Webpack 插件 / MCP / 面板，并自带 CLI",
+  "bin": {
+    "uni-devtools": "./dist/cli.mjs"
+  },
+  "type": "module",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./dist/index.mjs"
     }
-  },
-  "bin": {
-    "uni-devtools": "./dist/cli.mjs"
   },
   "scripts": {
     "build": "pnpm run build:index && pnpm run build:cli",

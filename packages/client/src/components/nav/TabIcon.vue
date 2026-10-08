@@ -7,5 +7,9 @@ defineProps<{
 </script>
 
 <template>
-  <DevtoolsIcon class="tab-icon" :icon="icon" fallback="i-carbon-bring-forward" />
+  <DevtoolsIcon
+    class="tab-icon"
+    :icon="icon"
+    fallback="i-carbon-bring-forward"
+  />
 </template>

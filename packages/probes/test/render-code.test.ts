@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { getComponentRenderCode } from '../src/runtime/render-code.ts'
-import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree.ts'
+import {
+  clearInstanceRegistry,
+  extractComponentNode,
+} from '../src/runtime/tree.ts'
 
 const ORIGINAL_RENDER_PROP = '__uni_devtools_original_render__'
 
@@ -201,10 +204,10 @@ describe('render-code: 探针侧 Render Code 采集器', () => {
     it('多行函数剥除主体行最小公共前导空白', () => {
       const multilineFn = function dummy() {}
       multilineFn.toString = () =>
-        'function render() {\n'
-        + '    const a = 1;\n'
-        + '    const b = 2;\n'
-        + '  }'
+        'function render() {\n' +
+        '    const a = 1;\n' +
+        '    const b = 2;\n' +
+        '  }'
 
       const vm = {
         $: {
@@ -216,20 +219,14 @@ describe('render-code: 探针侧 Render Code 采集器', () => {
 
       const res = getComponentRenderCode('comp-multiline')
       expect(res.code).toBe(
-        'function render() {\n'
-        + '  const a = 1;\n'
-        + '  const b = 2;\n'
-        + '}',
+        'function render() {\n' + '  const a = 1;\n' + '  const b = 2;\n' + '}',
       )
     })
 
     it('主体行无公共缩进时保持原样', () => {
       const noIndentFn = function dummy() {}
       noIndentFn.toString = () =>
-        'function render() {\n'
-        + 'const a = 1;\n'
-        + '  const b = 2;\n'
-        + '}'
+        'function render() {\n' + 'const a = 1;\n' + '  const b = 2;\n' + '}'
 
       const vm = {
         $: {
@@ -241,10 +238,7 @@ describe('render-code: 探针侧 Render Code 采集器', () => {
 
       const res = getComponentRenderCode('comp-no-indent')
       expect(res.code).toBe(
-        'function render() {\n'
-        + 'const a = 1;\n'
-        + '  const b = 2;\n'
-        + '}',
+        'function render() {\n' + 'const a = 1;\n' + '  const b = 2;\n' + '}',
       )
     })
   })

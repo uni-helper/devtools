@@ -54,14 +54,14 @@ export function navigateInMiniProgram(
     if (Array.isArray(raw)) {
       pages = raw
     }
-  }
-  catch {
+  } catch {
     // 栈不可读时不做同页判断，退化为普通压栈
   }
 
   const top = pages.length > 0 ? pages[pages.length - 1] : null
   const topRoute = top?.route || top?.__route__ || ''
-  const isSameAsTop = !!topRoute && normalizeRoutePath(topRoute) === normalizeRoutePath(url)
+  const isSameAsTop =
+    !!topRoute && normalizeRoutePath(topRoute) === normalizeRoutePath(url)
 
   return new Promise((resolve) => {
     const primary = isSameAsTop ? uniObj.redirectTo : uniObj.navigateTo
@@ -79,7 +79,8 @@ export function navigateInMiniProgram(
               schedulePushComponentTree(200)
               resolve({ ok: true })
             },
-            fail: () => resolve({ ok: false, error: err?.errMsg || String(err) }),
+            fail: () =>
+              resolve({ ok: false, error: err?.errMsg || String(err) }),
           })
           return
         }

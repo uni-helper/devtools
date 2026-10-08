@@ -36,14 +36,14 @@ export function UniDevtools() {
   return {
     name: 'uni-devtools',
     enforce: 'pre', // 在其他插件之前执行
-    
+
     async transform(code: string, id: string) {
       // 只处理 .vue 文件
       if (!id.endsWith('.vue')) return
-      
+
       // 注入 DevTools 代码
       return await injectDevtoolInfo(code, id)
-    }
+    },
   }
 }
 ```
@@ -82,7 +82,7 @@ const bindings = content.bindings
 // packages/plugin/src/injects/injectVueFile.ts
 
 // 提取需要监听的变量（过滤掉导入的变量和函数）
-const watchBindings = Object.keys(bindings).filter(key => {
+const watchBindings = Object.keys(bindings).filter((key) => {
   // 跳过从 vue 或其他地方导入的变量
   if (imports.includes(key)) return false
   return true
@@ -137,18 +137,19 @@ setupProxy(bindings)
 
 ```javascript
 // 编译后的代码（简化）
-const a = ref(0)  // count 被混淆成 a
-const b = ref('')  // name 被混淆成 b
+const a = ref(0) // count 被混淆成 a
+const b = ref('') // name 被混淆成 b
 
-function c() {  // increment 被混淆成 c
+function c() {
+  // increment 被混淆成 c
   a.value++
 }
 
 // 👇 关键：对象的 key 是字符串，不会被混淆！
-const bindings = { 
-  "count": a,      // key 还是 "count"
-  "name": b,       // key 还是 "name"
-  "increment": c   // key 还是 "increment"
+const bindings = {
+  count: a, // key 还是 "count"
+  name: b, // key 还是 "name"
+  increment: c, // key 还是 "increment"
 }
 setupProxy(bindings)
 ```
@@ -159,21 +160,24 @@ setupProxy(bindings)
 // packages/plugin/inspect/setupProxy.js
 export function setupProxy(reactiveBindings) {
   const componentId = getCurrentInstance().uid
-  
+
   // 遍历 bindings，key 就是原始变量名
   for (const [key, binding] of Object.entries(reactiveBindings)) {
     // 跳过函数
     if (typeof binding === 'function') continue
-    
+
     // 监听变化
-    watch(() => binding.value, (newValue) => {
-      // 发送到 DevTools，key 是原始变量名
-      trpc.sendComponentData.subscribe({
-        key,  // "count" 而不是 "a"
-        id: componentId,
-        value: stringify([newValue])
-      })
-    })
+    watch(
+      () => binding.value,
+      (newValue) => {
+        // 发送到 DevTools，key 是原始变量名
+        trpc.sendComponentData.subscribe({
+          key, // "count" 而不是 "a"
+          id: componentId,
+          value: stringify([newValue]),
+        })
+      },
+    )
   }
 }
 ```
@@ -189,7 +193,7 @@ export function setupProxy(reactiveBindings) {
 **会被混淆的：**
 
 ```javascript
-const myVariable = 123  // myVariable → a
+const myVariable = 123 // myVariable → a
 function myFunction() {} // myFunction → b
 ```
 
@@ -197,10 +201,10 @@ function myFunction() {} // myFunction → b
 
 ```javascript
 const obj = {
-  "myKey": 123  // "myKey" 保持不变
+  myKey: 123, // "myKey" 保持不变
 }
 
-obj.myProperty = 456  // obj["myProperty"] 保持不变
+obj.myProperty = 456 // obj["myProperty"] 保持不变
 ```
 
 ### 实际例子
@@ -257,13 +261,13 @@ Vue DevTools 无法使用编译时注入，因为它运行在浏览器扩展中�
 
 ## 关键技术点总结
 
-| 技术 | 作用 |
-|-----|------|
-| **Vite 插件** | 拦截 `.vue` 文件的编译过程 |
+| 技术                  | 作用                                    |
+| --------------------- | --------------------------------------- |
+| **Vite 插件**         | 拦截 `.vue` 文件的编译过程              |
 | **@vue/compiler-sfc** | 解析 SFC，获取 `bindings`（原始变量名） |
-| **MagicString** | 在不破坏 source map 的情况下修改代码 |
-| **对象字面量** | 利用 key 不会被混淆的特性保留变量名 |
-| **setupProxy** | 运行时发送数据到 DevTools |
+| **MagicString**       | 在不破坏 source map 的情况下修改代码    |
+| **对象字面量**        | 利用 key 不会被混淆的特性保留变量名     |
+| **setupProxy**        | 运行时发送数据到 DevTools               |
 
 ---
 
@@ -353,16 +357,19 @@ Vue DevTools 无法使用编译时注入，因为它运行在浏览器扩展中�
 export function setupProxy(reactiveBindings) {
   const adapter = getDevframeAdapter()
   const componentId = getCurrentInstance().uid
-  
+
   for (const [key, binding] of Object.entries(reactiveBindings)) {
-    watch(() => binding.value, (newValue) => {
-      // 调用 Devframe Adapter API
-      adapter.updateComponentState({
-        id: componentId,
-        key,  // 原始变量名
-        value: newValue
-      })
-    })
+    watch(
+      () => binding.value,
+      (newValue) => {
+        // 调用 Devframe Adapter API
+        adapter.updateComponentState({
+          id: componentId,
+          key, // 原始变量名
+          value: newValue,
+        })
+      },
+    )
   }
 }
 ```

@@ -1,4 +1,7 @@
-import type { ReactivityGraphNode, ReactivityGraphNodeType } from '@vue/devtools-kit'
+import type {
+  ReactivityGraphNode,
+  ReactivityGraphNodeType,
+} from '@vue/devtools-kit'
 
 export const TYPE_LEGEND_TYPES: ReactivityGraphNodeType[] = [
   'ref',

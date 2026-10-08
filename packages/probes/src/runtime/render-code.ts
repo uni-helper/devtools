@@ -15,44 +15,40 @@ const ORIGINAL_RENDER_PROP = '__uni_devtools_original_render__'
  */
 function normalizeFunctionIndentation(source: string): string {
   const lines = source.split('\n')
-  if (lines.length < 2)
-    return source
+  if (lines.length < 2) return source
 
   const indents = lines
     .slice(1)
-    .filter(line => line.trim())
-    .map(line => line.match(/^[\t ]*/)?.[0] ?? '')
-  if (!indents.length)
-    return source
+    .filter((line) => line.trim())
+    .map((line) => line.match(/^[\t ]*/)?.[0] ?? '')
+  if (!indents.length) return source
 
   let commonIndent = indents[0]!
   for (const indent of indents.slice(1)) {
     while (commonIndent && !indent.startsWith(commonIndent))
       commonIndent = commonIndent.slice(0, -1)
   }
-  if (!commonIndent)
-    return source
+  if (!commonIndent) return source
 
   return [
     lines[0],
     ...lines
       .slice(1)
-      .map(line => (line.startsWith(commonIndent) ? line.slice(commonIndent.length) : line)),
+      .map((line) =>
+        line.startsWith(commonIndent) ? line.slice(commonIndent.length) : line,
+      ),
   ].join('\n')
 }
 
 export function getComponentRenderCode(id: string): { code?: string } {
   try {
-    if (!id || typeof id !== 'string')
-      return {}
+    if (!id || typeof id !== 'string') return {}
 
     const vm = getRegisteredInstance(id)
-    if (!vm)
-      return {}
+    if (!vm) return {}
 
     const internal = vm.$ || vm
-    if (!internal)
-      return {}
+    if (!internal) return {}
 
     let targetFn: any
 
@@ -63,12 +59,10 @@ export function getComponentRenderCode(id: string): { code?: string } {
         const original = (instanceRender as any)[ORIGINAL_RENDER_PROP]
         if (typeof original === 'function') {
           targetFn = original
-        }
-        else {
+        } else {
           targetFn = instanceRender
         }
-      }
-      catch {
+      } catch {
         targetFn = instanceRender
       }
     }
@@ -83,16 +77,13 @@ export function getComponentRenderCode(id: string): { code?: string } {
       targetFn = internal.type.setup
     }
 
-    if (typeof targetFn !== 'function')
-      return {}
+    if (typeof targetFn !== 'function') return {}
 
     const raw = targetFn.toString()
-    if (typeof raw !== 'string')
-      return {}
+    if (typeof raw !== 'string') return {}
 
     return { code: normalizeFunctionIndentation(raw) }
-  }
-  catch {
+  } catch {
     return {}
   }
 }

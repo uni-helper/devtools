@@ -27,17 +27,16 @@ const ICONIFY_ID = /^(?:i-)?([\w-]+):([\w-]+)$/
  * @example
  * await dockIconSvg('ph:git-branch-duotone') // → '<svg ...>...</svg>'
  */
-export async function dockIconSvg(name: string | { light: string, dark: string } | undefined): Promise<string | undefined> {
+export async function dockIconSvg(
+  name: string | { light: string; dark: string } | undefined,
+): Promise<string | undefined> {
   const id = typeof name === 'string' ? name : name?.light
-  if (!id)
-    return undefined
+  if (!id) return undefined
   const match = id.match(ICONIFY_ID)
-  if (!match)
-    return undefined
+  if (!match) return undefined
   try {
     return await getIconifySvg(match[1]!, match[2]!)
-  }
-  catch {
+  } catch {
     // A failed fetch (offline / flaky CDN) degrades to the text-initial
     // fallback, not a thrown error out of a render path.
     return undefined

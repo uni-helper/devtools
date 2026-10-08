@@ -4,14 +4,13 @@ import { computed, ref } from 'vue'
 const showBanner = ref(true)
 
 const iframeSrc = computed(() => {
-  if (typeof window === 'undefined')
-    return '/__uni-devtools/inspect/'
+  if (typeof window === 'undefined') return '/__uni-devtools/inspect/'
   const pathname = window.location.pathname
   const normalized = pathname.endsWith('/')
     ? pathname
-    : (pathname.split('/').pop()?.includes('.')
-        ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
-        : `${pathname}/`)
+    : pathname.split('/').pop()?.includes('.')
+      ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
+      : `${pathname}/`
   return `${normalized}inspect/`
 })
 
@@ -38,7 +37,9 @@ function openInNewTab() {
     >
       <div class="flex items-center gap-1.5 truncate">
         <i class="i-carbon-ibm-watson-discovery shrink-0 text-primary" />
-        <span class="truncate">Vite 转换管线检查器 · 每次构建后刷新 · standalone 直连模式生效</span>
+        <span class="truncate"
+          >Vite 转换管线检查器 · 每次构建后刷新 · standalone 直连模式生效</span
+        >
       </div>
       <div class="flex shrink-0 items-center gap-2">
         <button

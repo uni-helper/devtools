@@ -1,6 +1,14 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { DevtoolsCommand } from './commands'
-import { computed, nextTick, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  toValue,
+  watch,
+} from 'vue'
 import { filterDevtoolsCommands } from './commands'
 
 interface CommandLevel {
@@ -8,7 +16,9 @@ interface CommandLevel {
   parent: DevtoolsCommand
 }
 
-export function useCommandPalette(commands: MaybeRefOrGetter<readonly DevtoolsCommand[]>) {
+export function useCommandPalette(
+  commands: MaybeRefOrGetter<readonly DevtoolsCommand[]>,
+) {
   const dialog = ref<HTMLDialogElement>()
   const searchInput = ref<HTMLInputElement>()
   const search = ref('')
@@ -17,13 +27,17 @@ export function useCommandPalette(commands: MaybeRefOrGetter<readonly DevtoolsCo
   const commandError = ref<string>()
   const commandLevels = ref<CommandLevel[]>([])
   const currentCommands = computed(
-    () => commandLevels.value[commandLevels.value.length - 1]?.commands ?? toValue(commands),
+    () =>
+      commandLevels.value[commandLevels.value.length - 1]?.commands ??
+      toValue(commands),
   )
   const filteredCommands = computed(() =>
     filterDevtoolsCommands(currentCommands.value, search.value),
   )
   const nested = computed(() => commandLevels.value.length > 0)
-  const commandPath = computed(() => commandLevels.value.map((level) => level.parent.title))
+  const commandPath = computed(() =>
+    commandLevels.value.map((level) => level.parent.title),
+  )
   const groupedCommands = computed(() => {
     const groups = new Map<string, DevtoolsCommand[]>()
     for (const command of filteredCommands.value) {
@@ -73,7 +87,11 @@ export function useCommandPalette(commands: MaybeRefOrGetter<readonly DevtoolsCo
 
   function onWindowKeydown(event: KeyboardEvent) {
     const key = event.key.toLowerCase()
-    if (key === 'k' && !event.shiftKey && (event.metaKey || event.ctrlKey || event.altKey)) {
+    if (
+      key === 'k' &&
+      !event.shiftKey &&
+      (event.metaKey || event.ctrlKey || event.altKey)
+    ) {
       event.preventDefault()
       event.stopPropagation()
       togglePalette()
@@ -102,7 +120,9 @@ export function useCommandPalette(commands: MaybeRefOrGetter<readonly DevtoolsCo
     selectedIndex.value = (selectedIndex.value + delta + count) % count
     void nextTick(() => {
       dialog.value
-        ?.querySelector<HTMLElement>(`[data-command-index="${selectedIndex.value}"]`)
+        ?.querySelector<HTMLElement>(
+          `[data-command-index="${selectedIndex.value}"]`,
+        )
         ?.scrollIntoView({ block: 'nearest' })
     })
   }
@@ -116,7 +136,10 @@ export function useCommandPalette(commands: MaybeRefOrGetter<readonly DevtoolsCo
       const childCommands = await command.action()
       runningCommandId.value = undefined
       if (childCommands) {
-        commandLevels.value = [...commandLevels.value, { parent: command, commands: childCommands }]
+        commandLevels.value = [
+          ...commandLevels.value,
+          { parent: command, commands: childCommands },
+        ]
         search.value = ''
         selectedIndex.value = 0
         await nextTick()
@@ -125,7 +148,8 @@ export function useCommandPalette(commands: MaybeRefOrGetter<readonly DevtoolsCo
       }
       closePalette()
     } catch (error) {
-      commandError.value = error instanceof Error ? error.message : String(error)
+      commandError.value =
+        error instanceof Error ? error.message : String(error)
       runningCommandId.value = undefined
     }
   }

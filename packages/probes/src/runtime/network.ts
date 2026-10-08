@@ -37,7 +37,10 @@ const INTERCEPTED_FLAG = '__uni_devtools_network_intercepted__'
 
 export interface NetworkDeps {
   getUni?: () => any
-  getActiveInstance?: () => { rpc: any, socketHandle: { isConnected: () => boolean } } | null
+  getActiveInstance?: () => {
+    rpc: any
+    socketHandle: { isConnected: () => boolean }
+  } | null
   getCurrentRoute?: () => string | undefined
 }
 
@@ -45,7 +48,10 @@ const ringBuffer: NetworkRecord[] = []
 const GLOBAL_RECORD_ID_KEY = '__uni_devtools_network_next_id__'
 
 function getGlobalRecordId(): number | undefined {
-  if (typeof globalThis !== 'undefined' && typeof (globalThis as any)[GLOBAL_RECORD_ID_KEY] === 'number') {
+  if (
+    typeof globalThis !== 'undefined' &&
+    typeof (globalThis as any)[GLOBAL_RECORD_ID_KEY] === 'number'
+  ) {
     return (globalThis as any)[GLOBAL_RECORD_ID_KEY]
   }
   return undefined
@@ -55,9 +61,8 @@ function setGlobalRecordId(id: number | undefined): void {
   if (typeof globalThis !== 'undefined') {
     if (id === undefined) {
       delete (globalThis as any)[GLOBAL_RECORD_ID_KEY]
-    }
-    else {
-      (globalThis as any)[GLOBAL_RECORD_ID_KEY] = id
+    } else {
+      ;(globalThis as any)[GLOBAL_RECORD_ID_KEY] = id
     }
   }
 }
@@ -106,11 +111,13 @@ function getPagePath(): string | undefined {
       return undefined
     }
 
-    const getPages = typeof getCurrentPages === 'function'
-      ? getCurrentPages
-      : (typeof globalThis !== 'undefined' && typeof (globalThis as any).getCurrentPages === 'function'
+    const getPages =
+      typeof getCurrentPages === 'function'
+        ? getCurrentPages
+        : typeof globalThis !== 'undefined' &&
+            typeof (globalThis as any).getCurrentPages === 'function'
           ? (globalThis as any).getCurrentPages
-          : undefined)
+          : undefined
     if (!getPages) {
       return undefined
     }
@@ -124,8 +131,7 @@ function getPagePath(): string | undefined {
       return undefined
     }
     return rawRoute.startsWith('/') ? rawRoute : `/${rawRoute}`
-  }
-  catch {
+  } catch {
     return undefined
   }
 }
@@ -137,7 +143,10 @@ function normalizeHeaders(header: any): Record<string, string> | undefined {
   return { ...header }
 }
 
-function processRequestBody(type: NetworkRecordType, options: any): {
+function processRequestBody(
+  type: NetworkRecordType,
+  options: any,
+): {
   body?: unknown
   truncated?: boolean
 } {
@@ -152,8 +161,7 @@ function processRequestBody(type: NetworkRecordType, options: any): {
       name: options?.name,
       formData: options?.formData,
     }
-  }
-  else {
+  } else {
     rawBody = options?.data
   }
 
@@ -181,8 +189,7 @@ function processRequestBody(type: NetworkRecordType, options: any): {
         }
       }
       return { body: rawBody }
-    }
-    catch {
+    } catch {
       return { body: rawBody }
     }
   }
@@ -190,7 +197,10 @@ function processRequestBody(type: NetworkRecordType, options: any): {
   return { body: rawBody }
 }
 
-function processResponseBody(type: NetworkRecordType, res: any): {
+function processResponseBody(
+  type: NetworkRecordType,
+  res: any,
+): {
   body?: unknown
   truncated?: boolean
   size?: number
@@ -200,7 +210,10 @@ function processResponseBody(type: NetworkRecordType, res: any): {
     if (tempFilePath === undefined) {
       return {}
     }
-    if (typeof tempFilePath === 'string' && tempFilePath.length > MAX_NETWORK_BODY_CHARS) {
+    if (
+      typeof tempFilePath === 'string' &&
+      tempFilePath.length > MAX_NETWORK_BODY_CHARS
+    ) {
       return {
         body: tempFilePath.slice(0, MAX_NETWORK_BODY_CHARS),
         truncated: true,
@@ -221,8 +234,7 @@ function processResponseBody(type: NetworkRecordType, res: any): {
     try {
       parsed = JSON.parse(rawData)
       parseOk = true
-    }
-    catch {
+    } catch {
       parseOk = false
     }
 
@@ -255,8 +267,7 @@ function processResponseBody(type: NetworkRecordType, res: any): {
         body: rawData,
         size,
       }
-    }
-    catch {
+    } catch {
       return { body: rawData }
     }
   }
@@ -278,14 +289,16 @@ function allocateNextRecordId(): number {
   return id
 }
 
-function createPendingRecord(type: NetworkRecordType, options: any): NetworkRecord {
+function createPendingRecord(
+  type: NetworkRecordType,
+  options: any,
+): NetworkRecord {
   const id = allocateNextRecordId()
 
   let method = 'GET'
   if (type === 'upload' || type === 'download') {
     method = 'POST'
-  }
-  else if (options?.method) {
+  } else if (options?.method) {
     method = String(options.method).toUpperCase()
   }
 
@@ -328,7 +341,11 @@ function createPendingRecord(type: NetworkRecordType, options: any): NetworkReco
   return record
 }
 
-function handleSuccess(record: NetworkRecord, res: any, type: NetworkRecordType): void {
+function handleSuccess(
+  record: NetworkRecord,
+  res: any,
+  type: NetworkRecordType,
+): void {
   const status = typeof res?.statusCode === 'number' ? res.statusCode : 200
   record.status = status
   record.ok = status < 400
@@ -353,23 +370,26 @@ function handleSuccess(record: NetworkRecord, res: any, type: NetworkRecordType)
 function handleFail(record: NetworkRecord, err: any): void {
   record.status = 0
   record.ok = false
-  const errMsg = typeof err === 'string'
-    ? err
-    : (err?.errMsg || err?.message || String(err || 'fail'))
+  const errMsg =
+    typeof err === 'string'
+      ? err
+      : err?.errMsg || err?.message || String(err || 'fail')
   record.error = errMsg
   if (/abort/i.test(errMsg)) {
     record.aborted = true
   }
 }
 
-function handleFallbackFromComplete(record: NetworkRecord, res: any, type: NetworkRecordType): void {
+function handleFallbackFromComplete(
+  record: NetworkRecord,
+  res: any,
+  type: NetworkRecordType,
+): void {
   if (res && typeof res.statusCode === 'number') {
     handleSuccess(record, res, type)
-  }
-  else if (res && (res.errMsg || res.message)) {
+  } else if (res && (res.errMsg || res.message)) {
     handleFail(record, res)
-  }
-  else {
+  } else {
     record.status = 0
     record.ok = false
   }
@@ -389,15 +409,15 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
       return orig.call(this, options, ...rest)
     }
 
-    const hasCallback = typeof options.success === 'function'
-      || typeof options.fail === 'function'
-      || typeof options.complete === 'function'
+    const hasCallback =
+      typeof options.success === 'function' ||
+      typeof options.fail === 'function' ||
+      typeof options.complete === 'function'
 
     let record: NetworkRecord | null = null
     try {
       record = createPendingRecord(type, options)
-    }
-    catch {}
+    } catch {}
 
     if (hasCallback) {
       const wrappedOptions: any = { ...options }
@@ -410,8 +430,7 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
             successHandled = true
             handleSuccess(record, args[0], type)
           }
-        }
-        catch {}
+        } catch {}
         if (typeof options.success === 'function') {
           return options.success.apply(this, args)
         }
@@ -423,8 +442,7 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
             failHandled = true
             handleFail(record, args[0])
           }
-        }
-        catch {}
+        } catch {}
         if (typeof options.fail === 'function') {
           return options.fail.apply(this, args)
         }
@@ -438,8 +456,7 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
             }
             handleComplete(record)
           }
-        }
-        catch {}
+        } catch {}
         if (typeof options.complete === 'function') {
           return options.complete.apply(this, args)
         }
@@ -447,31 +464,26 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
 
       try {
         return orig.call(this, wrappedOptions, ...rest)
-      }
-      catch (e) {
+      } catch (e) {
         try {
           if (record) {
             handleFail(record, e)
             handleComplete(record)
           }
-        }
-        catch {}
+        } catch {}
         throw e
       }
-    }
-    else {
+    } else {
       let result: any
       try {
         result = orig.call(this, options, ...rest)
-      }
-      catch (e) {
+      } catch (e) {
         try {
           if (record) {
             handleFail(record, e)
             handleComplete(record)
           }
-        }
-        catch {}
+        } catch {}
         throw e
       }
 
@@ -483,8 +495,7 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
                 handleSuccess(record, res, type)
                 handleComplete(record)
               }
-            }
-            catch {}
+            } catch {}
           },
           (err: any) => {
             try {
@@ -492,8 +503,7 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
                 handleFail(record, err)
                 handleComplete(record)
               }
-            }
-            catch {}
+            } catch {}
           },
         )
       }
@@ -517,7 +527,10 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
     return
   }
 
-  const methods: Array<{ name: 'request' | 'uploadFile' | 'downloadFile', type: NetworkRecordType }> = [
+  const methods: Array<{
+    name: 'request' | 'uploadFile' | 'downloadFile'
+    type: NetworkRecordType
+  }> = [
     { name: 'request', type: 'request' },
     { name: 'uploadFile', type: 'upload' },
     { name: 'downloadFile', type: 'download' },
@@ -531,24 +544,33 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
   }
 }
 
-export function getNetworkRecords(params?: GetNetworkRecordsParams | any): GetNetworkRecordsResult {
+export function getNetworkRecords(
+  params?: GetNetworkRecordsParams | any,
+): GetNetworkRecordsResult {
   let effectiveParams = params
   if (typeof params === 'string') {
     try {
       effectiveParams = JSON.parse(params)
-    }
-    catch {
+    } catch {
       effectiveParams = {}
     }
   }
 
-  const sinceId = effectiveParams && typeof effectiveParams === 'object' && effectiveParams.sinceId !== undefined
-    ? Number(effectiveParams.sinceId)
-    : (typeof effectiveParams === 'number' ? effectiveParams : undefined)
+  const sinceId =
+    effectiveParams &&
+    typeof effectiveParams === 'object' &&
+    effectiveParams.sinceId !== undefined
+      ? Number(effectiveParams.sinceId)
+      : typeof effectiveParams === 'number'
+        ? effectiveParams
+        : undefined
 
-  let limit = effectiveParams && typeof effectiveParams === 'object' && effectiveParams.limit !== undefined
-    ? Number(effectiveParams.limit)
-    : 200
+  let limit =
+    effectiveParams &&
+    typeof effectiveParams === 'object' &&
+    effectiveParams.limit !== undefined
+      ? Number(effectiveParams.limit)
+      : 200
   if (Number.isNaN(limit) || limit <= 0) {
     limit = 200
   }
@@ -558,16 +580,16 @@ export function getNetworkRecords(params?: GetNetworkRecordsParams | any): GetNe
 
   let candidates = ringBuffer
   if (sinceId !== undefined && !Number.isNaN(sinceId)) {
-    candidates = candidates.filter(r => r.id > sinceId)
+    candidates = candidates.filter((r) => r.id > sinceId)
   }
 
-  const records = candidates.length > limit
-    ? candidates.slice(candidates.length - limit)
-    : candidates.slice()
+  const records =
+    candidates.length > limit
+      ? candidates.slice(candidates.length - limit)
+      : candidates.slice()
 
-  const latestId = ringBuffer.length > 0
-    ? ringBuffer[ringBuffer.length - 1].id
-    : 0
+  const latestId =
+    ringBuffer.length > 0 ? ringBuffer[ringBuffer.length - 1].id : 0
 
   return {
     records,
@@ -613,7 +635,7 @@ export async function pushNetworkRecordsNow(): Promise<void> {
 
   // 环形淘汰的脏 id 不再追：记录已出局，推送无主可寻
   if (dirtyPushIds.size > 0) {
-    const ringIds = new Set(ringBuffer.map(r => r.id))
+    const ringIds = new Set(ringBuffer.map((r) => r.id))
     for (const id of dirtyPushIds) {
       if (!ringIds.has(id)) {
         dirtyPushIds.delete(id)
@@ -621,22 +643,25 @@ export async function pushNetworkRecordsNow(): Promise<void> {
     }
   }
 
-  const incremental = ringBuffer.filter(r => r.id > lastPushedId || dirtyPushIds.has(r.id))
+  const incremental = ringBuffer.filter(
+    (r) => r.id > lastPushedId || dirtyPushIds.has(r.id),
+  )
   if (incremental.length === 0) {
     return
   }
 
   const maxId = incremental[incremental.length - 1].id
-  const pushedIds = incremental.map(r => r.id)
+  const pushedIds = incremental.map((r) => r.id)
 
   try {
-    await instance.rpc.$call(NODE_RPC.pushNetworkRecords, { records: incremental })
+    await instance.rpc.$call(NODE_RPC.pushNetworkRecords, {
+      records: incremental,
+    })
     lastPushedId = Math.max(lastPushedId, maxId)
     for (const id of pushedIds) {
       dirtyPushIds.delete(id)
     }
-  }
-  catch {}
+  } catch {}
 }
 
 export function __resetNetworkForTest(): void {

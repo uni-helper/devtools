@@ -33,7 +33,11 @@ const model = defineModel<boolean>({ required: true })
     />
     <span
       class="relative h-4 w-7 shrink-0 rounded-full border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/35"
-      :class="model ? 'border-primary-500/40 bg-primary-500/20' : 'border-base bg-#8882'"
+      :class="
+        model
+          ? 'border-primary-500/40 bg-primary-500/20'
+          : 'border-base bg-#8882'
+      "
       aria-hidden="true"
     >
       <span

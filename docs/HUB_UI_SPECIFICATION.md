@@ -202,7 +202,11 @@ flowchart TD
 
 ```ts
 export interface DockRenderer<T = any> {
-  mount: (entry: T, container: HTMLElement, context: DevframeClientContext) => Promise<{
+  mount: (
+    entry: T,
+    container: HTMLElement,
+    context: DevframeClientContext,
+  ) => Promise<{
     dispose: () => void
   }>
 }
@@ -234,7 +238,11 @@ export interface DockRenderer<T = any> {
 - **根节点与挂载容器约束**：
   - 无论在 Light DOM 还是 Shadow DOM 内部，最顶层的根容器（`devframes-color-root`）以及所有外部渲染器的挂载挂载点（`container`）上，**必须实时绑定当前的主题 Class**：
     ```html
-    <div ref="container" class="h-full w-full" :class="isDark ? 'dark' : 'light'" />
+    <div
+      ref="container"
+      class="h-full w-full"
+      :class="isDark ? 'dark' : 'light'"
+    />
     ```
   - 必须显式声明 CSS 属性 `color-scheme: dark | light`，保证原生表单输入框、滚动条（Scrollbar）在双色模式下均获得原生平滑渲染。
 
@@ -302,7 +310,10 @@ export interface DockRenderer<T = any> {
    - Devframe 内部使用了基于 `structured-clone` 的定制帧编码（响应帧携带 `s:` 前缀）。面板必须统一通过官方客户端建立连接：
      ```ts
      import { connectDevframe } from './df-client.mjs'
-     const client = await connectDevframe({ authToken: token, simpleAuth: false })
+     const client = await connectDevframe({
+       authToken: token,
+       simpleAuth: false,
+     })
      const myRpc = client.scope('uni-helper-devtools').rpc
      ```
 2. **鉴权令牌与 SimpleAuth 弹窗抑制**：

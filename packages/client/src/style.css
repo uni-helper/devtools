@@ -6,17 +6,61 @@
  * fallback 保持官方原绿。色阶比例对照官方 uno.config 原 emerald 系手工标定。
  */
 :root {
-  --devframe-primary-50: color-mix(in srgb, var(--devframe-primary, #00b878) 88%, white);
-  --devframe-primary-100: color-mix(in srgb, var(--devframe-primary, #00b878) 80%, white);
-  --devframe-primary-200: color-mix(in srgb, var(--devframe-primary, #00b878) 66%, white);
-  --devframe-primary-300: color-mix(in srgb, var(--devframe-primary, #00b878) 45%, white);
-  --devframe-primary-400: color-mix(in srgb, var(--devframe-primary, #00b878) 22%, white);
-  --devframe-primary-500: color-mix(in srgb, var(--devframe-primary, #00b878) 90%, black);
-  --devframe-primary-600: color-mix(in srgb, var(--devframe-primary, #00b878) 78%, black);
-  --devframe-primary-700: color-mix(in srgb, var(--devframe-primary, #00b878) 68%, black);
-  --devframe-primary-800: color-mix(in srgb, var(--devframe-primary, #00b878) 55%, black);
-  --devframe-primary-900: color-mix(in srgb, var(--devframe-primary, #00b878) 45%, black);
-  --devframe-primary-950: color-mix(in srgb, var(--devframe-primary, #00b878) 30%, black);
+  --devframe-primary-50: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 88%,
+    white
+  );
+  --devframe-primary-100: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 80%,
+    white
+  );
+  --devframe-primary-200: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 66%,
+    white
+  );
+  --devframe-primary-300: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 45%,
+    white
+  );
+  --devframe-primary-400: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 22%,
+    white
+  );
+  --devframe-primary-500: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 90%,
+    black
+  );
+  --devframe-primary-600: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 78%,
+    black
+  );
+  --devframe-primary-700: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 68%,
+    black
+  );
+  --devframe-primary-800: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 55%,
+    black
+  );
+  --devframe-primary-900: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 45%,
+    black
+  );
+  --devframe-primary-950: color-mix(
+    in srgb,
+    var(--devframe-primary, #00b878) 30%,
+    black
+  );
 }
 
 @font-face {
@@ -61,13 +105,8 @@ html {
   -ms-overflow-style: none;
   scrollbar-width: none;
   font-family:
-    'DM Sans',
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+    'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
 }
 
 html.dark {
@@ -110,7 +149,8 @@ button {
 code,
 kbd,
 pre {
-  font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family:
+    'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .selectable-item.active {

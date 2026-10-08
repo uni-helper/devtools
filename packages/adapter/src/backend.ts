@@ -12,10 +12,13 @@ import { DEVFRAME_RPC } from '@uni-helper/devtools-shared'
  * node 侧 devframe 注册也以该表为名）：方法名漂移在编译期暴露，MockBackend 另有
  * 运行时未知方法 throw 兜底（fail loud）。
  */
-export type ProbeMethod = typeof DEVFRAME_RPC[keyof typeof DEVFRAME_RPC]
+export type ProbeMethod = (typeof DEVFRAME_RPC)[keyof typeof DEVFRAME_RPC]
 
 /** push 通道 key，与 node 侧 sharedState key 对应 */
-export type ProbePushKey = 'component-tree' | 'network-records' | 'rendered-components'
+export type ProbePushKey =
+  | 'component-tree'
+  | 'network-records'
+  | 'rendered-components'
 
 export type ProbeConnectionStatus = 'connected' | 'closed'
 
@@ -42,7 +45,10 @@ export interface ProbeBackend {
   onConnectionStatus(cb: (status: ProbeConnectionStatus) => void): () => void
   /** 探针方法面（拉取 + 写回）；未知方法实现方必须 throw */
   call(method: ProbeMethod, ...args: unknown[]): Promise<unknown>
-  subscribe(key: ProbePushKey, cb: (snapshot: unknown) => void): ProbeSubscription
+  subscribe(
+    key: ProbePushKey,
+    cb: (snapshot: unknown) => void,
+  ): ProbeSubscription
   /** 幂等；任何时刻可调用（含 connect / subscribe 尚未 settle 时） */
   dispose(): void
 }

@@ -41,7 +41,10 @@ describe('network: 探针网络采集器', () => {
       if (options && (options.success || options.fail || options.complete)) {
         return { abort: vi.fn(), name: 'fakeDownloadTask' }
       }
-      return Promise.resolve({ statusCode: 200, tempFilePath: '/tmp/download.file' })
+      return Promise.resolve({
+        statusCode: 200,
+        tempFilePath: '/tmp/download.file',
+      })
     }
 
     fakeUni = {
@@ -107,7 +110,9 @@ describe('network: 探针网络采集器', () => {
       expect(rec.status).toBe(200)
       expect(rec.ok).toBe(true)
       expect(rec.requestHeaders).toEqual({ authorization: 'Bearer token' })
-      expect(rec.responseHeaders).toEqual({ 'content-type': 'application/json' })
+      expect(rec.responseHeaders).toEqual({
+        'content-type': 'application/json',
+      })
       expect(rec.requestBody).toEqual({ query: 'test' })
       expect(rec.responseBody).toEqual({ message: 'hello', code: 0 })
       expect(rec.responseSize).toBe('{"message":"hello","code":0}'.length)
@@ -178,7 +183,10 @@ describe('network: 探针网络采集器', () => {
       let capturedArg: any
 
       requestHandler = function (opts: any) {
-        opts.success.call({ context: 'custom' }, { statusCode: 200, data: 'pass' })
+        opts.success.call(
+          { context: 'custom' },
+          { statusCode: 200, data: 'pass' },
+        )
       }
 
       fakeUni.request({
@@ -393,8 +401,7 @@ describe('network: 探针网络采集器', () => {
   describe('5. 环形缓冲、淘汰与拉取', () => {
     it('环形缓冲超容淘汰：第 501 条出局第 1 条', () => {
       requestHandler = (opts: any) => {
-        if (opts.complete)
-          opts.complete({})
+        if (opts.complete) opts.complete({})
       }
 
       for (let i = 1; i <= 501; i++) {
@@ -412,8 +419,7 @@ describe('network: 探针网络采集器', () => {
 
     it('getNetworkRecords 默认返回最近 200 条、latestId 正确', () => {
       requestHandler = (opts: any) => {
-        if (opts.complete)
-          opts.complete({})
+        if (opts.complete) opts.complete({})
       }
 
       for (let i = 1; i <= 250; i++) {
@@ -432,8 +438,7 @@ describe('network: 探针网络采集器', () => {
 
     it('getNetworkRecords sinceId 与 limit 控制', () => {
       requestHandler = (opts: any) => {
-        if (opts.complete)
-          opts.complete({})
+        if (opts.complete) opts.complete({})
       }
 
       for (let i = 1; i <= 50; i++) {
@@ -445,33 +450,23 @@ describe('network: 探针网络采集器', () => {
 
       const sinceRes = getNetworkRecords({ sinceId: 40 })
       expect(sinceRes.records.length).toBe(10)
-      expect(sinceRes.records.map(r => r.id)).toEqual([
-        41,
-        42,
-        43,
-        44,
-        45,
-        46,
-        47,
-        48,
-        49,
-        50,
+      expect(sinceRes.records.map((r) => r.id)).toEqual([
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
       ])
 
       const limitRes = getNetworkRecords({ sinceId: 0, limit: 5 })
       expect(limitRes.records.length).toBe(5)
-      expect(limitRes.records.map(r => r.id)).toEqual([46, 47, 48, 49, 50])
+      expect(limitRes.records.map((r) => r.id)).toEqual([46, 47, 48, 49, 50])
 
       // 字符串容错
       const strRes = getNetworkRecords('{"sinceId":45,"limit":3}')
       expect(strRes.records.length).toBe(3)
-      expect(strRes.records.map(r => r.id)).toEqual([48, 49, 50])
+      expect(strRes.records.map((r) => r.id)).toEqual([48, 49, 50])
     })
 
     it('clearNetworkRecords 清空缓冲且计数器不回退', () => {
       requestHandler = (opts: any) => {
-        if (opts.complete)
-          opts.complete({})
+        if (opts.complete) opts.complete({})
       }
 
       for (let i = 1; i <= 5; i++) {
@@ -617,8 +612,7 @@ describe('network: 探针网络采集器', () => {
   describe('7. 幂等安装与边界保护', () => {
     it('二次 install 不双包，且原函数仅调用一次', () => {
       const innerSpy = vi.fn((opts: any) => {
-        if (opts.complete)
-          opts.complete({})
+        if (opts.complete) opts.complete({})
       })
       fakeUni.request = innerSpy
 
@@ -646,10 +640,12 @@ describe('network: 探针网络采集器', () => {
   describe('8. 完成态补推（pending → 终态）', () => {
     it('pending 快照随批次先行推出后，完成态仍会补推（回归：面板 FAIL 误报）', async () => {
       const pushes: any[][] = []
-      const mockCall = vi.fn().mockImplementation((_name: string, args: any) => {
-        pushes.push(args.records)
-        return Promise.resolve({ ok: true })
-      })
+      const mockCall = vi
+        .fn()
+        .mockImplementation((_name: string, args: any) => {
+          pushes.push(args.records)
+          return Promise.resolve({ ok: true })
+        })
       installNetworkInterceptors({
         getActiveInstance: () => ({
           rpc: { $call: mockCall },
@@ -663,8 +659,7 @@ describe('network: 探针网络采集器', () => {
           slowOptions = opts
           return { taskId: 'slow' }
         }
-        if (opts.complete)
-          opts.complete({})
+        if (opts.complete) opts.complete({})
       }
 
       // 慢请求发起后一直在途
@@ -678,7 +673,9 @@ describe('network: 探针网络采集器', () => {
       expect(pendingSnapshot.status).toBe(0)
       expect(pendingSnapshot.duration).toBeUndefined()
       // 水位推进到批次内最大 id（快请求创建在慢请求之后）
-      expect(__getLastPushedIdForTest()).toBe(pushes[0]![pushes[0]!.length - 1]!.id)
+      expect(__getLastPushedIdForTest()).toBe(
+        pushes[0]![pushes[0]!.length - 1]!.id,
+      )
 
       // 慢请求完成：终态必须补推（id 已 ≤ 水位，靠脏集带出）
       slowOptions.success({ statusCode: 201, data: '{"ok":true}' })

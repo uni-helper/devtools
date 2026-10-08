@@ -1,7 +1,10 @@
 import process from 'node:process'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { getRegisteredRoutesFromFs, parsePagesJsonRoutes } from '../src/devframe.ts'
+import {
+  getRegisteredRoutesFromFs,
+  parsePagesJsonRoutes,
+} from '../src/devframe.ts'
 
 describe('parsePagesJsonRoutes', () => {
   it('解析基础 pages 列表', () => {
@@ -43,7 +46,7 @@ describe('parsePagesJsonRoutes', () => {
     `
     const routes = parsePagesJsonRoutes(jsonc)
     expect(routes).toHaveLength(2)
-    expect(routes.map(r => r.path)).toEqual(['/pages/index', '/pages/about'])
+    expect(routes.map((r) => r.path)).toEqual(['/pages/index', '/pages/about'])
   })
 
   it('支持解析 subPackages 分包路径', () => {
@@ -52,10 +55,7 @@ describe('parsePagesJsonRoutes', () => {
       subPackages: [
         {
           root: 'packageA',
-          pages: [
-            { path: 'list' },
-            { path: 'detail' },
-          ],
+          pages: [{ path: 'list' }, { path: 'detail' }],
         },
       ],
     })
@@ -86,10 +86,13 @@ describe('getRegisteredRoutesFromFs', () => {
 
   it('在 UNI_INPUT_DIR 指向 playground/src 时读回页面', () => {
     // 包级测试时 cwd 在 packages/core，需要回溯到项目根
-    process.env.UNI_INPUT_DIR = resolve(process.cwd(), '../../playground/vue3-vite/src')
+    process.env.UNI_INPUT_DIR = resolve(
+      process.cwd(),
+      '../../playground/vue3-vite/src',
+    )
     const routes = getRegisteredRoutesFromFs()
     expect(routes.length).toBeGreaterThanOrEqual(2)
-    const paths = routes.map(r => r.path)
+    const paths = routes.map((r) => r.path)
     expect(paths).toContain('/pages/index')
     expect(paths).toContain('/pages/hi')
   })

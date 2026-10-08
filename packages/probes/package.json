@@ -1,8 +1,8 @@
 {
   "name": "@uni-helper/devtools-probes",
-  "type": "module",
   "version": "0.0.1",
   "description": "Uni DevTools 小程序探针：Vue 2/3 双线入口 + 运行时采集（组件树/状态/Pinia/网络/响应式图）",
+  "type": "module",
   "exports": {
     "./vue3": "./src/vue3/index.ts",
     "./vue2": {

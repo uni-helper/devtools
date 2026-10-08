@@ -1,7 +1,12 @@
 import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
 import type { AppSnapshot, ComponentTreeNodeSnapshot } from '@vue/devtools-kit'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { appIdOf, buildFlatTree, computeTreeDiff, sameAppSet } from '../src/mapping/tree.ts'
+import {
+  appIdOf,
+  buildFlatTree,
+  computeTreeDiff,
+  sameAppSet,
+} from '../src/mapping/tree.ts'
 import { connectUniRpcClient } from '../src/uni-devtools-rpc.ts'
 
 type ConnectionStatusListener = (status: string) => void
@@ -62,7 +67,10 @@ vi.mock('devframe/client', () => ({
 
 type PageTree = ComponentTreeResult['pages'][number]
 
-const page = (route: string, components: PageTree['components']): PageTree => ({ route, components })
+const page = (route: string, components: PageTree['components']): PageTree => ({
+  route,
+  components,
+})
 
 const tree: ComponentTreeResult = {
   fetchedAt: 1000,
@@ -80,7 +88,11 @@ const tree: ComponentTreeResult = {
           type: 'component',
           file: '/src/components/AppHeader.vue',
           children: [
-            { id: 'pages/index/index#3', name: 'UserAvatar', type: 'component' },
+            {
+              id: 'pages/index/index#3',
+              name: 'UserAvatar',
+              type: 'component',
+            },
           ],
         },
       ],
@@ -94,8 +106,16 @@ const tree: ComponentTreeResult = {
   ],
 }
 
-const appSnap = (id: string): AppSnapshot => ({ id, name: id, componentCount: 0 })
-const mkNode = (id: string, appId: string, parentId?: string): ComponentTreeNodeSnapshot => ({
+const appSnap = (id: string): AppSnapshot => ({
+  id,
+  name: id,
+  componentCount: 0,
+})
+const mkNode = (
+  id: string,
+  appId: string,
+  parentId?: string,
+): ComponentTreeNodeSnapshot => ({
   id,
   appId,
   parentId,
@@ -114,14 +134,14 @@ describe('组件 id 与页面归属', () => {
 describe('组件树映射', () => {
   it('嵌套组件树展平为带 parentId 的扁平快照，page 根带标签', () => {
     const { nodes } = buildFlatTree(tree)
-    expect(nodes.map(n => n.id)).toEqual([
+    expect(nodes.map((n) => n.id)).toEqual([
       'pages/index/index#1',
       'pages/index/index#2',
       'pages/index/index#3',
       'pages/settings/settings#1',
     ])
 
-    const byId = new Map(nodes.map(n => [n.id, n]))
+    const byId = new Map(nodes.map((n) => [n.id, n]))
     expect(byId.get('pages/index/index#1')).toMatchObject({
       appId: 'pages/index/index',
       parentId: undefined,
@@ -131,21 +151,32 @@ describe('组件树映射', () => {
       childCount: 1,
       tags: [{ label: 'page' }],
     })
-    expect(byId.get('pages/index/index#3')).toMatchObject({ parentId: 'pages/index/index#2' })
+    expect(byId.get('pages/index/index#3')).toMatchObject({
+      parentId: 'pages/index/index#2',
+    })
     expect(byId.get('pages/index/index#3')?.tags).toBeUndefined()
   })
 
   it('每个组件节点归属其页面 appId，多页不串', () => {
     const { nodes } = buildFlatTree(tree)
-    for (const n of nodes)
-      expect(n.appId).toBe(n.id.split('#')[0])
+    for (const n of nodes) expect(n.appId).toBe(n.id.split('#')[0])
   })
 
   it('每个页面映射为一个 app 快照，计数与版本透传', () => {
     const { apps } = buildFlatTree(tree)
     expect(apps).toEqual([
-      { id: 'pages/index/index', name: 'pages/index/index', version: '3.5.13', componentCount: 3 },
-      { id: 'pages/settings/settings', name: 'pages/settings/settings', version: '3.5.13', componentCount: 1 },
+      {
+        id: 'pages/index/index',
+        name: 'pages/index/index',
+        version: '3.5.13',
+        componentCount: 3,
+      },
+      {
+        id: 'pages/settings/settings',
+        name: 'pages/settings/settings',
+        version: '3.5.13',
+        componentCount: 1,
+      },
     ])
   })
 
@@ -157,13 +188,18 @@ describe('组件树映射', () => {
 
 describe('组件树增量差异', () => {
   it('app 集合相同的树更新产出按 appId 分组的补丁，先删后插', () => {
-    const prev = { apps: [appSnap('a')], nodes: [mkNode('a#1', 'a'), mkNode('a#2', 'a', 'a#1')] }
-    const next = { apps: [appSnap('a')], nodes: [mkNode('a#1', 'a'), mkNode('a#3', 'a', 'a#1')] }
+    const prev = {
+      apps: [appSnap('a')],
+      nodes: [mkNode('a#1', 'a'), mkNode('a#2', 'a', 'a#1')],
+    }
+    const next = {
+      apps: [appSnap('a')],
+      nodes: [mkNode('a#1', 'a'), mkNode('a#3', 'a', 'a#1')],
+    }
 
     const diff = computeTreeDiff(prev, next)
     expect(diff.kind).toBe('patches')
-    if (diff.kind !== 'patches')
-      throw new Error('unreachable')
+    if (diff.kind !== 'patches') throw new Error('unreachable')
 
     expect(diff.patchesByApp.get('a')).toEqual([
       { op: 'remove', id: 'a#1' },
@@ -175,12 +211,17 @@ describe('组件树增量差异', () => {
 
   it('app 集合变化走全量刷新而非补丁', () => {
     const prev = { apps: [appSnap('a')], nodes: [mkNode('a#1', 'a')] }
-    const next = { apps: [appSnap('a'), appSnap('b')], nodes: [mkNode('a#1', 'a'), mkNode('b#1', 'b')] }
+    const next = {
+      apps: [appSnap('a'), appSnap('b')],
+      nodes: [mkNode('a#1', 'a'), mkNode('b#1', 'b')],
+    }
     expect(computeTreeDiff(prev, next).kind).toBe('apps-changed')
   })
 
   it('app 集合按 id 判定相等，与顺序无关', () => {
-    expect(sameAppSet([appSnap('a'), appSnap('b')], [appSnap('b'), appSnap('a')])).toBe(true)
+    expect(
+      sameAppSet([appSnap('a'), appSnap('b')], [appSnap('b'), appSnap('a')]),
+    ).toBe(true)
     expect(sameAppSet([appSnap('a')], [appSnap('a'), appSnap('b')])).toBe(false)
   })
 })
@@ -205,7 +246,8 @@ describe('RPC 连接状态竞态与就绪时机 (connectUniRpcClient)', () => {
     // 发起组件树请求，此时 socket 尚未真正 connected，请求应等待而非抛出 'RPC not connected'
     let resolved = false
     let queryError: unknown
-    const queryPromise = client.query({ type: 'apps:snapshot' })
+    const queryPromise = client
+      .query({ type: 'apps:snapshot' })
       .then((res) => {
         resolved = true
         return res
@@ -215,7 +257,7 @@ describe('RPC 连接状态竞态与就绪时机 (connectUniRpcClient)', () => {
       })
 
     // 等待微任务与定时器执行，确认仍在等待中且没有提前报错
-    await new Promise(r => setTimeout(r, 20))
+    await new Promise((r) => setTimeout(r, 20))
     expect(resolved).toBe(false)
     expect(queryError).toBeUndefined()
 
@@ -225,7 +267,7 @@ describe('RPC 连接状态竞态与就绪时机 (connectUniRpcClient)', () => {
       listener('connected')
     }
 
-    const res = await queryPromise as any
+    const res = (await queryPromise) as any
     expect(resolved).toBe(true)
     expect(queryError).toBeUndefined()
     expect(receivedStatuses).toContain('connected')
@@ -244,7 +286,7 @@ describe('RPC 连接状态竞态与就绪时机 (connectUniRpcClient)', () => {
     })
 
     // 等待初始化连接异步完成
-    await new Promise(r => setTimeout(r, 10))
+    await new Promise((r) => setTimeout(r, 10))
     expect(receivedStatuses).toContain('connected')
 
     // 触发底层断开
@@ -257,4 +299,3 @@ describe('RPC 连接状态竞态与就绪时机 (connectUniRpcClient)', () => {
     client.dispose()
   })
 })
-

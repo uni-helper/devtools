@@ -12,18 +12,24 @@ function createTestState(options?: {
   const error = ref<string | undefined>()
   const assertCommandSucceeded = vi.fn()
 
-  const queryMock = vi.fn(options?.queryHandler ?? (async (req: any) => ({
-    componentId: req.payload.componentId,
-    version: 1,
-    sections: [],
-  })))
+  const queryMock = vi.fn(
+    options?.queryHandler ??
+      (async (req: any) => ({
+        componentId: req.payload.componentId,
+        version: 1,
+        sections: [],
+      })),
+  )
 
-  const commandMock = vi.fn(options?.commandHandler ?? (async () => ({ status: 0 })))
+  const commandMock = vi.fn(
+    options?.commandHandler ?? (async () => ({ status: 0 })),
+  )
 
-  const getRpcClient = () => ({
-    query: queryMock,
-    command: commandMock,
-  } as any)
+  const getRpcClient = () =>
+    ({
+      query: queryMock,
+      command: commandMock,
+    }) as any
 
   const state = createDevtoolsState({
     getRpcClient,
@@ -47,7 +53,12 @@ function createTestState(options?: {
 
 describe('devtools-state version wrap-around and remount handling', () => {
   it('fetches initial component state correctly', async () => {
-    const { fetchComponentState, componentState, componentStateLoading, queryMock } = createTestState({
+    const {
+      fetchComponentState,
+      componentState,
+      componentStateLoading,
+      queryMock,
+    } = createTestState({
       queryHandler: async (req) => ({
         componentId: req.payload.componentId,
         version: 1,
@@ -65,7 +76,12 @@ describe('devtools-state version wrap-around and remount handling', () => {
   it('handles version wrap-around when component remounts (old request version 1000, new snapshot version 1)', async () => {
     let queryCallCount = 0
 
-    const { fetchComponentState, componentState, componentStateLoading, queryMock } = createTestState({
+    const {
+      fetchComponentState,
+      componentState,
+      componentStateLoading,
+      queryMock,
+    } = createTestState({
       queryHandler: async (req) => {
         queryCallCount++
         // Backend component has remounted, returning version 1
@@ -119,9 +135,10 @@ describe('devtools-state version wrap-around and remount handling', () => {
       { componentId: 'comp-1', version: 1, mountId: 'mount-2', sections: [] },
     ]
 
-    const { fetchComponentState, componentState, componentStateLoading } = createTestState({
-      queryHandler: async () => snapshots[callIndex++],
-    })
+    const { fetchComponentState, componentState, componentStateLoading } =
+      createTestState({
+        queryHandler: async () => snapshots[callIndex++],
+      })
 
     await fetchComponentState('comp-1')
     expect(componentState.value?.version).toBe(10)
@@ -135,7 +152,12 @@ describe('devtools-state version wrap-around and remount handling', () => {
   it('detects sessionId change and accepts new snapshot without loop', async () => {
     let callIndex = 0
     const snapshots = [
-      { componentId: 'comp-1', version: 100, sessionId: 'sess-1', sections: [] },
+      {
+        componentId: 'comp-1',
+        version: 100,
+        sessionId: 'sess-1',
+        sections: [],
+      },
       { componentId: 'comp-1', version: 1, sessionId: 'sess-2', sections: [] },
     ]
 
@@ -156,10 +178,14 @@ describe('devtools-state version wrap-around and remount handling', () => {
       resolveQuery = resolve
     })
 
-    const { fetchComponentState, cancelPendingStateRequests, componentState, componentStateLoading } =
-      createTestState({
-        queryHandler: () => queryPromise,
-      })
+    const {
+      fetchComponentState,
+      cancelPendingStateRequests,
+      componentState,
+      componentStateLoading,
+    } = createTestState({
+      queryHandler: () => queryPromise,
+    })
 
     const fetchPromise = fetchComponentState('comp-1')
     expect(componentStateLoading.value).toBe(true)

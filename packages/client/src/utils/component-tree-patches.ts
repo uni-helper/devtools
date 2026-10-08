@@ -1,8 +1,14 @@
-import type { ComponentTreeNodeSnapshot, ComponentTreePatch } from '@vue/devtools-kit'
+import type {
+  ComponentTreeNodeSnapshot,
+  ComponentTreePatch,
+} from '@vue/devtools-kit'
 
 // Snapshots are immutable. Attribute-only patches can share their positional
 // index without rebuilding parent/child maps or walking the tree again.
-const snapshotIndices = new WeakMap<ComponentTreeNodeSnapshot[], Map<string, number>>()
+const snapshotIndices = new WeakMap<
+  ComponentTreeNodeSnapshot[],
+  Map<string, number>
+>()
 
 export function applyComponentTreePatches(
   nodes: ComponentTreeNodeSnapshot[],
@@ -12,7 +18,9 @@ export function applyComponentTreePatches(
   if (
     patches.every(
       (patch) =>
-        patch.op === 'update' && !('parentId' in patch.changes) && !('id' in patch.changes),
+        patch.op === 'update' &&
+        !('parentId' in patch.changes) &&
+        !('id' in patch.changes),
     )
   ) {
     let index = snapshotIndices.get(nodes)
@@ -50,7 +58,10 @@ export function applyComponentTreePatches(
         const id = patch.op === 'insert' ? patch.node.id : patch.id
         const previous = byId.get(id)
         if (patch.op === 'update' && !previous) break
-        const next = patch.op === 'insert' ? patch.node : { ...previous!, ...patch.changes }
+        const next =
+          patch.op === 'insert'
+            ? patch.node
+            : { ...previous!, ...patch.changes }
         if (previous) children.get(previous.parentId)?.delete(id)
         byId.set(id, next)
         addChild(next)
@@ -75,11 +86,14 @@ export function applyComponentTreePatches(
   return orderComponentTree([...byId.values()])
 }
 
-function orderComponentTree(nodes: ComponentTreeNodeSnapshot[]): ComponentTreeNodeSnapshot[] {
+function orderComponentTree(
+  nodes: ComponentTreeNodeSnapshot[],
+): ComponentTreeNodeSnapshot[] {
   const byId = new Map(nodes.map((node) => [node.id, node]))
   const children = new Map<string | undefined, ComponentTreeNodeSnapshot[]>()
   for (const node of nodes) {
-    const parentId = node.parentId && byId.has(node.parentId) ? node.parentId : undefined
+    const parentId =
+      node.parentId && byId.has(node.parentId) ? node.parentId : undefined
     const siblings = children.get(parentId) ?? []
     siblings.push(node)
     children.set(parentId, siblings)
@@ -94,7 +108,8 @@ function orderComponentTree(nodes: ComponentTreeNodeSnapshot[]): ComponentTreeNo
     visited.add(node.id)
     ordered.push(node)
     const descendants = children.get(node.id) ?? []
-    for (let index = descendants.length - 1; index >= 0; index--) stack.push(descendants[index]!)
+    for (let index = descendants.length - 1; index >= 0; index--)
+      stack.push(descendants[index]!)
   }
   for (const node of nodes) {
     if (!visited.has(node.id)) ordered.push(node)

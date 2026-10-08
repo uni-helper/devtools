@@ -13,7 +13,8 @@ import {
 } from '../src/entry-inject.ts'
 import { BINDINGS_PROP } from '../src/instrument.ts'
 
-const parseWithAcorn = (source: string): any => parse(source, { ecmaVersion: 'latest', sourceType: 'module' })
+const parseWithAcorn = (source: string): any =>
+  parse(source, { ecmaVersion: 'latest', sourceType: 'module' })
 
 describe('entry-inject: shouldInjectAgentEntry 命名谓词 (LESSONS #2)', () => {
   it('主入口 main.ts / main.js 正常判定为应注入', () => {
@@ -29,29 +30,48 @@ describe('entry-inject: shouldInjectAgentEntry 命名谓词 (LESSONS #2)', () =>
   })
 
   it('带 query 的主入口不注入 (id 含 query 或显式 query 参数)', () => {
-    expect(shouldInjectAgentEntry('/project/src/main.ts?vue&type=script')).toBe(false)
-    expect(shouldInjectAgentEntry('/project/src/main.ts', '?{"page":"pages%2Findex%2Findex"}')).toBe(false)
-    expect(shouldInjectAgentEntry('/project/src/main.ts', { query: '?page=index' })).toBe(false)
+    expect(shouldInjectAgentEntry('/project/src/main.ts?vue&type=script')).toBe(
+      false,
+    )
+    expect(
+      shouldInjectAgentEntry(
+        '/project/src/main.ts',
+        '?{"page":"pages%2Findex%2Findex"}',
+      ),
+    ).toBe(false)
+    expect(
+      shouldInjectAgentEntry('/project/src/main.ts', { query: '?page=index' }),
+    ).toBe(false)
   })
 
   it('裸 ? 不注入 (无论是 id 结尾含 ? 还是显式 query 为 ?)', () => {
     expect(shouldInjectAgentEntry('/project/src/main.ts?')).toBe(false)
     expect(shouldInjectAgentEntry('/project/src/main.ts', '?')).toBe(false)
-    expect(shouldInjectAgentEntry('/project/src/main.ts', { query: '?' })).toBe(false)
+    expect(shouldInjectAgentEntry('/project/src/main.ts', { query: '?' })).toBe(
+      false,
+    )
   })
 
   it('空 query 正常注入', () => {
     expect(shouldInjectAgentEntry('/project/src/main.ts', '')).toBe(true)
-    expect(shouldInjectAgentEntry('/project/src/main.ts', { query: '' })).toBe(true)
+    expect(shouldInjectAgentEntry('/project/src/main.ts', { query: '' })).toBe(
+      true,
+    )
   })
 
   it('已含 AGENT_IMPORT_MARKER 或 probe 引用时不重复注入', () => {
     const already = `/* ${AGENT_IMPORT_MARKER} */\nimport { initAgent } from '@uni-helper/devtools-probes/vue3';`
-    expect(shouldInjectAgentEntry('/project/src/main.ts', '', already)).toBe(false)
-    expect(shouldInjectAgentEntry('/project/src/main.ts', { code: already })).toBe(false)
+    expect(shouldInjectAgentEntry('/project/src/main.ts', '', already)).toBe(
+      false,
+    )
+    expect(
+      shouldInjectAgentEntry('/project/src/main.ts', { code: already }),
+    ).toBe(false)
 
     const probeCode = `import { initAgent } from '@uni-helper/devtools-probes/vue3';`
-    expect(shouldInjectAgentEntry('/project/src/main.ts', '', probeCode)).toBe(false)
+    expect(shouldInjectAgentEntry('/project/src/main.ts', '', probeCode)).toBe(
+      false,
+    )
   })
 })
 
@@ -65,9 +85,18 @@ describe('entry-inject: transformAgentEntry 纯函数', () => {
   })
 
   it('不符合条件时返回 null', () => {
-    expect(transformAgentEntry('const a = 1;', '/project/src/other.ts')).toBeNull()
-    expect(transformAgentEntry('const a = 1;', '/project/src/main.ts?vue')).toBeNull()
-    expect(transformAgentEntry(`/* ${AGENT_IMPORT_MARKER} */`, '/project/src/main.ts')).toBeNull()
+    expect(
+      transformAgentEntry('const a = 1;', '/project/src/other.ts'),
+    ).toBeNull()
+    expect(
+      transformAgentEntry('const a = 1;', '/project/src/main.ts?vue'),
+    ).toBeNull()
+    expect(
+      transformAgentEntry(
+        `/* ${AGENT_IMPORT_MARKER} */`,
+        '/project/src/main.ts',
+      ),
+    ).toBeNull()
   })
 })
 
@@ -89,7 +118,9 @@ describe('entry-inject: isVirtualComponentEntry & isComponentModule 谓词', () 
 
 describe('entry-inject: transformInstrument 纯函数', () => {
   it('虚拟入口注入 __file 守卫', () => {
-    const encoded = Buffer.from('components/TestComp.vue', 'utf8').toString('base64url')
+    const encoded = Buffer.from('components/TestComp.vue', 'utf8').toString(
+      'base64url',
+    )
     process.env.UNI_INPUT_DIR = '/project/src'
     const code = `import Component from '/src/components/TestComp.vue'\nwx.createComponent(Component)`
     const result = transformInstrument(code, `uniComponent://${encoded}`)
@@ -111,9 +142,13 @@ describe('entry-inject: transformInstrument 纯函数', () => {
       }
     });`
 
-    const result = transformInstrument(code, '/project/src/components/TestComp.vue', {
-      parse: parseWithAcorn,
-    })
+    const result = transformInstrument(
+      code,
+      '/project/src/components/TestComp.vue',
+      {
+        parse: parseWithAcorn,
+      },
+    )
 
     expect(result).not.toBeNull()
     expect(result!.code).toContain(BINDINGS_PROP)
@@ -126,14 +161,21 @@ const _sfc_render = () => {};
 const _sfc_main = {};
 export default /* @__PURE__ */ _export_sfc(_sfc_main, [['render', _sfc_render]]);`
 
-    const result = transformInstrument(code, '/project/src/components/Plain.vue')
+    const result = transformInstrument(
+      code,
+      '/project/src/components/Plain.vue',
+    )
 
     expect(result).not.toBeNull()
     expect(result!.code).toContain('__uniDevtoolsNotifyRender')
   })
 
   it('非组件模块或无匹配点时返回 null', () => {
-    expect(transformInstrument('const a = 1;', '/project/src/utils.ts')).toBeNull()
-    expect(transformInstrument('const a = 1;', '/project/src/plain.vue')).toBeNull()
+    expect(
+      transformInstrument('const a = 1;', '/project/src/utils.ts'),
+    ).toBeNull()
+    expect(
+      transformInstrument('const a = 1;', '/project/src/plain.vue'),
+    ).toBeNull()
   })
 })

@@ -23,8 +23,8 @@
 | Pinia 检查器（官方树形：🍍 root 聚合视图+平级 stores、无页面列、编辑+失效刷新）                                                  | ✅          | Pinia 标签（官方内建映射）                         |
 | 路由页面栈（pages.json 注册路由 + 当前栈 + 匹配 + 导航）                                                                         | ✅          | Pages 标签                                         |
 | openInEditor（launch-editor + 项目根越界守卫）                                                                                   | ✅          | 树行文件名 / 状态行动作                            |
-| Timeline                                                                                                                         | ⏸ 有据降级 | tab 禁用（结论见 §7 W6）                           |
-| Reactivity Graph（setup 绑定↔render/watch 依赖图，d3-force 力导向）                                                             | ✅ 真机待验 | Graph 标签（W10，§7 B-graph-1002）                 |
+| Timeline                                                                                                                         | ⏸ 有据降级  | tab 禁用（结论见 §7 W6）                           |
+| Reactivity Graph（setup 绑定↔render/watch 依赖图，d3-force 力导向）                                                              | ✅ 真机待验 | Graph 标签（W10，§7 B-graph-1002）                 |
 | Vite Inspect（转换管线检查器，iframe 内嵌 vite-plugin-inspect UI）                                                               | ✅ 真机待验 | Vite Inspect 标签（W11，§7 B-inspect-1002）        |
 | Show render code（组件 render 函数源码，解插桩包装层 + 官方缩进归一）                                                            | ✅ 真机待验 | Components 页组件操作（W12，§7 B-rendercode-1002） |
 | Network（uni.request/uploadFile/downloadFile 全捕获：列表/详情/过滤/清空，实时推送）                                             | ✅ 真机待验 | Network 标签（W13，§7 B-network-1002）             |

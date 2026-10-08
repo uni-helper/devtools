@@ -12,8 +12,7 @@ const vueIsRef = vueAny.isRef || vueAny.default?.isRef
 export function getRaw(val: any): any {
   try {
     return typeof vueToRaw === 'function' ? vueToRaw(val) : val
-  }
-  catch {
+  } catch {
     return val
   }
 }
@@ -32,8 +31,7 @@ export function checkIsRef(val: any): boolean {
     if (typeof vueIsRef === 'function' && vueIsRef(val)) {
       return true
     }
-  }
-  catch {
+  } catch {
     // 容错环境无 Vue 导出
   }
   const raw = getRaw(val)
@@ -45,16 +43,15 @@ export function checkIsRef(val: any): boolean {
       if (typeof vueIsRef === 'function' && vueIsRef(raw)) {
         return true
       }
-    }
-    catch {}
+    } catch {}
   }
   const ctorName = val.constructor?.name ?? raw?.constructor?.name
   if (
-    ctorName === 'RefImpl'
-    || ctorName === 'ComputedRefImpl'
-    || ctorName === 'CustomRefImpl'
-    || ctorName === 'ObjectRefImpl'
-    || ctorName === 'Ref'
+    ctorName === 'RefImpl' ||
+    ctorName === 'ComputedRefImpl' ||
+    ctorName === 'CustomRefImpl' ||
+    ctorName === 'ObjectRefImpl' ||
+    ctorName === 'Ref'
   ) {
     return 'value' in val
   }
@@ -84,13 +81,14 @@ export function getSetupBindingInfo(val: unknown): SetupBindingInfo {
 
   const record = val as Record<string, unknown>
   const ref = record.__v_isRef === true
-  const computed = ref && (
-    record.effect != null
-    || typeof record.fn === 'function'
-    || typeof record._dirty === 'boolean'
-  )
+  const computed =
+    ref &&
+    (record.effect != null ||
+      typeof record.fn === 'function' ||
+      typeof record._dirty === 'boolean')
   const reactive = record.__v_isReactive === true
-  const hasSetter = typeof record.setter === 'function' || typeof record.set === 'function'
+  const hasSetter =
+    typeof record.setter === 'function' || typeof record.set === 'function'
   const readonly = record.__v_isReadonly === true || (computed && !hasSetter)
 
   return {
@@ -105,14 +103,11 @@ export function getSetupBindingInfo(val: unknown): SetupBindingInfo {
  * 读取 computed getter 源码，镜像 kit readComputedSource（截断 500 字符）
  */
 export function readComputedSource(val: unknown): string | undefined {
-  if (val == null || typeof val !== 'object')
-    return undefined
+  if (val == null || typeof val !== 'object') return undefined
 
   const record = val as Record<string, unknown>
   const effect = record.effect as Record<string, unknown> | undefined
-  const source = effect
-    ? (effect.raw ?? effect.fn)
-    : record.fn
+  const source = effect ? (effect.raw ?? effect.fn) : record.fn
 
   if (typeof source === 'function') {
     const str = source.toString()
@@ -124,7 +119,11 @@ export function readComputedSource(val: unknown): string | undefined {
 /**
  * 递归清洗非纯 JSON 可序列化数据，消除循环引用与特殊对象
  */
-export function toSafeJsonValue(val: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
+export function toSafeJsonValue(
+  val: unknown,
+  depth = 0,
+  seen = new WeakSet<object>(),
+): unknown {
   if (val === null || val === undefined) {
     return val
   }
@@ -153,7 +152,7 @@ export function toSafeJsonValue(val: unknown, depth = 0, seen = new WeakSet<obje
     seen.add(val as object)
 
     if (Array.isArray(val)) {
-      return val.map(item => toSafeJsonValue(item, depth + 1, seen))
+      return val.map((item) => toSafeJsonValue(item, depth + 1, seen))
     }
 
     if (val instanceof Date) {
@@ -179,8 +178,7 @@ export function toSafeJsonValue(val: unknown, depth = 0, seen = new WeakSet<obje
           continue
         }
         out[key] = toSafeJsonValue(propVal, depth + 1, seen)
-      }
-      catch {
+      } catch {
         out[key] = '<unserializable>'
       }
     }
@@ -197,8 +195,7 @@ export function ensureJsonSafe(value: unknown): unknown {
   try {
     const cleaned = toSafeJsonValue(value)
     return JSON.parse(JSON.stringify(cleaned))
-  }
-  catch {
+  } catch {
     return '<unserializable>'
   }
 }

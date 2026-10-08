@@ -12,7 +12,10 @@ import { NODE_RPC } from '@uni-helper/devtools-shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { __uniDevtoolsNotifyRender } from '../src/runtime/render-hook'
 import { bindPushDeps, resetPushGate } from '../src/runtime/push'
-import { clearInstanceRegistry, extractComponentNode } from '../src/runtime/tree'
+import {
+  clearInstanceRegistry,
+  extractComponentNode,
+} from '../src/runtime/tree'
 
 interface Call {
   method: string
@@ -35,7 +38,8 @@ function recordCalls(): Call[] {
   return calls
 }
 
-const notifyCalls = (calls: Call[]) => calls.filter(c => c.method === NODE_RPC.notifyComponentRendered)
+const notifyCalls = (calls: Call[]) =>
+  calls.filter((c) => c.method === NODE_RPC.notifyComponentRendered)
 
 /** 组件的（被包装的）render：以组件实例为 this 调用即模拟一次渲染 */
 function renderOf(): (this: unknown, ...args: unknown[]) => unknown {
@@ -63,7 +67,10 @@ describe('组件重渲染上报', () => {
     await vi.advanceTimersByTimeAsync(400)
 
     expect(notifyCalls(calls)).toEqual([
-      { method: NODE_RPC.notifyComponentRendered, payload: { ids: ['pages/index/index#7'] } },
+      {
+        method: NODE_RPC.notifyComponentRendered,
+        payload: { ids: ['pages/index/index#7'] },
+      },
     ])
   })
 
@@ -80,7 +87,10 @@ describe('组件重渲染上报', () => {
     await vi.advanceTimersByTimeAsync(400)
 
     expect(notifyCalls(calls)).toEqual([
-      { method: NODE_RPC.notifyComponentRendered, payload: { ids: ['pages/index/index#1', 'pages/index/index#2'] } },
+      {
+        method: NODE_RPC.notifyComponentRendered,
+        payload: { ids: ['pages/index/index#1', 'pages/index/index#2'] },
+      },
     ])
   })
 
@@ -99,8 +109,14 @@ describe('组件重渲染上报', () => {
     }
 
     expect(notifyCalls(calls)).toEqual([
-      { method: NODE_RPC.notifyComponentRendered, payload: { ids: ['pages/index/index#3'] } },
-      { method: NODE_RPC.notifyComponentRendered, payload: { ids: ['pages/index/index#3'] } },
+      {
+        method: NODE_RPC.notifyComponentRendered,
+        payload: { ids: ['pages/index/index#3'] },
+      },
+      {
+        method: NODE_RPC.notifyComponentRendered,
+        payload: { ids: ['pages/index/index#3'] },
+      },
     ])
   })
 
@@ -116,7 +132,10 @@ describe('组件重渲染上报', () => {
     await vi.advanceTimersByTimeAsync(400)
 
     expect(notifyCalls(calls)).toEqual([
-      { method: NODE_RPC.notifyComponentRendered, payload: { ids: ['pages/index/index#11'] } },
+      {
+        method: NODE_RPC.notifyComponentRendered,
+        payload: { ids: ['pages/index/index#11'] },
+      },
     ])
   })
 
@@ -132,7 +151,10 @@ describe('组件重渲染上报', () => {
     await vi.advanceTimersByTimeAsync(400)
 
     expect(notifyCalls(calls)).toEqual([
-      { method: NODE_RPC.notifyComponentRendered, payload: { ids: ['pages/index/index#5'] } },
+      {
+        method: NODE_RPC.notifyComponentRendered,
+        payload: { ids: ['pages/index/index#5'] },
+      },
     ])
   })
 

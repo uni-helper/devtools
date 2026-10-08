@@ -31,10 +31,21 @@ if (isMockPanelUrl()) {
   const badge = document.createElement('div')
   badge.textContent = 'MOCK'
   badge.title = 'URL 带 ?mock：当前展示的是 fixtures 假数据，与真实小程序无关'
-  badge.setAttribute('style', [
-    'position:fixed', 'z-index:2147483647', 'right:10px', 'bottom:10px',
-    'padding:2px 8px', 'border-radius:4px', 'font:600 10px ui-monospace,monospace',
-    'background:#b45309', 'color:#fff', 'opacity:.9', 'pointer-events:none',
-  ].join(';'))
+  badge.setAttribute(
+    'style',
+    [
+      'position:fixed',
+      'z-index:2147483647',
+      'right:10px',
+      'bottom:10px',
+      'padding:2px 8px',
+      'border-radius:4px',
+      'font:600 10px ui-monospace,monospace',
+      'background:#b45309',
+      'color:#fff',
+      'opacity:.9',
+      'pointer-events:none',
+    ].join(';'),
+  )
   document.body.appendChild(badge)
 }

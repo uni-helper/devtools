@@ -18,7 +18,9 @@ const props = withDefaults(
 )
 
 const icon = computed(() => props.icon || props.fallback)
-const imageIcon = computed(() => (isUrlIcon(icon.value) ? icon.value : undefined))
+const imageIcon = computed(() =>
+  isUrlIcon(icon.value) ? icon.value : undefined,
+)
 const materialIconText = computed(() => getMaterialIconText(icon.value))
 const classIcon = computed(() => {
   if (imageIcon.value || materialIconText.value) return
@@ -44,5 +46,11 @@ const classIcon = computed(() => {
   >
     {{ materialIconText }}
   </span>
-  <span v-else v-bind="$attrs" :class="classIcon" :title="title" aria-hidden="true" />
+  <span
+    v-else
+    v-bind="$attrs"
+    :class="classIcon"
+    :title="title"
+    aria-hidden="true"
+  />
 </template>

@@ -1,4 +1,9 @@
-import { defineConfig, presetIcons, presetWind3, transformerDirectives } from 'unocss'
+import {
+  defineConfig,
+  presetIcons,
+  presetWind3,
+  transformerDirectives,
+} from 'unocss'
 
 // presetWind3 给 var() 颜色套透明度修饰时会把 alpha 静默丢弃（bg-primary-500/20
 // 直接渲染成实心色，settings 开关因此全绿）。primary 各阶显式包一层 color-mix +
@@ -45,7 +50,8 @@ export default defineConfig({
       'tab-icon': 'h-5 w-5 shrink-0 text-5',
       'settings-button':
         'min-h-8 inline-flex items-center justify-center gap-1.5 rounded-1 border border-solid border-[#d4d4d4] bg-transparent px-3 py-1 color-inherit font-[inherit] appearance-none dark:border-[#737373] hover:bg-active',
-      'settings-button-primary': 'border-primary-500 text-primary-700 dark:text-primary-300',
+      'settings-button-primary':
+        'border-primary-500 text-primary-700 dark:text-primary-300',
       'settings-button-warning':
         'border-amber-600 text-amber-700 dark:border-amber-400 dark:text-amber-300',
       'settings-icon-button':
@@ -54,7 +60,8 @@ export default defineConfig({
         'min-h-8 min-w-30 rounded-1 border border-solid border-[#d4d4d4] bg-transparent py-1 pl-2.5 pr-7 color-inherit font-[inherit] appearance-none dark:border-[#737373]',
       'selectable-item':
         'flex items-center px-2 py-1 rounded cursor-pointer hover:bg-primary-200 dark:hover:bg-gray-800',
-      'selectable-item-active': 'text-white bg-primary-600 hover:text-white hover:bg-primary-600',
+      'selectable-item-active':
+        'text-white bg-primary-600 hover:text-white hover:bg-primary-600',
       'font-state-field': 'font-mono',
       'state-key': 'text-purple-700 dark:text-purple-300',
       colon: 'text-#444 dark:text-white',

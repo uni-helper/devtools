@@ -12,14 +12,18 @@
 // 只是从「自己实现一份」变成「引上游 + 传参」。
 export const REACTIVITY_GRAPH_MIN_VUE_VERSION = '3.5.0'
 
-export function supportsReactivityGraphVueVersion(version: string | undefined): boolean {
+export function supportsReactivityGraphVueVersion(
+  version: string | undefined,
+): boolean {
   const parts = parseVueVersion(version)
   if (!parts) return false
 
   return compareVersionParts(parts, [3, 5, 0]) >= 0
 }
 
-function parseVueVersion(version: string | undefined): [number, number, number] | undefined {
+function parseVueVersion(
+  version: string | undefined,
+): [number, number, number] | undefined {
   const match = version?.trim().match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/)
   if (!match) return
 

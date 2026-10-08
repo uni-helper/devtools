@@ -17,7 +17,11 @@
 
 import type { AgentConfig, AgentInstance } from '../runtime/lifecycle.ts'
 import { createBaseRpcFunctions } from '../runtime/rpc-base.ts'
-import { disposeAgent, getAgentInstance, initAgentPipeline } from '../runtime/lifecycle.ts'
+import {
+  disposeAgent,
+  getAgentInstance,
+  initAgentPipeline,
+} from '../runtime/lifecycle.ts'
 
 declare const uni: any
 declare const wx: any
@@ -27,12 +31,15 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     clientFunctions: createBaseRpcFunctions(), // 仅 8 个基础 RPC 方法
     customConfig,
     // Vue 2 运行时回退逻辑：uni → globalThis.uni → wx → globalThis.wx
-    getUni: () => (
+    getUni: () =>
       typeof uni !== 'undefined'
         ? uni
-        : ((typeof globalThis !== 'undefined' && (globalThis as any).uni)
-          || (typeof wx !== 'undefined' ? wx : (typeof globalThis !== 'undefined' ? (globalThis as any).wx : undefined)))
-    ),
+        : (typeof globalThis !== 'undefined' && (globalThis as any).uni) ||
+          (typeof wx !== 'undefined'
+            ? wx
+            : typeof globalThis !== 'undefined'
+              ? (globalThis as any).wx
+              : undefined),
   })
 }
 

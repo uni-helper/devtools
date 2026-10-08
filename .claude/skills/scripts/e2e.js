@@ -52,38 +52,27 @@ function parseArgs(argv) {
     const a = argv[i]
     if (a === '--build') {
       args.build = true
-    }
-    else if (a === '--fresh') {
+    } else if (a === '--fresh') {
       args.fresh = true
-    }
-    else if (a === '--keep-build') {
+    } else if (a === '--keep-build') {
       args.keepBuild = true
-    }
-    else if (a === '--kill-ide') {
+    } else if (a === '--kill-ide') {
       args.keepIde = false
-    }
-    else if (a === '--base-url') {
+    } else if (a === '--base-url') {
       args.baseUrl = argv[++i]
-    }
-    else if (a === '--token') {
+    } else if (a === '--token') {
       args.token = argv[++i]
-    }
-    else if (a === '--project') {
+    } else if (a === '--project') {
       args.project = path.resolve(argv[++i])
-    }
-    else if (a === '--scenarios') {
+    } else if (a === '--scenarios') {
       args.scenarios = argv[++i]
-    }
-    else if (a === '--chaos-ms') {
+    } else if (a === '--chaos-ms') {
       args.chaosMs = Number(argv[++i])
-    }
-    else if (a === '--seed') {
+    } else if (a === '--seed') {
       args.seed = Number(argv[++i])
-    }
-    else if (a === '--help' || a === '-h') {
+    } else if (a === '--help' || a === '-h') {
       args.help = true
-    }
-    else {
+    } else {
       console.error(`未知参数: ${a}`)
       args.help = true
     }
@@ -110,7 +99,7 @@ function printHelp() {
 
 // ---------- 小工具 ----------
 
-const sleep = ms => new Promise(r => setTimeout(r, ms))
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 function exec(cmd, args) {
   return new Promise((resolve) => {
@@ -128,7 +117,7 @@ function mulberry32(seed) {
   let a = seed >>> 0
   return () => {
     a |= 0
-    a = (a + 0x6D2B79F5) | 0
+    a = (a + 0x6d2b79f5) | 0
     let t = Math.imul(a ^ (a >>> 15), 1 | a)
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
@@ -138,7 +127,10 @@ function mulberry32(seed) {
 async function dumpArtifacts(label, payload) {
   const dir = path.join(ROOT, 'scripts/e2e-artifacts')
   fs.mkdirSync(dir, { recursive: true })
-  const file = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-')}-${label}.json`)
+  const file = path.join(
+    dir,
+    `${new Date().toISOString().replace(/[:.]/g, '-')}-${label}.json`,
+  )
   fs.writeFileSync(file, JSON.stringify(payload, null, 2))
   console.error(`  📦 现场快照已保存: ${path.relative(ROOT, file)}`)
 }
@@ -149,23 +141,30 @@ function resolveDep(name) {
   for (const base of [import.meta.url, path.join(ROOT, 'package.json')]) {
     try {
       return createRequire(base).resolve(name)
+    } catch {
+      /* 下一个候选 */
     }
-    catch { /* 下一个候选 */ }
   }
   return undefined
 }
 
 async function requireDeps() {
   if (!resolveDep('miniprogram-automator/package.json')) {
-    console.error('缺少依赖 miniprogram-automator。在仓库根目录执行：\n  pnpm add -w -D miniprogram-automator')
+    console.error(
+      '缺少依赖 miniprogram-automator。在仓库根目录执行：\n  pnpm add -w -D miniprogram-automator',
+    )
     process.exit(2)
   }
   if (!resolveDep('devframe/client')) {
-    console.error('缺少依赖 devframe（中继连接用）。请确认在仓库根目录执行本脚本。')
+    console.error(
+      '缺少依赖 devframe（中继连接用）。请确认在仓库根目录执行本脚本。',
+    )
     process.exit(2)
   }
   if (process.platform !== 'darwin') {
-    console.error(`当前仅支持 macOS（微信开发者工具 CLI 路径 ${WX_CLI}），检测到 ${process.platform}`)
+    console.error(
+      `当前仅支持 macOS（微信开发者工具 CLI 路径 ${WX_CLI}），检测到 ${process.platform}`,
+    )
     process.exit(2)
   }
 }
@@ -184,8 +183,7 @@ async function startBuildWatcher() {
     const cleanup = () => {
       try {
         process.kill(-child.pid, 'SIGTERM')
-      }
-      catch {
+      } catch {
         child.kill('SIGTERM')
       }
     }
@@ -193,29 +191,35 @@ async function startBuildWatcher() {
       const text = chunk.toString()
       buffer += text
       for (const line of text.split('\n')) {
-        if (line.trim())
-          console.error(`  [build] ${line}`)
+        if (line.trim()) console.error(`  [build] ${line}`)
       }
       // 面板 URL 行 = sidecar 已起；Build complete = bundle 可加载
       const tokenMatch = /devframe_auth_token=([0-9a-fA-F]+)/.exec(buffer)
       if (tokenMatch && /Build complete/.test(buffer) && !resolved) {
         const portMatch = /:(\d+)\/__uni-devtools\//.exec(buffer)
-        if (!portMatch)
-          return
+        if (!portMatch) return
         resolved = true
-        resolve({ child, cleanup, baseURL: `http://localhost:${portMatch[1]}/__uni-devtools/`, token: tokenMatch[1] })
+        resolve({
+          child,
+          cleanup,
+          baseURL: `http://localhost:${portMatch[1]}/__uni-devtools/`,
+          token: tokenMatch[1],
+        })
       }
     }
     child.stdout.on('data', onChunk)
     child.stderr.on('data', onChunk)
     child.on('exit', (code) => {
-      if (!resolved)
-        reject(new Error(`构建进程提前退出（code=${code}）`))
+      if (!resolved) reject(new Error(`构建进程提前退出（code=${code}）`))
     })
     setTimeout(() => {
       if (!resolved) {
         cleanup()
-        reject(new Error('等待构建/sidecar 就绪超时（180s）——检查 pnpm dev:mp-weixin 是否能正常启动'))
+        reject(
+          new Error(
+            '等待构建/sidecar 就绪超时（180s）——检查 pnpm dev:mp-weixin 是否能正常启动',
+          ),
+        )
       }
     }, 180000).unref()
   })
@@ -229,7 +233,9 @@ async function startBuildWatcher() {
 function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} 超时（${ms}ms）`)), ms)),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} 超时（${ms}ms）`)), ms),
+    ),
   ])
 }
 
@@ -263,16 +269,21 @@ async function ensureIdeAndAutomator(args) {
           15000,
           'automator 连接',
         )
-        const page = await withTimeout(miniProgram.currentPage(), 10000, 'currentPage')
+        const page = await withTimeout(
+          miniProgram.currentPage(),
+          10000,
+          'currentPage',
+        )
         console.error(`✓ 模拟器已连接，当前页面: ${page && page.path}`)
         return { miniProgram, ideChild }
-      }
-      catch (err) {
+      } catch (err) {
         lastErr = err
         await sleep(6000)
       }
     }
-    console.error(`… 模拟器始终无响应（第 ${attempt} 次）: ${lastErr && lastErr.message}`)
+    console.error(
+      `… 模拟器始终无响应（第 ${attempt} 次）: ${lastErr && lastErr.message}`,
+    )
     ideChild?.kill('SIGTERM')
     if (attempt === 1) {
       console.error('… 重启微信开发者工具后重试')
@@ -280,18 +291,26 @@ async function ensureIdeAndAutomator(args) {
       await sleep(4000)
     }
   }
-  throw new Error('模拟器始终无响应。人工排查：IDE 是否登录、设置 → 安全设置 → 服务端口是否开启、项目是否已打开')
+  throw new Error(
+    '模拟器始终无响应。人工排查：IDE 是否登录、设置 → 安全设置 → 服务端口是否开启、项目是否已打开',
+  )
 }
 
 async function launchIde(args) {
-  console.error('… 启动微信开发者工具（首次拉起较慢，服务端口未开时自动回 y 确认）')
-  const child = spawn(WX_CLI, ['auto', '--project', args.project, '--auto-port', String(AUTOMATOR_PORT)], {
-    stdio: ['pipe', 'pipe', 'pipe'],
-  })
+  console.error(
+    '… 启动微信开发者工具（首次拉起较慢，服务端口未开时自动回 y 确认）',
+  )
+  const child = spawn(
+    WX_CLI,
+    ['auto', '--project', args.project, '--auto-port', String(AUTOMATOR_PORT)],
+    {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  )
   // CLI 在服务端口关闭时会交互式询问 "Enable IDE Service (y/N)"
   child.stdin.write('y\n')
-  child.stdout.on('data', c => process.stderr.write(`  [cli] ${c}`))
-  child.stderr.on('data', c => process.stderr.write(`  [cli] ${c}`))
+  child.stdout.on('data', (c) => process.stderr.write(`  [cli] ${c}`))
+  child.stderr.on('data', (c) => process.stderr.write(`  [cli] ${c}`))
 
   const start = Date.now()
   while (Date.now() - start < 120000) {
@@ -302,27 +321,44 @@ async function launchIde(args) {
     await sleep(2000)
   }
   child.kill('SIGTERM')
-  throw new Error('等待 IDE 自动化端口超时（120s）。检查：IDE 是否已登录；设置 → 安全设置 → 服务端口是否开启')
+  throw new Error(
+    '等待 IDE 自动化端口超时（120s）。检查：IDE 是否已登录；设置 → 安全设置 → 服务端口是否开启',
+  )
 }
 
 async function connectRelay(baseURL, token) {
   // devframe client 面向浏览器环境，node 下补最小全局（resolveWsUrl 读取 location）
   if (typeof globalThis.location === 'undefined')
     globalThis.location = new URL(baseURL)
-  if (typeof globalThis.window === 'undefined')
-    globalThis.window = globalThis
+  if (typeof globalThis.window === 'undefined') globalThis.window = globalThis
   const { connectDevframe } = await import('devframe/client')
-  const client = await connectDevframe({ baseURL, authToken: token, simpleAuth: false, otpParam: false })
+  const client = await connectDevframe({
+    baseURL,
+    authToken: token,
+    simpleAuth: false,
+    otpParam: false,
+  })
   await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`中继连接超时（${baseURL}）——确认 sidecar 在跑、token 正确`)), 15000)
+    const timer = setTimeout(
+      () =>
+        reject(
+          new Error(
+            `中继连接超时（${baseURL}）——确认 sidecar 在跑、token 正确`,
+          ),
+        ),
+      15000,
+    )
     client.events.on('connection:status', (status) => {
       if (status === 'connected') {
         clearTimeout(timer)
         resolve()
-      }
-      else if (status === 'unauthorized' || status === 'error') {
+      } else if (status === 'unauthorized' || status === 'error') {
         clearTimeout(timer)
-        reject(new Error(`中继鉴权失败（${status}）——token 是否来自当前那次构建的日志？`))
+        reject(
+          new Error(
+            `中继鉴权失败（${status}）——token 是否来自当前那次构建的日志？`,
+          ),
+        )
       }
     })
   })
@@ -392,8 +428,7 @@ function flattenRelay(tree) {
   const nodes = []
   for (const page of tree.pages ?? []) {
     const walkNode = (node) => {
-      if (!node)
-        return
+      if (!node) return
       nodes.push({ id: node.id, name: node.name, route: page.route })
       for (const child of node.children ?? []) walkNode(child)
     }
@@ -417,17 +452,21 @@ async function relayStable(scoped, { timeout = 12000, interval = 700 } = {}) {
     try {
       lastTree = await scoped.rpc.call('get-component-tree')
       const flat = flattenRelay(lastTree)
-      const sig = JSON.stringify([flat.map(n => n.id), lastTree.pages?.map(p => p.route)])
-      if (sig === lastSig)
-        return lastTree
+      const sig = JSON.stringify([
+        flat.map((n) => n.id),
+        lastTree.pages?.map((p) => p.route),
+      ])
+      if (sig === lastSig) return lastTree
       lastSig = sig
+    } catch {
+      /* 中继瞬时不可达，继续重试 */
     }
-    catch { /* 中继瞬时不可达，继续重试 */ }
     await sleep(interval)
   }
-  if (lastTree)
-    return lastTree
-  throw new Error('中继快照始终不可用——确认探针已连接（构建日志无 WebSocket 报错）')
+  if (lastTree) return lastTree
+  throw new Error(
+    '中继快照始终不可用——确认探针已连接（构建日志无 WebSocket 报错）',
+  )
 }
 
 // ---------- 驱动：编译产物事件处理器 ----------
@@ -445,7 +484,9 @@ async function discoverHandlers(miniProgram) {
     return out
   })
   if (!Object.keys(handlers).length)
-    throw new Error('页面 $scope 上没有发现 e*_ 形态的事件处理器——页面结构或编译产物变了')
+    throw new Error(
+      '页面 $scope 上没有发现 e*_ 形态的事件处理器——页面结构或编译产物变了',
+    )
   console.error(`✓ 事件处理器: ${JSON.stringify(handlers)}`)
   return handlers
 }
@@ -453,7 +494,9 @@ async function discoverHandlers(miniProgram) {
 async function tapHandler(miniProgram, handlers, suffix) {
   const key = handlers[suffix]
   if (!key)
-    throw new Error(`找不到事件处理器「${suffix}」，已有的: ${JSON.stringify(handlers)}`)
+    throw new Error(
+      `找不到事件处理器「${suffix}」，已有的: ${JSON.stringify(handlers)}`,
+    )
   return miniProgram.evaluate((handlerKey) => {
     const scope = getCurrentPages()[0].$vm.$.ctx.$scope
     const invoker = scope[handlerKey]
@@ -469,32 +512,40 @@ async function tapHandler(miniProgram, handlers, suffix) {
 
 function judge(label, relay, probe, options, baseline) {
   const flat = flattenRelay(relay)
-  const dupIds = duplicatesOf(flat.map(n => n.id))
+  const dupIds = duplicatesOf(flat.map((n) => n.id))
   const reasons = []
   if (dupIds.length)
     reasons.push(`中继快照存在重复节点 id: ${dupIds.join(', ')}`)
   if (flat.length !== probe.totalAlive)
-    reasons.push(`中继快照节点数(${flat.length}) !== 内核探针同款遍历存活数(${probe.totalAlive})——死实例泄漏或遍历规则漂移`)
-  const dupUidPages = probe.pages.filter(p => p.dupUids.length > 0)
+    reasons.push(
+      `中继快照节点数(${flat.length}) !== 内核探针同款遍历存活数(${probe.totalAlive})——死实例泄漏或遍历规则漂移`,
+    )
+  const dupUidPages = probe.pages.filter((p) => p.dupUids.length > 0)
   if (dupUidPages.length)
-    reasons.push(`内核存活链出现同页 uid 撞车: ${dupUidPages.map(p => `${p.route}#${p.dupUids.join(',')}`).join('; ')}`)
+    reasons.push(
+      `内核存活链出现同页 uid 撞车: ${dupUidPages.map((p) => `${p.route}#${p.dupUids.join(',')}`).join('; ')}`,
+    )
   if (options.pages !== undefined && relay.pages.length !== options.pages)
     reasons.push(`页面栈期望 ${options.pages} 个，实际 ${relay.pages.length}`)
   if (options.testComp !== undefined) {
-    const count = flat.filter(n => n.name === options.testComp.name).length
+    const count = flat.filter((n) => n.name === options.testComp.name).length
     if (count !== options.testComp.count)
-      reasons.push(`${options.testComp.name} 期望 ${options.testComp.count} 个，实际 ${count}`)
+      reasons.push(
+        `${options.testComp.name} 期望 ${options.testComp.count} 个，实际 ${count}`,
+      )
   }
   if (options.expectBaseline && baseline) {
     if (flat.length !== baseline.relayTotal)
-      reasons.push(`回到基线后组件总数 ${flat.length} !== 基线 ${baseline.relayTotal}`)
+      reasons.push(
+        `回到基线后组件总数 ${flat.length} !== 基线 ${baseline.relayTotal}`,
+      )
   }
   const info = {
     relayTotal: flat.length,
     probeAlive: probe.totalAlive,
     kernelChain: probe.totalKernel,
     deadInChain: probe.totalDead,
-    pages: relay.pages.map(p => p.route),
+    pages: relay.pages.map((p) => p.route),
   }
   if (reasons.length) {
     console.error(`  ✗ ${label}: ${reasons.join('；')}`)
@@ -508,7 +559,9 @@ function judge(label, relay, probe, options, baseline) {
 async function collect(miniProgram, scoped) {
   await sleep(1200) // 渲染 + 探针 300ms 防抖
   const relay = await relayStable(scoped)
-  const probe = await miniProgram.evaluate(new Function(`return (${PROBE_WALK_SOURCE})`)())
+  const probe = await miniProgram.evaluate(
+    new Function(`return (${PROBE_WALK_SOURCE})`)(),
+  )
   return { relay, probe }
 }
 
@@ -522,43 +575,85 @@ const SCENARIOS = {
       relayTotal: flattenRelay(relay).length,
       probeTotal: probe.totalAlive,
     }
-    return judge('baseline', relay, probe, { testComp: { name: 'TestComp', count: 1 } }, ctx.baseline)
+    return judge(
+      'baseline',
+      relay,
+      probe,
+      { testComp: { name: 'TestComp', count: 1 } },
+      ctx.baseline,
+    )
   },
 
   'tab-switch': async function (ctx) {
     await tapHandler(ctx.miniProgram, ctx.handlers, 'LEGACY')
     await sleep(1200)
     const mid = await collect(ctx.miniProgram, ctx.scoped)
-    const midResult = judge('tab-switch(切走)', mid.relay, mid.probe, {}, ctx.baseline)
+    const midResult = judge(
+      'tab-switch(切走)',
+      mid.relay,
+      mid.probe,
+      {},
+      ctx.baseline,
+    )
 
     await tapHandler(ctx.miniProgram, ctx.handlers, 'ALL')
     const back = await collect(ctx.miniProgram, ctx.scoped)
-    const backResult = judge('tab-switch(切回)', back.relay, back.probe, { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } }, ctx.baseline)
+    const backResult = judge(
+      'tab-switch(切回)',
+      back.relay,
+      back.probe,
+      { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } },
+      ctx.baseline,
+    )
     return mergeResults('tab-switch', [midResult, backResult])
   },
 
   'rapid-switch': async function (ctx) {
     // <200ms 间隔连续切换，压过防抖窗口；结束后必须能收敛回基线
     for (let i = 0; i < 10; i++) {
-      await tapHandler(ctx.miniProgram, ctx.handlers, i % 2 === 0 ? 'LEGACY' : 'ALL')
+      await tapHandler(
+        ctx.miniProgram,
+        ctx.handlers,
+        i % 2 === 0 ? 'LEGACY' : 'ALL',
+      )
       await sleep(150)
     }
     await tapHandler(ctx.miniProgram, ctx.handlers, 'ALL')
     await sleep(2500)
     const { relay, probe } = await collect(ctx.miniProgram, ctx.scoped)
-    return judge('rapid-switch', relay, probe, { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } }, ctx.baseline)
+    return judge(
+      'rapid-switch',
+      relay,
+      probe,
+      { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } },
+      ctx.baseline,
+    )
   },
 
   async navigation(ctx) {
-    await ctx.miniProgram.evaluate(() => uni.navigateTo({ url: '/pages/hi?name=e2e' }))
+    await ctx.miniProgram.evaluate(() =>
+      uni.navigateTo({ url: '/pages/hi?name=e2e' }),
+    )
     await sleep(2500)
     const pushed = await collect(ctx.miniProgram, ctx.scoped)
-    const pushedResult = judge('navigation(压栈)', pushed.relay, pushed.probe, { pages: 2 }, ctx.baseline)
+    const pushedResult = judge(
+      'navigation(压栈)',
+      pushed.relay,
+      pushed.probe,
+      { pages: 2 },
+      ctx.baseline,
+    )
 
     await ctx.miniProgram.evaluate(() => uni.navigateBack())
     await sleep(2500)
     const back = await collect(ctx.miniProgram, ctx.scoped)
-    const backResult = judge('navigation(回栈)', back.relay, back.probe, { pages: 1, expectBaseline: true }, ctx.baseline)
+    const backResult = judge(
+      'navigation(回栈)',
+      back.relay,
+      back.probe,
+      { pages: 1, expectBaseline: true },
+      ctx.baseline,
+    )
     return mergeResults('navigation', [pushedResult, backResult])
   },
 
@@ -573,8 +668,7 @@ const SCENARIOS = {
       }
       let target = null
       const walk = (vm, depth, visited) => {
-        if (!vm || depth > 10 || visited.has(vm) || target)
-          return
+        if (!vm || depth > 10 || visited.has(vm) || target) return
         visited.add(vm)
         if (nameOf(vm) === 'DynamicKeepAliveDemo') {
           target = vm
@@ -585,15 +679,20 @@ const SCENARIOS = {
         for (const kid of kids) walk(kid, depth + 1, visited)
       }
       walk(getCurrentPages()[0].$vm, 0, new Set())
-      if (!target)
-        return null
+      if (!target) return null
       const scope = target.$.ctx.$scope || {}
       return Object.keys(scope).filter(
-        k => /^e\d+$/.test(k) && scope[k] && typeof scope[k].value === 'function',
+        (k) =>
+          /^e\d+$/.test(k) && scope[k] && typeof scope[k].value === 'function',
       )
     })
     if (!keys || keys.length === 0)
-      return { name: 'keepalive', pass: true, reasons: [], info: { skipped: '未找到 DynamicKeepAliveDemo（页面结构变化），跳过' } }
+      return {
+        name: 'keepalive',
+        pass: true,
+        reasons: [],
+        info: { skipped: '未找到 DynamicKeepAliveDemo（页面结构变化），跳过' },
+      }
 
     console.error(`  … KeepAlive 处理器轮换: ${keys.join(', ')}`)
     for (let round = 0; round < 2; round++) {
@@ -602,44 +701,56 @@ const SCENARIOS = {
           const page = getCurrentPages()[0].$vm
           // 子组件处理器在页面 scope 上不可见，需从组件实例出发
           const find = (vm, depth, visited) => {
-            if (!vm || depth > 10 || visited.has(vm))
-              return null
+            if (!vm || depth > 10 || visited.has(vm)) return null
             visited.add(vm)
             const internal = vm.$ || vm
-            if (internal.ctx && internal.ctx.$scope && internal.ctx.$scope[handlerKey])
+            if (
+              internal.ctx &&
+              internal.ctx.$scope &&
+              internal.ctx.$scope[handlerKey]
+            )
               return internal.ctx.$scope[handlerKey]
             const kids = (internal.ctx && internal.ctx.$children) || []
             for (const kid of kids) {
               const hit = find(kid, depth + 1, visited)
-              if (hit)
-                return hit
+              if (hit) return hit
             }
             return null
           }
           const invoker = find(page, 0, new Set())
-          if (invoker && typeof invoker.value === 'function')
-            invoker.value()
+          if (invoker && typeof invoker.value === 'function') invoker.value()
         }, key)
         await sleep(600)
       }
     }
     const { relay, probe } = await collect(ctx.miniProgram, ctx.scoped)
-    return judge('keepalive', relay, probe, { expectBaseline: true }, ctx.baseline)
+    return judge(
+      'keepalive',
+      relay,
+      probe,
+      { expectBaseline: true },
+      ctx.baseline,
+    )
   },
 
   async chaos(ctx) {
     const rand = mulberry32(ctx.args.seed)
     const suffixes = Object.keys(ctx.handlers)
     const deadline = Date.now() + ctx.args.chaosMs
-    console.error(`  … chaos ${ctx.args.chaosMs}ms，seed=${ctx.args.seed}（复现：--seed ${ctx.args.seed}）`)
+    console.error(
+      `  … chaos ${ctx.args.chaosMs}ms，seed=${ctx.args.seed}（复现：--seed ${ctx.args.seed}）`,
+    )
     let actions = 0
     while (Date.now() < deadline) {
       if (rand() < 0.85) {
-        await tapHandler(ctx.miniProgram, ctx.handlers, suffixes[Math.floor(rand() * suffixes.length)])
+        await tapHandler(
+          ctx.miniProgram,
+          ctx.handlers,
+          suffixes[Math.floor(rand() * suffixes.length)],
+        )
         actions++
         await sleep(100 + Math.floor(rand() * 800))
-      }
-      else {
+      } else {
         await sleep(300)
       }
     }
@@ -647,17 +758,23 @@ const SCENARIOS = {
     await tapHandler(ctx.miniProgram, ctx.handlers, 'ALL')
     await sleep(2500)
     const { relay, probe } = await collect(ctx.miniProgram, ctx.scoped)
-    return judge('chaos', relay, probe, { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } }, ctx.baseline)
+    return judge(
+      'chaos',
+      relay,
+      probe,
+      { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } },
+      ctx.baseline,
+    )
   },
 }
 
 function mergeResults(name, results) {
-  const failed = results.filter(r => !r.pass)
+  const failed = results.filter((r) => !r.pass)
   return {
     name,
     pass: failed.length === 0,
-    reasons: failed.flatMap(r => r.reasons),
-    info: results.map(r => ({ step: r.name, ...r.info })),
+    reasons: failed.flatMap((r) => r.reasons),
+    info: results.map((r) => ({ step: r.name, ...r.info })),
   }
 }
 
@@ -688,9 +805,10 @@ async function main() {
     spawned.build = build.cleanup
     baseURL = build.baseURL
     token = build.token
-  }
-  else if (!baseURL || !token) {
-    console.error('未指定 sidecar。二选一：\n  a) --build 由脚本自己起构建\n  b) --base-url <url> --token <token>（token 来自 dev:mp-weixin 日志的 devframe_auth_token）')
+  } else if (!baseURL || !token) {
+    console.error(
+      '未指定 sidecar。二选一：\n  a) --build 由脚本自己起构建\n  b) --base-url <url> --token <token>（token 来自 dev:mp-weixin 日志的 devframe_auth_token）',
+    )
     return 2
   }
 
@@ -704,10 +822,15 @@ async function main() {
   // 4. 场景
   const handlers = await discoverHandlers(miniProgram)
   const ctx = { miniProgram, scoped, handlers, args, baseline: undefined }
-  const requested = args.scenarios.split(',').map(s => s.trim()).filter(Boolean)
-  const unknown = requested.filter(s => !SCENARIOS[s])
+  const requested = args.scenarios
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const unknown = requested.filter((s) => !SCENARIOS[s])
   if (unknown.length) {
-    console.error(`未知场景: ${unknown.join(', ')}；可选: ${Object.keys(SCENARIOS).join(', ')}`)
+    console.error(
+      `未知场景: ${unknown.join(', ')}；可选: ${Object.keys(SCENARIOS).join(', ')}`,
+    )
     return 2
   }
 
@@ -716,10 +839,13 @@ async function main() {
     console.error(`\n▶ 场景 ${name}`)
     try {
       results.push(await SCENARIOS[name](ctx))
-    }
-    catch (err) {
+    } catch (err) {
       console.error(`  ✗ ${name}: ${err.message}`)
-      await dumpArtifacts(name, { error: err.message, handlers, baseline: ctx.baseline })
+      await dumpArtifacts(name, {
+        error: err.message,
+        handlers,
+        baseline: ctx.baseline,
+      })
       results.push({ name, pass: false, reasons: [err.message], info: {} })
     }
   }
@@ -727,26 +853,36 @@ async function main() {
   // 5. 汇总
   console.error('\n===== 结果 =====')
   for (const r of results) {
-    console.error(`  ${r.pass ? '✓' : '✗'} ${r.name}${r.pass ? '' : ` — ${r.reasons.join('；')}`}`)
+    console.error(
+      `  ${r.pass ? '✓' : '✗'} ${r.name}${r.pass ? '' : ` — ${r.reasons.join('；')}`}`,
+    )
   }
-  const failed = results.filter(r => !r.pass)
-  const failedNames = failed.map(r => r.name)
+  const failed = results.filter((r) => !r.pass)
+  const failedNames = failed.map((r) => r.name)
   if (failedNames.length) {
-    await dumpArtifacts('failed', { failed: failedNames, results, baseline: ctx.baseline })
+    await dumpArtifacts('failed', {
+      failed: failedNames,
+      results,
+      baseline: ctx.baseline,
+    })
   }
-  console.error(failedNames.length
-    ? `\n✗ ${failedNames.length}/${results.length} 个场景失败`
-    : '\n✓ 全部场景通过')
+  console.error(
+    failedNames.length
+      ? `\n✗ ${failedNames.length}/${results.length} 个场景失败`
+      : '\n✓ 全部场景通过',
+  )
 
   // 6. 清理
   try {
     await miniProgram.disconnect()
+  } catch {
+    /* 已断开 */
   }
-  catch { /* 已断开 */ }
   try {
     await client.close?.()
+  } catch {
+    /* 已关闭 */
   }
-  catch { /* 已关闭 */ }
   if (!args.keepBuild) {
     spawned.build?.()
   }
@@ -757,7 +893,11 @@ async function main() {
 }
 
 process.exitCode = 1
-main().then((code) => { process.exitCode = code }).catch((err) => {
-  console.error(`\n环境错误: ${err.message}`)
-  process.exitCode = 2
-})
+main()
+  .then((code) => {
+    process.exitCode = code
+  })
+  .catch((err) => {
+    console.error(`\n环境错误: ${err.message}`)
+    process.exitCode = 2
+  })

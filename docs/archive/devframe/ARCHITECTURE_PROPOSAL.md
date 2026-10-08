@@ -3,6 +3,7 @@
 ## 现状问题
 
 当前 `agent/index.ts` (Vue 3) 和 `agent/vue2.ts` 存在：
+
 - 80% 代码重复（agent 初始化、WebSocket、钩子安装、路由等）
 - 分支逻辑混杂在单一文件中
 - 维护成本高：bug 修复需要两处同步
@@ -12,6 +13,7 @@
 ### 方案一：共享核心 + 能力注册（推荐 ⭐）
 
 **架构：**
+
 ```
 src/agent/
 ├── core/
@@ -41,21 +43,24 @@ export interface AgentCapability {
   onDispose?: () => void
 }
 
-export function createAgent(capabilities: AgentCapability[], config: AgentConfig) {
+export function createAgent(
+  capabilities: AgentCapability[],
+  config: AgentConfig,
+) {
   const clientFunctions = {}
-  
+
   // 合并所有能力的 RPC 方法
   for (const cap of capabilities) {
     Object.assign(clientFunctions, cap.rpcMethods)
   }
-  
+
   // 初始化所有能力
   for (const cap of capabilities) {
     cap.onInit?.()
   }
-  
+
   // ... 核心初始化逻辑
-  
+
   return {
     rpc,
     socketHandle,
@@ -64,7 +69,7 @@ export function createAgent(capabilities: AgentCapability[], config: AgentConfig
         cap.onDispose?.()
       }
       // ...
-    }
+    },
   }
 }
 ```
@@ -114,13 +119,16 @@ import { piniaCapability } from './capabilities/pinia'
 import { renderCodeCapability } from './capabilities/render-code'
 
 export function initAgent(config) {
-  return createAgent([
-    componentCapability,
-    networkCapability,
-    routerCapability,
-    piniaCapability,        // Vue 3 专属
-    renderCodeCapability,   // Vue 3 专属
-  ], config)
+  return createAgent(
+    [
+      componentCapability,
+      networkCapability,
+      routerCapability,
+      piniaCapability, // Vue 3 专属
+      renderCodeCapability, // Vue 3 专属
+    ],
+    config,
+  )
 }
 ```
 
@@ -132,16 +140,20 @@ import { networkCapability } from './capabilities/network'
 import { routerCapability } from './capabilities/router'
 
 export function initAgent(config) {
-  return createAgent([
-    componentCapability,
-    networkCapability,
-    routerCapability,
-    // 不包含 pinia、renderCode 等 Vue 3 专属能力
-  ], config)
+  return createAgent(
+    [
+      componentCapability,
+      networkCapability,
+      routerCapability,
+      // 不包含 pinia、renderCode 等 Vue 3 专属能力
+    ],
+    config,
+  )
 }
 ```
 
 **优点：**
+
 - ✅ 零重复代码
 - ✅ 能力清晰隔离，易于测试
 - ✅ 新增能力只需新建文件并注册
@@ -149,6 +161,7 @@ export function initAgent(config) {
 - ✅ 支持未来扩展（Vue 2.7 可选启用某些 Vue 3 特性）
 
 **缺点：**
+
 - 需要一次性重构
 - 增加抽象层（但复杂度可控）
 
@@ -181,9 +194,9 @@ export function createAgentCore(adapter: AgentAdapter, config: AgentConfig) {
       vueVersion: getVueRuntimeVersion(),
     }),
     'uni-devtools:agent:ping': () => Date.now(),
-    ...adapter.getExtraRpcMethods(),  // 注入适配器特有方法
+    ...adapter.getExtraRpcMethods(), // 注入适配器特有方法
   }
-  
+
   // ... 核心逻辑
 }
 ```
@@ -193,7 +206,7 @@ export function createAgentCore(adapter: AgentAdapter, config: AgentConfig) {
 export const vue3Adapter: AgentAdapter = {
   getExtraRpcMethods: () => ({
     'uni-devtools:agent:getPiniaStores': () => getPiniaStores(),
-    'uni-devtools:agent:recomputeComponentState': (params) => 
+    'uni-devtools:agent:recomputeComponentState': (params) =>
       recomputeComponentState(params.id, params.section, params.path),
     // ...
   }),
@@ -203,15 +216,17 @@ export const vue3Adapter: AgentAdapter = {
 ```typescript
 // adapters/vue2-adapter.ts
 export const vue2Adapter: AgentAdapter = {
-  getExtraRpcMethods: () => ({}),  // 无额外方法
+  getExtraRpcMethods: () => ({}), // 无额外方法
 }
 ```
 
 **优点：**
+
 - ✅ 重构成本相对较小
 - ✅ 适配器模式易于理解
 
 **缺点：**
+
 - ❌ 适配器内部仍可能有重复
 - ❌ 共享逻辑和差异逻辑边界模糊
 
@@ -226,18 +241,26 @@ export const vue2Adapter: AgentAdapter = {
 const isVue2 = detectVueVersion() === 2
 
 const clientFunctions = {
-  'uni-devtools:agent:getComponentTree': () => { /* ... */ },
-  ...(isVue2 ? {} : {
-    'uni-devtools:agent:getPiniaStores': () => getPiniaStores(),
-    'uni-devtools:agent:recomputeComponentState': (params) => { /* ... */ },
-  }),
+  'uni-devtools:agent:getComponentTree': () => {
+    /* ... */
+  },
+  ...(isVue2
+    ? {}
+    : {
+        'uni-devtools:agent:getPiniaStores': () => getPiniaStores(),
+        'uni-devtools:agent:recomputeComponentState': (params) => {
+          /* ... */
+        },
+      }),
 }
 ```
 
 **优点：**
+
 - ✅ 单一入口文件
 
 **缺点：**
+
 - ❌ 运行时分支影响性能和可读性
 - ❌ 构建时条件需要双构建流程
 - ❌ 不符合你当前"两个独立入口"的设计
@@ -247,6 +270,7 @@ const clientFunctions = {
 ## 推荐决策
 
 **选择方案一**，理由：
+
 1. 你的 package.json 已经设计了两个独立入口（`./agent` 和 `./agent/vue2`），方案一与之契合
 2. 能力注册模式是经典的插件化架构，Vue DevTools 官方也用类似方案
 3. 重构后维护成本大幅降低，一次投入长期受益

@@ -75,7 +75,7 @@ Wait for "IDE server started successfully"（轮询 `lsof -i :9420` 即可）。
 const automator = require('miniprogram-automator')
 
 const miniProgram = await automator.connect({
-  wsEndpoint: 'ws://localhost:9420'
+  wsEndpoint: 'ws://localhost:9420',
 })
 
 const page = await miniProgram.currentPage()
@@ -93,14 +93,14 @@ Mini-program compiles `bindtap="handleName"` into `vm.$.ctx.$scope.eX_NAME.value
 // List available handlers（语义后缀对应 index 页 Tab id）
 const handlers = await miniProgram.evaluate(() => {
   const scope = getCurrentPages()[0].$vm.$.ctx.$scope
-  return Object.keys(scope).filter(k => /^e\d+_/.test(k))
+  return Object.keys(scope).filter((k) => /^e\d+_/.test(k))
 })
 
 // Trigger: switch to LEGACY tab
 await miniProgram.evaluate(() => {
   getCurrentPages()[0].$vm.$.ctx.$scope.e8_LEGACY.value()
 })
-await new Promise(resolve => setTimeout(resolve, 500)) // Wait for render
+await new Promise((resolve) => setTimeout(resolve, 500)) // Wait for render
 ```
 
 Handler 名以编译产物为准：`playground/vue3-vite/dist/dev/mp-weixin/pages/index.wxml`。
@@ -112,15 +112,13 @@ Handler 名以编译产物为准：`playground/vue3-vite/dist/dev/mp-weixin/page
 ```javascript
 const snapshot = await miniProgram.evaluate(() => {
   function traverse(vm, depth = 0, visited = new Set()) {
-    if (!vm || depth >= 10 || visited.has(vm))
-      return []
+    if (!vm || depth >= 10 || visited.has(vm)) return []
     visited.add(vm)
     const internal = vm.$ || vm // Vue3 内部实例
     const t = internal.type
     const name = (t && (t.__name || t.name)) || vm.$options?.name || 'Anonymous'
     const isDead = !!(internal.isUnmounted || internal._isDestroyed)
-    if (isDead)
-      return [] // 探针同款：死实例及其子树剪掉
+    if (isDead) return [] // 探针同款：死实例及其子树剪掉
     const nodes = [{ name, uid: internal.uid ?? internal._uid, depth }]
     const kids = (internal.ctx && internal.ctx.$children) || []
     for (const child of kids) nodes.push(...traverse(child, depth + 1, visited))
@@ -137,7 +135,12 @@ const snapshot = await miniProgram.evaluate(() => {
 ```javascript
 import { connectDevframe } from 'devframe/client'
 // node 下需先补 globalThis.location/window（client 面向浏览器）
-const client = await connectDevframe({ baseURL, authToken: token, simpleAuth: false, otpParam: false })
+const client = await connectDevframe({
+  baseURL,
+  authToken: token,
+  simpleAuth: false,
+  otpParam: false,
+})
 const scoped = client.scope('uni-helper-devtools')
 const tree = await scoped.rpc.call('get-component-tree')
 ```

@@ -1,7 +1,8 @@
 import type { ComponentSnapshot } from './devtools-client'
 import { getComponentPreferenceKey } from './component-tree'
 
-const COMPONENT_TREE_PREFERENCES_STORAGE = 'vue-devtools-next:component-tree-preferences'
+const COMPONENT_TREE_PREFERENCES_STORAGE =
+  'vue-devtools-next:component-tree-preferences'
 
 interface StoredComponentTreePreferences {
   favorites: Record<string, string[]>
@@ -61,7 +62,10 @@ function getSelectionScope(appName: string, routePath: string): string {
 }
 
 function readPreferences(): StoredComponentTreePreferences {
-  const fallback: StoredComponentTreePreferences = { favorites: {}, selections: {} }
+  const fallback: StoredComponentTreePreferences = {
+    favorites: {},
+    selections: {},
+  }
   if (typeof window === 'undefined') return fallback
 
   try {
@@ -83,7 +87,10 @@ function writePreferences(preferences: StoredComponentTreePreferences): void {
   if (typeof window === 'undefined') return
 
   try {
-    window.localStorage.setItem(COMPONENT_TREE_PREFERENCES_STORAGE, JSON.stringify(preferences))
+    window.localStorage.setItem(
+      COMPONENT_TREE_PREFERENCES_STORAGE,
+      JSON.stringify(preferences),
+    )
   } catch {}
 }
 
@@ -101,7 +108,9 @@ function normalizeStringArrayRecord(value: unknown): Record<string, string[]> {
   return Object.fromEntries(
     Object.entries(value).flatMap(([key, items]) => {
       if (!Array.isArray(items)) return []
-      return [[key, items.filter((item): item is string => typeof item === 'string')]]
+      return [
+        [key, items.filter((item): item is string => typeof item === 'string')],
+      ]
     }),
   )
 }

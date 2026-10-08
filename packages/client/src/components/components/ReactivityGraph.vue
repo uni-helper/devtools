@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { ReactivityGraphNodeType, ReactivityGraphSnapshot } from '@vue/devtools-kit'
+import type {
+  ReactivityGraphNodeType,
+  ReactivityGraphSnapshot,
+} from '@vue/devtools-kit'
 import { computed, ref } from 'vue'
 import { Pane, Splitpanes } from 'splitpanes'
 import ReactivityGraphToolbar from './ReactivityGraphToolbar.vue'
@@ -23,7 +26,9 @@ const dependencyDepth = ref(1)
 
 const graphSearch = ref('')
 
-const activeTypeFilters = ref<Set<ReactivityGraphNodeType>>(new Set(TYPE_LEGEND_TYPES))
+const activeTypeFilters = ref<Set<ReactivityGraphNodeType>>(
+  new Set(TYPE_LEGEND_TYPES),
+)
 
 const pathSelectorOpen = ref(false)
 
@@ -39,7 +44,8 @@ const filteredGraph = computed<ReactivityGraphSnapshot>(() => {
   })
   const nodeIds = new Set(nodes.map((node) => node.id))
   const relationships = props.graph.relationships.filter(
-    (relationship) => nodeIds.has(relationship.from) && nodeIds.has(relationship.to),
+    (relationship) =>
+      nodeIds.has(relationship.from) && nodeIds.has(relationship.to),
   )
 
   return { nodes, relationships }
@@ -53,7 +59,11 @@ const pathModeActive = computed(() => !!pathStartId.value && !!pathEndId.value)
 
 const selectedRelationshipPath = computed<RelationshipPathResult>(() => {
   if (!pathModeActive.value) return emptyRelationshipPath()
-  return buildRelationshipPath(pathStartId.value, pathEndId.value, relationshipsBySource.value)
+  return buildRelationshipPath(
+    pathStartId.value,
+    pathEndId.value,
+    relationshipsBySource.value,
+  )
 })
 function selectGraphNode(nodeId: string) {
   pathSelectorOpen.value = false

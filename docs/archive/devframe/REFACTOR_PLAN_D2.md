@@ -13,6 +13,7 @@
 将 `packages/devframe/src/agent/index.ts` (Vue 3, 317行) 和 `agent/vue2.ts` (Vue 2, 288行) 中约 80% 的重复代码抽取为 2 个共享核心文件，同时修复定时器内存泄漏缺陷。重构后两个入口各缩减至 25-35 行，代码总量从 606 行降至约 260-290 行，净减少 43%-56%。
 
 **核心收益**：
+
 - ✅ 消除 80% 代码重复（约 230 行）
 - ✅ 修复 `setInterval` 内存泄漏缺陷
 - ✅ 保持 TypeScript 静态类型安全（强类型 Object Spread）
@@ -45,13 +46,13 @@ src/agent/
 
 ### 1.2 代码量对比
 
-| 模块 | 当前行数 | 重构后行数 | 变化 |
-|------|----------|------------|------|
-| `index.ts` | 317 | ~30 | -287 |
-| `vue2.ts` | 288 | ~25 | -263 |
-| `rpc-base.ts` | 0 | ~100 | +100 |
-| `lifecycle.ts` | 0 | ~100 | +100 |
-| **总计** | **605** | **~255** | **-350 (-58%)** |
+| 模块           | 当前行数 | 重构后行数 | 变化            |
+| -------------- | -------- | ---------- | --------------- |
+| `index.ts`     | 317      | ~30        | -287            |
+| `vue2.ts`      | 288      | ~25        | -263            |
+| `rpc-base.ts`  | 0        | ~100       | +100            |
+| `lifecycle.ts` | 0        | ~100       | +100            |
+| **总计**       | **605**  | **~255**   | **-350 (-58%)** |
 
 ### 1.3 核心设计原则
 
@@ -67,6 +68,7 @@ src/agent/
 ### 2.1 `rpc-base.ts` - 基础 RPC 方法集合
 
 **职责**：
+
 - 提供 8 个 Vue 2/3 通用的 RPC 方法
 - 提供环境探测工具函数（`getCurrentPagesSafe`、`resolveRuntimeUni`）
 
@@ -75,7 +77,10 @@ src/agent/
 ```typescript
 import type { PageComponentTree } from './tree'
 import type { ComponentStateResult, UpdateStateResult } from './state'
-import type { ClearNetworkRecordsResult, GetNetworkRecordsResult } from '../types'
+import type {
+  ClearNetworkRecordsResult,
+  GetNetworkRecordsResult,
+} from '../types'
 import { collectComponentTree, getVueRuntimeVersion } from './tree'
 import { getComponentState, updateComponentState } from './state'
 import { getNetworkRecords, clearNetworkRecords } from './network'
@@ -84,16 +89,17 @@ import { navigateInMiniProgram } from './navigate'
 
 /** 安全读取当前页面栈（mp 全局 getCurrentPages 可能不存在或抛错） */
 export function getCurrentPagesSafe(): any[] {
-  const getPages = typeof getCurrentPages === 'function'
-    ? getCurrentPages
-    : (typeof globalThis !== 'undefined' && typeof (globalThis as any).getCurrentPages === 'function'
+  const getPages =
+    typeof getCurrentPages === 'function'
+      ? getCurrentPages
+      : typeof globalThis !== 'undefined' &&
+          typeof (globalThis as any).getCurrentPages === 'function'
         ? (globalThis as any).getCurrentPages
-        : undefined)
+        : undefined
   try {
     const pages = getPages ? getPages() : []
     return Array.isArray(pages) ? pages : []
-  }
-  catch {
+  } catch {
     return []
   }
 }
@@ -102,29 +108,52 @@ export function getCurrentPagesSafe(): any[] {
 export function resolveRuntimeUni(runtimeHint?: any): any {
   if (runtimeHint) return runtimeHint
   if (typeof uni !== 'undefined') return uni
-  if (typeof globalThis !== 'undefined' && (globalThis as any).uni) return (globalThis as any).uni
+  if (typeof globalThis !== 'undefined' && (globalThis as any).uni)
+    return (globalThis as any).uni
   if (typeof wx !== 'undefined') return wx
-  if (typeof globalThis !== 'undefined' && (globalThis as any).wx) return (globalThis as any).wx
+  if (typeof globalThis !== 'undefined' && (globalThis as any).wx)
+    return (globalThis as any).wx
   return undefined
 }
 
 /**
  * 创建 8 个基础 RPC 方法（Vue 2/3 通用）
- * 
+ *
  * 返回类型显式声明，确保 TypeScript 完整推导每个方法的签名
  */
 export function createBaseRpcFunctions(): {
   'uni-devtools:agent:ping': () => number
-  'uni-devtools:agent:getComponentTree': () => { pages: PageComponentTree[], vueVersion?: string }
-  'uni-devtools:agent:getNetworkRecords': (params?: any) => GetNetworkRecordsResult
-  'uni-devtools:agent:clearNetworkRecords': () => ClearNetworkRecordsResult
-  'uni-devtools:agent:getComponentState': (params: { id: string } | string) => ComponentStateResult
-  'uni-devtools:agent:updateComponentState': (params: any, maybeKey?: string, maybeVal?: unknown) => UpdateStateResult
-  'uni-devtools:agent:getRouterInfo': () => {
-    currentRoute: { path: string, fullPath?: string, query?: Record<string, unknown> } | null
-    stack: Array<{ path: string, query?: Record<string, unknown>, options?: Record<string, unknown> }>
+  'uni-devtools:agent:getComponentTree': () => {
+    pages: PageComponentTree[]
+    vueVersion?: string
   }
-  'uni-devtools:agent:navigate': (params: { path: string }) => Promise<{ ok: boolean, error?: string }>
+  'uni-devtools:agent:getNetworkRecords': (
+    params?: any,
+  ) => GetNetworkRecordsResult
+  'uni-devtools:agent:clearNetworkRecords': () => ClearNetworkRecordsResult
+  'uni-devtools:agent:getComponentState': (
+    params: { id: string } | string,
+  ) => ComponentStateResult
+  'uni-devtools:agent:updateComponentState': (
+    params: any,
+    maybeKey?: string,
+    maybeVal?: unknown,
+  ) => UpdateStateResult
+  'uni-devtools:agent:getRouterInfo': () => {
+    currentRoute: {
+      path: string
+      fullPath?: string
+      query?: Record<string, unknown>
+    } | null
+    stack: Array<{
+      path: string
+      query?: Record<string, unknown>
+      options?: Record<string, unknown>
+    }>
+  }
+  'uni-devtools:agent:navigate': (params: {
+    path: string
+  }) => Promise<{ ok: boolean; error?: string }>
 } {
   return {
     'uni-devtools:agent:ping': (): number => {
@@ -146,15 +175,26 @@ export function createBaseRpcFunctions(): {
       return clearNetworkRecords()
     },
 
-    'uni-devtools:agent:getComponentState': (params: { id: string } | string) => {
+    'uni-devtools:agent:getComponentState': (
+      params: { id: string } | string,
+    ) => {
       const id = typeof params === 'string' ? params : params?.id
       return getComponentState(id)
     },
 
-    'uni-devtools:agent:updateComponentState': (params: any, maybeKey?: string, maybeVal?: unknown) => {
-      const res = typeof params === 'object' && params !== null && 'id' in params
-        ? updateComponentState(params)
-        : updateComponentState({ id: params, key: maybeKey!, value: maybeVal })
+    'uni-devtools:agent:updateComponentState': (
+      params: any,
+      maybeKey?: string,
+      maybeVal?: unknown,
+    ) => {
+      const res =
+        typeof params === 'object' && params !== null && 'id' in params
+          ? updateComponentState(params)
+          : updateComponentState({
+              id: params,
+              key: maybeKey!,
+              value: maybeVal,
+            })
       schedulePushComponentTree(100)
       return res
     },
@@ -163,7 +203,11 @@ export function createBaseRpcFunctions(): {
       const pages = getCurrentPagesSafe()
       const stack = pages.map((page: any) => {
         const rawRoute = page?.route || page?.__route__ || ''
-        const path = rawRoute ? (rawRoute.startsWith('/') ? rawRoute : `/${rawRoute}`) : '/'
+        const path = rawRoute
+          ? rawRoute.startsWith('/')
+            ? rawRoute
+            : `/${rawRoute}`
+          : '/'
         const query = page?.options || page?.$page?.options || {}
         return {
           path,
@@ -194,7 +238,10 @@ export function createBaseRpcFunctions(): {
       }
       const uniObj = resolveRuntimeUni()
       if (!uniObj) {
-        return Promise.resolve({ ok: false, error: 'uni runtime is not available' })
+        return Promise.resolve({
+          ok: false,
+          error: 'uni runtime is not available',
+        })
       }
 
       return navigateInMiniProgram(uniObj, url, getCurrentPagesSafe)
@@ -204,6 +251,7 @@ export function createBaseRpcFunctions(): {
 ```
 
 **关键设计点**：
+
 - ✅ 返回类型显式声明（不依赖自动推导），保证 TypeScript 完整类型检查
 - ✅ 所有依赖的底层模块（`tree.ts`、`state.ts`、`network.ts`、`navigate.ts`）均为 Vue 2/3 共享模块
 - ✅ 零引用 Vue 3 专属模块（`pinia.ts`、`render-code.ts`）
@@ -213,6 +261,7 @@ export function createBaseRpcFunctions(): {
 ### 2.2 `lifecycle.ts` - 生命周期管道与单例管理
 
 **职责**：
+
 - 统一管理 `activeAgentInstance` 单例状态
 - 按严格时序执行 Agent 初始化管道（Socket → RPC → bindPushDeps → installNetworkInterceptors → resetGates → setupChangeDetectionHooks）
 - 提供带清理句柄的变更检测钩子（修复 `setInterval` 泄漏）
@@ -224,7 +273,12 @@ export function createBaseRpcFunctions(): {
 import { createRpcClient } from 'devframe/rpc/client'
 import { config } from 'virtual:uni-devtools-agent'
 import { type UniSocketChannelHandle, createUniSocketChannel } from './socket'
-import { bindPushDeps, cancelScheduledPush, resetPushGate, schedulePushComponentTree } from './push'
+import {
+  bindPushDeps,
+  cancelScheduledPush,
+  resetPushGate,
+  schedulePushComponentTree,
+} from './push'
 import { collectComponentTree } from './tree'
 import {
   cancelScheduledNetworkPush,
@@ -259,7 +313,7 @@ let activeAgentInstance: AgentInstance | null = null
 
 /**
  * 进程级全局事件钩子（只安装一次，永不重复安装）
- * 
+ *
  * 包括：wx.onAppRoute、uni.addInterceptor、__VUE_DEVTOOLS_GLOBAL_HOOK__
  * 这些是宿主运行时的全局单例事件总线，不应随 Agent 实例销毁而重复注册
  */
@@ -277,14 +331,19 @@ function ensureProcessGlobalHooks(): void {
       wx.onAppRoute(() => {
         schedulePushComponentTree(200)
       })
-    }
-    catch {}
+    } catch {}
   }
 
   // uni 路由跳转拦截（涵盖 navigateTo / redirectTo / switchTab / navigateBack / reLaunch）
   const uniObj = typeof uni !== 'undefined' ? uni : (globalThis as any).uni
   if (uniObj && typeof uniObj.addInterceptor === 'function') {
-    const routeMethods = ['navigateTo', 'redirectTo', 'reLaunch', 'switchTab', 'navigateBack']
+    const routeMethods = [
+      'navigateTo',
+      'redirectTo',
+      'reLaunch',
+      'switchTab',
+      'navigateBack',
+    ]
     for (const method of routeMethods) {
       try {
         uniObj.addInterceptor(method, {
@@ -292,8 +351,7 @@ function ensureProcessGlobalHooks(): void {
             schedulePushComponentTree(250)
           },
         })
-      }
-      catch {}
+      } catch {}
     }
   }
 
@@ -306,13 +364,12 @@ function ensureProcessGlobalHooks(): void {
       existingHook.on('component:updated', () => schedulePushComponentTree(300))
       existingHook.on('component:removed', () => schedulePushComponentTree(300))
     }
-  }
-  catch {}
+  } catch {}
 }
 
 /**
  * 实例级快照轮询定时器（随 Agent 实例生命周期启停）
- * 
+ *
  * 快照轮询是兜底机制：uni 的 mp 构建里 __VUE_DEVTOOLS_GLOBAL_HOOK__ 通常不存在，
  * 「小程序里改 data」没有任何事件可听——这恰恰是用户最高频的场景。
  */
@@ -322,7 +379,7 @@ function startSnapshotPolling(): void {
   if (snapshotPollingTimer !== null) {
     return // 已启动，避免重复
   }
-  
+
   let lastSnapshot = ''
   snapshotPollingTimer = setInterval(() => {
     try {
@@ -331,8 +388,7 @@ function startSnapshotPolling(): void {
         lastSnapshot = snapshot
         schedulePushComponentTree(0)
       }
-    }
-    catch {}
+    } catch {}
   }, 2000)
 }
 
@@ -345,7 +401,7 @@ function stopSnapshotPolling(): void {
 
 /**
  * Agent 初始化管道（严格按 6 步时序执行）
- * 
+ *
  * @param options.clientFunctions - RPC 方法字典（由入口组装，包含版本专属方法）
  * @param options.customConfig - 自定义配置（wsUrl、token 等）
  * @param options.getUni - 运行时 uni 对象获取器（用于网络拦截器）
@@ -384,7 +440,9 @@ export function initAgentPipeline(options: {
     wsUrl: fullWsUrl,
     /* eslint-disable no-console */
     onOpen: () => {
-      console.log('[uni-devtools-agent] DevTools connected, pushing initial state')
+      console.log(
+        '[uni-devtools-agent] DevTools connected, pushing initial state',
+      )
       schedulePushComponentTree(100)
       resetNetworkPushState()
       scheduleNetworkPush(100)
@@ -445,7 +503,7 @@ export function getAgentInstance(): AgentInstance | null {
 
 /**
  * 清理并销毁当前 Agent 实例
- * 
+ *
  * 清理项：
  * 1. 取消所有调度的推送任务
  * 2. 取消所有调度的网络推送任务
@@ -457,7 +515,7 @@ export function disposeAgent(): void {
   cancelScheduledPush()
   cancelScheduledNetworkPush()
   stopSnapshotPolling() // ✅ 清理快照轮询定时器
-  
+
   if (activeAgentInstance) {
     activeAgentInstance.dispose()
     activeAgentInstance = null
@@ -466,6 +524,7 @@ export function disposeAgent(): void {
 ```
 
 **关键设计点**：
+
 - ✅ 模块级单例（`activeAgentInstance`）由 `lifecycle.ts` 统一持有
 - ✅ **拆分钩子管理**：进程级全局钩子（`processGlobalHooksInstalled`，永不重置）+ 实例级定时器（`snapshotPollingTimer`，随实例启停）
 - ✅ `instance.dispose()` 显式清理快照轮询定时器（修复泄漏）
@@ -478,6 +537,7 @@ export function disposeAgent(): void {
 ### 2.3 `index.ts` - Vue 3 入口（重构后 ~30 行）
 
 **职责**：
+
 - 组装 Vue 3 专属 RPC 方法（pinia 3个、renderCode 1个、recomputeComponentState 1个）
 - 调用 `initAgentPipeline` 初始化探针
 - 重导出公共 API 以保持向后兼容
@@ -493,30 +553,47 @@ export function disposeAgent(): void {
 import type { AgentConfig, AgentInstance } from './lifecycle'
 import { createBaseRpcFunctions } from './rpc-base'
 import { initAgentPipeline, getAgentInstance, disposeAgent } from './lifecycle'
-import { type PiniaStateResult, type PiniaStoresResult, type UpdatePiniaStateResult, getPiniaState, getPiniaStores, updatePiniaState } from './pinia'
+import {
+  type PiniaStateResult,
+  type PiniaStoresResult,
+  type UpdatePiniaStateResult,
+  getPiniaState,
+  getPiniaStores,
+  updatePiniaState,
+} from './pinia'
 import { getComponentRenderCode } from './render-code'
 import { recomputeComponentState } from './state'
 
 export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
   const clientFunctions = {
     ...createBaseRpcFunctions(), // 8 个基础 RPC 方法（强类型展开）
-    
+
     // Vue 3 专属方法（5 个）
-    'uni-devtools:agent:getComponentRenderCode': (params: { id: string } | string): { code?: string } => {
+    'uni-devtools:agent:getComponentRenderCode': (
+      params: { id: string } | string,
+    ): { code?: string } => {
       const id = typeof params === 'string' ? params : params?.id
       return getComponentRenderCode(id)
     },
-    'uni-devtools:agent:recomputeComponentState': (params: { id: string, section: string, path: string[] }): { ok: boolean } => {
+    'uni-devtools:agent:recomputeComponentState': (params: {
+      id: string
+      section: string
+      path: string[]
+    }): { ok: boolean } => {
       return recomputeComponentState(params.id, params.section, params.path)
     },
     'uni-devtools:agent:getPiniaStores': (): PiniaStoresResult => {
       return getPiniaStores()
     },
-    'uni-devtools:agent:getPiniaState': (args: { id: string } | string): PiniaStateResult => {
+    'uni-devtools:agent:getPiniaState': (
+      args: { id: string } | string,
+    ): PiniaStateResult => {
       const id = typeof args === 'string' ? args : args?.id
       return getPiniaState(id)
     },
-    'uni-devtools:agent:updatePiniaState': (params: any): UpdatePiniaStateResult => {
+    'uni-devtools:agent:updatePiniaState': (
+      params: any,
+    ): UpdatePiniaStateResult => {
       return updatePiniaState(params)
     },
   }
@@ -531,15 +608,30 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
 export { getAgentInstance, disposeAgent }
 
 // 向后兼容导出（按实际模块分别 re-export，保持现有外部消费方不受影响）
-export { collectComponentTree, getRegisteredInstance, getVueRuntimeVersion } from './tree'
+export {
+  collectComponentTree,
+  getRegisteredInstance,
+  getVueRuntimeVersion,
+} from './tree'
 export { createUniSocketChannel } from './socket'
 export { pushComponentTreeNow, schedulePushComponentTree } from './push'
-export { getComponentState, updateComponentState, recomputeComponentState } from './state'
+export {
+  getComponentState,
+  updateComponentState,
+  recomputeComponentState,
+} from './state'
 export { getPiniaState, getPiniaStores, updatePiniaState } from './pinia'
-export { clearNetworkRecords, getNetworkRecords, installNetworkInterceptors, resetNetworkPushState, scheduleNetworkPush } from './network'
+export {
+  clearNetworkRecords,
+  getNetworkRecords,
+  installNetworkInterceptors,
+  resetNetworkPushState,
+  scheduleNetworkPush,
+} from './network'
 ```
 
 **关键设计点**：
+
 - ✅ 使用 `{...createBaseRpcFunctions(), ...vue3Methods}` 组装，类型完整保留
 - ✅ 直接 import `pinia.ts` 和 `render-code.ts`（Vue 3 专属模块）
 - ✅ 入口仅 30 行逻辑代码（不含 import 和 export）
@@ -550,6 +642,7 @@ export { clearNetworkRecords, getNetworkRecords, installNetworkInterceptors, res
 ### 2.4 `vue2.ts` - Vue 2 入口（重构后 ~25 行）
 
 **职责**：
+
 - 仅使用 8 个基础 RPC 方法（不包含 Vue 3 专属方法）
 - 调用 `initAgentPipeline` 初始化探针
 - 运行时回退到 `wx`（微信小程序环境下 `uni` 可能不存在）
@@ -582,12 +675,15 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     clientFunctions: createBaseRpcFunctions(), // 仅 8 个基础 RPC 方法
     customConfig,
     // Vue 2 运行时回退逻辑：uni → wx → globalThis.uni → globalThis.wx
-    getUni: () => (
+    getUni: () =>
       typeof uni !== 'undefined'
         ? uni
-        : ((typeof globalThis !== 'undefined' && (globalThis as any).uni)
-            || (typeof wx !== 'undefined' ? wx : (typeof globalThis !== 'undefined' ? (globalThis as any).wx : undefined)))
-    ),
+        : (typeof globalThis !== 'undefined' && (globalThis as any).uni) ||
+          (typeof wx !== 'undefined'
+            ? wx
+            : typeof globalThis !== 'undefined'
+              ? (globalThis as any).wx
+              : undefined),
   })
 }
 
@@ -595,6 +691,7 @@ export { getAgentInstance, disposeAgent }
 ```
 
 **关键设计点**：
+
 - ✅ 仅使用 `createBaseRpcFunctions()`，不添加任何 Vue 3 专属方法
 - ✅ 零 import `pinia.ts` 和 `render-code.ts`（物理隔离，打包零污染）
 - ✅ 入口仅 25 行逻辑代码
@@ -635,7 +732,7 @@ export { getAgentInstance, disposeAgent }
    ```typescript
    // 保存定时器 ID
    const timerId = setInterval(...)
-   
+
    // 返回清理函数
    return () => {
      clearInterval(timerId)
@@ -692,16 +789,20 @@ export { getAgentInstance, disposeAgent }
 ### Phase 5：端到端验证（约 1 小时）
 
 1. **单元测试全量验证**：
+
    ```bash
    pnpm --filter @uni-helper/devtools-devframe test
    ```
+
    预期：136 项测试全部通过
 
 2. **真机验证（Vue 2 + Webpack）**：
+
    ```bash
    cd spike/uni-vue2-webpack
    npm run dev:mp-weixin
    ```
+
    在微信开发者工具中验证：
    - 探针 WebSocket 连接成功
    - 组件树正常上报
@@ -709,13 +810,14 @@ export { getAgentInstance, disposeAgent }
    - 网络拦截正常工作
 
 3. **打包产物验证**：
+
    ```bash
    # 检查 Vue 2 bundle 体积
    ls -lh packages/devframe/dist/agent-vue2.mjs
-   
+
    # 检查是否包含 Pinia（toRaw/isRef 作为属性名是安全的，不应检查）
    grep -i "pinia" packages/devframe/dist/agent-vue2.mjs
-   
+
    # 预期：无匹配（物理隔离成功）
    ```
 
@@ -735,6 +837,7 @@ export { getAgentInstance, disposeAgent }
 **描述**：测试套件中同时导入 `index.ts` 和 `vue2.ts` 时，两者共享 `lifecycle.ts` 的单例状态，可能导致后者覆盖前者。
 
 **缓解措施**：
+
 1. **检查现有单测**：审查 136 项单测，确认是否存在"并行实例化两个版本"的场景
 2. **测试隔离**：如果存在跨版本测试，在 `beforeEach` 中调用 `disposeAgent()` 清空单例
 3. **降级方案**：如果确实无法通过测试隔离解决，可将 `lifecycle.ts` 改为导出工厂函数（`createLifecycleManager()`），让两个入口各自创建管理器实例
@@ -747,6 +850,7 @@ export { getAgentInstance, disposeAgent }
 **描述**：如果 `rpc-base.ts` 或 `lifecycle.ts` 不小心 import 了 Vue 3 专属模块，esbuild 会将其打包进 `dist/agent-vue2.mjs`，导致运行时错误。
 
 **缓解措施**：
+
 1. **静态分析**：在 Phase 4 验证步骤中，使用 `grep` 检查产物中是否包含 `pinia` 关键字（注意：`toRaw`/`isRef` 作为属性名在 `serialize.ts` 中是安全的，不应检查）
 2. **CI 检查**：在 CI 流程中增加自动化检查：
    ```bash
@@ -769,6 +873,7 @@ export { getAgentInstance, disposeAgent }
 **描述**：除了 `setInterval` 外，可能还有其他未清理的监听器或定时器。
 
 **缓解措施**：
+
 1. **代码审查**：逐行审查 `setupChangeDetectionHooks` 中的所有监听器注册逻辑
 2. **测试验证**：编写单测验证 `disposeAgent` 清理的完整性：
    ```typescript
@@ -776,7 +881,7 @@ export { getAgentInstance, disposeAgent }
      vi.useFakeTimers()
      initAgent()
      expect(vi.getTimerCount()).toBe(1) // 快照轮询定时器
-     
+
      disposeAgent()
      expect(vi.getTimerCount()).toBe(0) // 所有定时器已清理
    })
@@ -790,6 +895,7 @@ export { getAgentInstance, disposeAgent }
 **描述**：外部消费方可能直接 import `index.ts` 底部重导出的辅助函数，重构后这些导出路径可能失效。
 
 **缓解措施**：
+
 1. **保留重导出**：在 Phase 3 中确保 `index.ts` 底部的 16 个重导出语句完全保留
 2. **单测覆盖**：现有 136 项单测已覆盖这些导出函数，通过单测验证向后兼容性
 3. **文档说明**：在 CHANGELOG 中明确说明：
@@ -838,21 +944,23 @@ export { getAgentInstance, disposeAgent }
 如果重构后出现严重问题且无法在 1 个工作日内修复，执行以下回滚步骤：
 
 1. **Git 回滚**：
+
    ```bash
    git revert <commit-hash>
    git push origin feat/vue2-webpack-support
    ```
 
 2. **临时修复定时器泄漏**（最小化修改）：
+
    ```typescript
    // index.ts 和 vue2.ts 中各自修改
    let snapshotPollingTimerId: any = null
-   
+
    function setupChangeDetectionHooks(): void {
      // ...
      snapshotPollingTimerId = setInterval(...)
    }
-   
+
    export function disposeAgent(): void {
      if (snapshotPollingTimerId !== null) {
        clearInterval(snapshotPollingTimerId)
@@ -897,6 +1005,7 @@ export { getAgentInstance, disposeAgent }
 **目的**：验证 Vue 2 实例不包含 Vue 3 专属方法，确保单例状态重置无残留。
 
 **测试代码**：
+
 ```typescript
 // packages/devframe/test/cross-version-isolation.test.ts
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -913,15 +1022,15 @@ describe('Cross-version instance isolation', () => {
   it('Vue 2 instance should not have Vue 3 exclusive methods', async () => {
     const { initAgent: initVue2 } = await import('../src/agent/vue2')
     const vue2Instance = initVue2({ wsUrl: 'ws://test', token: 'test' })
-    
+
     // 验证 Vue 2 实例的 RPC 方法列表
     const rpcMethods = Object.keys(vue2Instance.rpc._functions || {})
-    
+
     // 不应包含 Vue 3 专属方法
     expect(rpcMethods).not.toContain('uni-devtools:agent:getPiniaStores')
     expect(rpcMethods).not.toContain('uni-devtools:agent:getComponentRenderCode')
     expect(rpcMethods).not.toContain('uni-devtools:agent:recomputeComponentState')
-    
+
     // 应包含基础方法
     expect(rpcMethods).toContain('uni-devtools:agent:ping')
     expect(rpcMethods).toContain('uni-devtools:agent:getComponentTree')
@@ -929,13 +1038,13 @@ describe('Cross-version instance isolation', () => {
 
   it('Singleton state should reset cleanly after dispose', async () => {
     const { initAgent: initVue3, disposeAgent, getAgentInstance } = await import('../src/agent/index')
-    
+
     const instance1 = initVue3({ wsUrl: 'ws://test1', token: 'test1' })
     expect(getAgentInstance()).toBe(instance1)
-    
+
     disposeAgent()
     expect(getAgentInstance()).toBeNull()
-    
+
     const instance2 = initVue3({ wsUrl: 'ws://test2', token: 'test2' })
     expect(getAgentInstance()).toBe(instance2)
     expect(instance2).not.toBe(instance1)
@@ -950,6 +1059,7 @@ describe('Cross-version instance isolation', () => {
 **目的**：确保快照轮询定时器始终维持在 0 或 1 个，`uni.addInterceptor` 注册的拦截层数不随初始化次数线性叠加。
 
 **测试代码**：
+
 ```typescript
 // packages/devframe/test/listener-leak.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -965,21 +1075,21 @@ describe('Multiple initialization listener leak prevention', () => {
 
   it('Snapshot polling timer should not accumulate', async () => {
     const { initAgent, disposeAgent } = await import('../src/agent/index')
-    
+
     // 第 1 轮初始化
     initAgent({ wsUrl: 'ws://test', token: 'test' })
     expect(vi.getTimerCount()).toBe(1) // 1 个快照轮询定时器
-    
+
     disposeAgent()
     expect(vi.getTimerCount()).toBe(0) // 已清理
-    
+
     // 第 2 轮初始化
     initAgent({ wsUrl: 'ws://test', token: 'test' })
     expect(vi.getTimerCount()).toBe(1) // 仍然只有 1 个
-    
+
     disposeAgent()
     expect(vi.getTimerCount()).toBe(0)
-    
+
     // 第 3-5 轮初始化
     for (let i = 0; i < 3; i++) {
       initAgent({ wsUrl: 'ws://test', token: 'test' })
@@ -991,24 +1101,24 @@ describe('Multiple initialization listener leak prevention', () => {
 
   it('Global hooks should not be registered multiple times', async () => {
     const mockUni = {
-      addInterceptor: vi.fn()
+      addInterceptor: vi.fn(),
     }
     global.uni = mockUni
-    
+
     const { initAgent, disposeAgent } = await import('../src/agent/index')
-    
+
     // 第 1 轮初始化
     initAgent({ wsUrl: 'ws://test', token: 'test' })
     const firstCallCount = mockUni.addInterceptor.mock.calls.length
     expect(firstCallCount).toBe(5) // navigateTo, redirectTo, reLaunch, switchTab, navigateBack
-    
+
     disposeAgent()
-    
+
     // 第 2 轮初始化
     initAgent({ wsUrl: 'ws://test', token: 'test' })
     const secondCallCount = mockUni.addInterceptor.mock.calls.length
     expect(secondCallCount).toBe(firstCallCount) // ✅ 不应增加，processGlobalHooksInstalled 防止重复注册
-    
+
     delete global.uni
   })
 })
@@ -1021,6 +1131,7 @@ describe('Multiple initialization listener leak prevention', () => {
 **目的**：在真实的 Webpack 4 + Vue 2.6 环境中验证打包产物无 Vue 3 依赖泄漏。
 
 **验证步骤**：
+
 ```bash
 # 1. 进入 Vue 2 测试项目
 cd spike/uni-vue2-webpack
@@ -1050,6 +1161,7 @@ grep -i "isRef is not defined\|toRaw is not defined" dist/build/mp-weixin/common
 ```
 
 **验收标准**：
+
 - ✅ Webpack 4 构建成功，无编译错误
 - ✅ `vendor.js` 中不包含 `isRef is not defined` 或 `toRaw is not defined` 错误
 - ✅ 微信开发者工具真机运行无报错

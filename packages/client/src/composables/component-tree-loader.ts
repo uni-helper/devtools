@@ -62,7 +62,12 @@ export function createComponentTreeLoader(options: TreeLoaderOptions) {
             payload: { componentId, cursor },
           })
           cursor = page.cursor
-          if (job.cancelled || options.getAppId() !== appId || options.getClient() !== client) break
+          if (
+            job.cancelled ||
+            options.getAppId() !== appId ||
+            options.getClient() !== client
+          )
+            break
           options.apply([
             ...page.nodes.map((node): ComponentTreePatch => ({
               op: 'insert',

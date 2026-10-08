@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { ReactivityGraphNodeType, ReactivityGraphSnapshot } from '@vue/devtools-kit'
+import type {
+  ReactivityGraphNodeType,
+  ReactivityGraphSnapshot,
+} from '@vue/devtools-kit'
 import { computed, ref, watch, onUnmounted, toRef } from 'vue'
 import DevtoolsIcon from '../common/DevtoolsIcon.vue'
 import { displayNodeLabel } from '../../utils/reactivity-graph-layout'
@@ -21,10 +24,15 @@ const props = defineProps<{
 }>()
 const filteredGraph = toRef(props, 'filteredGraph')
 const graphSearch = defineModel<string>('search', { required: true })
-const activeTypeFilters = defineModel<Set<ReactivityGraphNodeType>>('activeTypes', {
+const activeTypeFilters = defineModel<Set<ReactivityGraphNodeType>>(
+  'activeTypes',
+  {
+    required: true,
+  },
+)
+const pathSelectorOpen = defineModel<boolean>('pathSelectorOpen', {
   required: true,
 })
-const pathSelectorOpen = defineModel<boolean>('pathSelectorOpen', { required: true })
 const pathStartId = defineModel<string>('pathStartId', { required: true })
 const pathEndId = defineModel<string>('pathEndId', { required: true })
 const selectedNodeId = defineModel<string>('selectedNodeId')
@@ -51,7 +59,9 @@ const typeFilterCounts = computed(() => {
   return counts
 })
 
-const snapshotNodeById = computed(() => new Map(props.graph.nodes.map((node) => [node.id, node])))
+const snapshotNodeById = computed(
+  () => new Map(props.graph.nodes.map((node) => [node.id, node])),
+)
 
 const pathSelectorNodes = computed(() =>
   [...filteredGraph.value.nodes].sort((a, b) =>
@@ -60,7 +70,10 @@ const pathSelectorNodes = computed(() =>
 )
 
 const pathStartCandidateNodeIds = computed(() =>
-  getRootPathNodeIds(filteredGraph.value.nodes, filteredGraph.value.relationships),
+  getRootPathNodeIds(
+    filteredGraph.value.nodes,
+    filteredGraph.value.relationships,
+  ),
 )
 
 const relationshipsBySource = computed(() =>
@@ -68,7 +81,11 @@ const relationshipsBySource = computed(() =>
 )
 
 const pathStartOptions = computed(() =>
-  filterPathSelectorNodes(pathStartSearch.value, pathEndId.value, pathStartCandidateNodeIds.value),
+  filterPathSelectorNodes(
+    pathStartSearch.value,
+    pathEndId.value,
+    pathStartCandidateNodeIds.value,
+  ),
 )
 
 const pathEndReachableNodeIds = computed(() =>
@@ -78,7 +95,11 @@ const pathEndReachableNodeIds = computed(() =>
 )
 
 const pathEndOptions = computed(() =>
-  filterPathSelectorNodes(pathEndSearch.value, pathStartId.value, pathEndReachableNodeIds.value),
+  filterPathSelectorNodes(
+    pathEndSearch.value,
+    pathStartId.value,
+    pathEndReachableNodeIds.value,
+  ),
 )
 
 const pathModeActive = computed(() => !!pathStartId.value && !!pathEndId.value)
@@ -204,7 +225,11 @@ function clearPathEnd() {
   pathSelectorFocus.value = 'end'
 }
 
-function filterPathSelectorNodes(query: string, excludedId: string, allowedIds?: Set<string>) {
+function filterPathSelectorNodes(
+  query: string,
+  excludedId: string,
+  allowedIds?: Set<string>,
+) {
   const normalizedQuery = normalizeSearch(query)
   return pathSelectorNodes.value
     .filter((node) => {
@@ -243,7 +268,10 @@ onUnmounted(clearTypeFilterDropdownCloseTimer)
         v-if="!pathSelectorOpen"
         class="group relative min-w-0 flex flex-1 items-center justify-between gap-2 overflow-hidden rounded-1 border border-primary-100 px-3 py-0.75 color-base dark:border-gray-700"
       >
-        <DevtoolsIcon icon="i-carbon-search" class="shrink-0 color-muted text-4" />
+        <DevtoolsIcon
+          icon="i-carbon-search"
+          class="shrink-0 color-muted text-4"
+        />
         <input
           v-model="graphSearch"
           class="min-w-0 w-full border-0 bg-transparent p-0 outline-none text-3.5 color-inherit placeholder-color-gray-500 dark:placeholder-gray-300"
@@ -317,13 +345,19 @@ onUnmounted(clearTypeFilterDropdownCloseTimer)
                 {{ nodeTypeLabel(node.type) }}
               </span>
             </button>
-            <div v-if="!pathStartOptions.length" class="px-2 py-2 color-muted text-3 italic">
+            <div
+              v-if="!pathStartOptions.length"
+              class="px-2 py-2 color-muted text-3 italic"
+            >
               No matching nodes
             </div>
           </div>
         </div>
 
-        <DevtoolsIcon icon="i-carbon-arrow-right" class="shrink-0 color-muted text-5" />
+        <DevtoolsIcon
+          icon="i-carbon-arrow-right"
+          class="shrink-0 color-muted text-5"
+        />
 
         <div class="relative min-w-0 flex-1">
           <div
@@ -379,8 +413,15 @@ onUnmounted(clearTypeFilterDropdownCloseTimer)
                 {{ nodeTypeLabel(node.type) }}
               </span>
             </button>
-            <div v-if="!pathEndOptions.length" class="px-2 py-2 color-muted text-3 italic">
-              {{ pathStartId ? 'No matching nodes' : 'Select a start node to get end nodes' }}
+            <div
+              v-if="!pathEndOptions.length"
+              class="px-2 py-2 color-muted text-3 italic"
+            >
+              {{
+                pathStartId
+                  ? 'No matching nodes'
+                  : 'Select a start node to get end nodes'
+              }}
             </div>
           </div>
         </div>
@@ -388,9 +429,13 @@ onUnmounted(clearTypeFilterDropdownCloseTimer)
 
       <button
         v-if="!pathSelectorOpen"
-        v-tooltip.top="pathSelectorOpen ? 'Clear path selector' : 'Graph path selector'"
+        v-tooltip.top="
+          pathSelectorOpen ? 'Clear path selector' : 'Graph path selector'
+        "
         class="h-7 w-7 shrink-0 rounded-1 border-0 bg-transparent color-muted flex items-center justify-center hover:bg-active hover:color-base"
-        :class="pathSelectorOpen || pathModeActive ? 'bg-active color-active' : ''"
+        :class="
+          pathSelectorOpen || pathModeActive ? 'bg-active color-active' : ''
+        "
         type="button"
         aria-label="Graph path selector"
         :aria-pressed="pathSelectorOpen || pathModeActive"
@@ -431,13 +476,17 @@ onUnmounted(clearTypeFilterDropdownCloseTimer)
         <div
           class="absolute right-0 top-[calc(100%+4px)] z-50 w-62 rounded-1 border border-base bg-base p-2 shadow transition-opacity"
           :class="
-            typeFilterDropdownOpen ? 'pointer-events-auto op-100' : 'pointer-events-none op-0'
+            typeFilterDropdownOpen
+              ? 'pointer-events-auto op-100'
+              : 'pointer-events-none op-0'
           "
           role="menu"
         >
           <div class="mb-1 flex items-center justify-between gap-2">
             <span class="color-muted text-3">Filter type</span>
-            <span class="w-14 shrink-0 text-right color-muted font-state-field text-3">
+            <span
+              class="w-14 shrink-0 text-right color-muted font-state-field text-3"
+            >
               {{ filteredGraph.nodes.length }} / {{ props.graph.nodes.length }}
             </span>
           </div>

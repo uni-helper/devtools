@@ -46,7 +46,11 @@ const {
         >
           <span class="i-carbon-arrow-left" aria-hidden="true" />
         </button>
-        <span v-else class="i-carbon-search shrink-0 text-lg color-muted" aria-hidden="true" />
+        <span
+          v-else
+          class="i-carbon-search shrink-0 text-lg color-muted"
+          aria-hidden="true"
+        />
         <input
           ref="searchInput"
           v-model="search"
@@ -59,7 +63,9 @@ const {
           aria-expanded="true"
           placeholder="Type a command..."
         />
-        <kbd class="rounded-1 border border-base bg-active px-1.5 py-0.5 text-xs color-muted">
+        <kbd
+          class="rounded-1 border border-base bg-active px-1.5 py-0.5 text-xs color-muted"
+        >
           Esc
         </kbd>
       </div>
@@ -75,10 +81,20 @@ const {
         </template>
       </div>
 
-      <div id="command-palette-list" class="min-h-30 flex-auto overflow-auto p-2" role="listbox">
+      <div
+        id="command-palette-list"
+        class="min-h-30 flex-auto overflow-auto p-2"
+        role="listbox"
+      >
         <template v-if="filteredCommands.length">
-          <section v-for="[group, commands] of groupedCommands" :key="group" class="mb-2 last:mb-0">
-            <h2 class="m-0 px-2 py-1 text-11px font-600 tracking-wide color-muted uppercase">
+          <section
+            v-for="[group, commands] of groupedCommands"
+            :key="group"
+            class="mb-2 last:mb-0"
+          >
+            <h2
+              class="m-0 px-2 py-1 text-11px font-600 tracking-wide color-muted uppercase"
+            >
               {{ group }}
             </h2>
             <button
@@ -86,19 +102,32 @@ const {
               :id="commandElementId(command.id)"
               :key="command.id"
               class="w-full border-0 rounded-1 bg-transparent px-2 py-2 color-base flex items-center gap-3 text-left hover:bg-active"
-              :class="filteredCommands.indexOf(command) === selectedIndex ? 'bg-active' : ''"
+              :class="
+                filteredCommands.indexOf(command) === selectedIndex
+                  ? 'bg-active'
+                  : ''
+              "
               :data-command-index="filteredCommands.indexOf(command)"
               role="option"
               type="button"
               :aria-busy="runningCommandId === command.id"
-              :aria-selected="filteredCommands.indexOf(command) === selectedIndex"
+              :aria-selected="
+                filteredCommands.indexOf(command) === selectedIndex
+              "
               @click="runCommand(command)"
               @pointerenter="selectedIndex = filteredCommands.indexOf(command)"
             >
-              <span :class="command.icon" class="shrink-0 text-lg" aria-hidden="true" />
+              <span
+                :class="command.icon"
+                class="shrink-0 text-lg"
+                aria-hidden="true"
+              />
               <span class="min-w-0 flex-auto">
                 <span class="block truncate">{{ command.title }}</span>
-                <span v-if="command.description" class="block truncate text-xs color-muted">
+                <span
+                  v-if="command.description"
+                  class="block truncate text-xs color-muted"
+                >
                   {{ command.description }}
                 </span>
               </span>
@@ -107,11 +136,18 @@ const {
                 class="i-carbon-circle-dash shrink-0 animate-spin color-muted"
                 aria-label="Running"
               />
-              <span v-else class="i-carbon-return shrink-0 color-muted" aria-hidden="true" />
+              <span
+                v-else
+                class="i-carbon-return shrink-0 color-muted"
+                aria-hidden="true"
+              />
             </button>
           </section>
         </template>
-        <div v-else class="min-h-28 color-muted flex items-center justify-center">
+        <div
+          v-else
+          class="min-h-28 color-muted flex items-center justify-center"
+        >
           No matching commands
         </div>
       </div>
@@ -124,7 +160,9 @@ const {
         {{ commandError }}
       </div>
 
-      <footer class="border-t border-base px-4 py-2 text-xs color-muted flex items-center gap-3">
+      <footer
+        class="border-t border-base px-4 py-2 text-xs color-muted flex items-center gap-3"
+      >
         <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
         <span><kbd>Enter</kbd> Run</span>
         <span><kbd>Esc</kbd> Close</span>

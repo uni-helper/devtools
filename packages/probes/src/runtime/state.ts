@@ -5,8 +5,17 @@
  */
 
 import { BINDINGS_PROP } from '@uni-helper/devtools-shared'
-import type { ComponentStateEntry, ComponentStateResult } from '@uni-helper/devtools-shared'
-import { checkIsRef, ensureJsonSafe, getRaw, getSetupBindingInfo, readComputedSource } from './serialize.ts'
+import type {
+  ComponentStateEntry,
+  ComponentStateResult,
+} from '@uni-helper/devtools-shared'
+import {
+  checkIsRef,
+  ensureJsonSafe,
+  getRaw,
+  getSetupBindingInfo,
+  readComputedSource,
+} from './serialize.ts'
 import { buildReactivityGraph } from './reactivity-graph.ts'
 import { getComponentDisplayName, getRegisteredInstance } from './tree.ts'
 import {
@@ -48,10 +57,8 @@ export interface UpdateStateResult {
  * 检查 key 是否在 props 声明中（支持数组和对象形式）
  */
 function isDeclaredProp(key: string, declaredProps: unknown): boolean {
-  if (!declaredProps)
-    return false
-  if (Array.isArray(declaredProps))
-    return declaredProps.includes(key)
+  if (!declaredProps) return false
+  if (Array.isArray(declaredProps)) return declaredProps.includes(key)
   if (typeof declaredProps === 'object')
     return key in (declaredProps as Record<string, unknown>)
   return false
@@ -65,15 +72,15 @@ export function triggerComponentUpdate(vm: any, internal: any): void {
   try {
     if (typeof vm?.$forceUpdate === 'function') {
       vm.$forceUpdate()
-    }
-    else if (internal?.proxy && typeof internal.proxy.$forceUpdate === 'function') {
+    } else if (
+      internal?.proxy &&
+      typeof internal.proxy.$forceUpdate === 'function'
+    ) {
       internal.proxy.$forceUpdate()
-    }
-    else if (typeof internal?.update === 'function') {
+    } else if (typeof internal?.update === 'function') {
       internal.update()
     }
-  }
-  catch {
+  } catch {
     // 降级静默
   }
 }
@@ -88,18 +95,24 @@ export function triggerComponentUpdate(vm: any, internal: any): void {
  *    挂在 render 函数上（instrument.ts），这里读回——ref/reactive 是同一
  *    引用，读到的是活值，编辑直接落到原对象
  */
-function resolveSetupSource(vm: any, internal: any): Record<string, any> | undefined {
+function resolveSetupSource(
+  vm: any,
+  internal: any,
+): Record<string, any> | undefined {
   // Vue 3：`internal.setupState`；Vue 2.7：`vm._setupState`；Vue 2.6：两者皆无 → undefined
   // （2.6 的 Options API 走 $data / $options.computed 两段，不需要 setup 段）
   const setupState = internal?.setupState ?? vm?.setupState ?? vm?._setupState
-  if (setupState && typeof setupState === 'object' && Object.keys(setupState).length > 0)
+  if (
+    setupState &&
+    typeof setupState === 'object' &&
+    Object.keys(setupState).length > 0
+  )
     return setupState
 
   const render = internal?.render
   if (typeof render === 'function') {
     const bindings = render[BINDINGS_PROP]
-    if (bindings && typeof bindings === 'object')
-      return bindings
+    if (bindings && typeof bindings === 'object') return bindings
   }
   return undefined
 }
@@ -110,13 +123,11 @@ function resolveSetupSource(vm: any, internal: any): Record<string, any> | undef
 function resolveMergedOptions(vm: any): Record<string, any> | undefined {
   const internal = getInternal(vm)
   const raw = getOptions(vm)
-  if (!raw || typeof raw !== 'object')
-    return undefined
+  if (!raw || typeof raw !== 'object') return undefined
 
   // Vue 2 的 `$options` 在实例化时已由 Vue 的 mergeOptions 合并过 mixins/extends，
   // 这里直接用它，不能重跑一遍合并
-  if (!internal?.appContext)
-    return raw as Record<string, any>
+  if (!internal?.appContext) return raw as Record<string, any>
 
   const globalMixins = internal.appContext?.mixins
   const mixins = Array.isArray(globalMixins) ? globalMixins : []
@@ -128,7 +139,10 @@ function resolveMergedOptions(vm: any): Record<string, any> | undefined {
 
   const options: Record<string, any> = {}
   mixins.forEach((mixin: any) => {
-    if (mixin != null && (typeof mixin === 'object' || typeof mixin === 'function'))
+    if (
+      mixin != null &&
+      (typeof mixin === 'object' || typeof mixin === 'function')
+    )
       mergeOptionGroup(options, mixin)
   })
   mergeOptionGroup(options, raw)
@@ -136,13 +150,10 @@ function resolveMergedOptions(vm: any): Record<string, any> | undefined {
 }
 
 function mergeOptionGroup(to: Record<string, any>, from: any): void {
-  if (typeof from === 'function')
-    from = from.options
-  if (!from || typeof from !== 'object')
-    return
+  if (typeof from === 'function') from = from.options
+  if (!from || typeof from !== 'object') return
 
-  if (from.extends)
-    mergeOptionGroup(to, from.extends)
+  if (from.extends) mergeOptionGroup(to, from.extends)
   if (Array.isArray(from.mixins)) {
     from.mixins.forEach((m: any) => mergeOptionGroup(to, m))
   }
@@ -154,11 +165,9 @@ function mergeOptionGroup(to: Record<string, any>, from: any): void {
     to.props = to.props || {}
     if (Array.isArray(from.props)) {
       for (const prop of from.props) {
-        if (typeof prop === 'string')
-          to.props[prop] = null
+        if (typeof prop === 'string') to.props[prop] = null
       }
-    }
-    else if (typeof from.props === 'object') {
+    } else if (typeof from.props === 'object') {
       Object.assign(to.props, from.props)
     }
   }
@@ -171,7 +180,9 @@ export function getComponentState(id: string): ComponentStateResult {
 
   const vm = getRegisteredInstance(id)
   if (!vm) {
-    throw new Error(`[getComponentState] Component with id "${id}" not found in registry (may be unmounted)`)
+    throw new Error(
+      `[getComponentState] Component with id "${id}" not found in registry (may be unmounted)`,
+    )
   }
 
   try {
@@ -184,12 +195,10 @@ export function getComponentState(id: string): ComponentStateResult {
     const rawProps = getProps(vm)
     if (rawProps && typeof rawProps === 'object') {
       for (const key of Object.keys(rawProps)) {
-        if (key.startsWith('_') || key.startsWith('$'))
-          continue
+        if (key.startsWith('_') || key.startsWith('$')) continue
         try {
           props[key] = ensureJsonSafe(rawProps[key])
-        }
-        catch {
+        } catch {
           props[key] = '<unserializable>'
         }
       }
@@ -201,21 +210,29 @@ export function getComponentState(id: string): ComponentStateResult {
     if (computedOptions && typeof computedOptions === 'object') {
       const proxy = getProxy(vm)
       for (const key of Object.keys(computedOptions)) {
-        if (key.startsWith('_') || key.startsWith('$'))
-          continue
+        if (key.startsWith('_') || key.startsWith('$')) continue
         const definition = computedOptions[key]
         let val: unknown
         try {
           val = proxy ? proxy[key] : undefined
-        }
-        catch {
+        } catch {
           val = '<unserializable>'
         }
-        const editable = typeof definition === 'object' && definition !== null && typeof definition.set === 'function'
-        const rawSource = typeof definition === 'function'
-          ? definition.toString()
-          : (typeof definition?.get === 'function' ? definition.get.toString() : undefined)
-        const raw = rawSource ? (rawSource.length > 500 ? rawSource.slice(0, 500) : rawSource) : undefined
+        const editable =
+          typeof definition === 'object' &&
+          definition !== null &&
+          typeof definition.set === 'function'
+        const rawSource =
+          typeof definition === 'function'
+            ? definition.toString()
+            : typeof definition?.get === 'function'
+              ? definition.get.toString()
+              : undefined
+        const raw = rawSource
+          ? rawSource.length > 500
+            ? rawSource.slice(0, 500)
+            : rawSource
+          : undefined
 
         computed[key] = {
           value: ensureJsonSafe(val),
@@ -230,21 +247,17 @@ export function getComponentState(id: string): ComponentStateResult {
     const data: Record<string, unknown> = {}
     const rawData = getData(vm)
     if (rawData && typeof rawData === 'object') {
-      const declaredProps = mergedOptions?.props || typeObj?.props || getProps(vm)
+      const declaredProps =
+        mergedOptions?.props || typeObj?.props || getProps(vm)
       for (const key of Object.keys(rawData)) {
-        if (key.startsWith('_') || key.startsWith('$'))
-          continue
-        if (declaredProps && key in declaredProps)
-          continue
-        if (computedOptions && key in computedOptions)
-          continue
+        if (key.startsWith('_') || key.startsWith('$')) continue
+        if (declaredProps && key in declaredProps) continue
+        if (computedOptions && key in computedOptions) continue
         try {
           const val = rawData[key]
-          if (typeof val === 'function')
-            continue
+          if (typeof val === 'function') continue
           data[key] = ensureJsonSafe(val)
-        }
-        catch {
+        } catch {
           data[key] = '<unserializable>'
         }
       }
@@ -256,18 +269,16 @@ export function getComponentState(id: string): ComponentStateResult {
     const rawSetup = resolveSetupSource(vm, internal)
     if (rawSetup && typeof rawSetup === 'object') {
       const unwrappedSetup = getRaw(rawSetup)
-      const declaredProps = mergedOptions?.props || typeObj?.props || getProps(vm)
+      const declaredProps =
+        mergedOptions?.props || typeObj?.props || getProps(vm)
       const computedOptions = mergedOptions?.computed || typeObj?.computed
 
       for (const key of Object.keys(rawSetup)) {
-        if (key.startsWith('_') || key.startsWith('$'))
-          continue
+        if (key.startsWith('_') || key.startsWith('$')) continue
         // 排除与 props 同名的绑定（镜像 collectSetupBindings）
-        if (isDeclaredProp(key, declaredProps))
-          continue
+        if (isDeclaredProp(key, declaredProps)) continue
         // 排除与 computed 同名的绑定
-        if (computedOptions && key in computedOptions)
-          continue
+        if (computedOptions && key in computedOptions) continue
 
         try {
           const rawBinding = unwrappedSetup?.[key]
@@ -282,17 +293,20 @@ export function getComponentState(id: string): ComponentStateResult {
           const val = binding !== undefined ? binding : rawBinding
 
           // 函数 / v大写前缀 / 组件样对象 -> setupOther
-          const isComponentLike = val != null && typeof val === 'object' && (
-            typeof val.render === 'function'
-            || typeof val.__asyncLoader === 'function'
-            || val.setup != null
-            || val.props != null
-          )
-          const isOther = (!isRef && !isComputed && !isReactive) && (
-            typeof val === 'function'
-            || /^v[A-Z]/.test(key)
-            || isComponentLike
-          )
+          const isComponentLike =
+            val != null &&
+            typeof val === 'object' &&
+            (typeof val.render === 'function' ||
+              typeof val.__asyncLoader === 'function' ||
+              val.setup != null ||
+              val.props != null)
+          const isOther =
+            !isRef &&
+            !isComputed &&
+            !isReactive &&
+            (typeof val === 'function' ||
+              /^v[A-Z]/.test(key) ||
+              isComponentLike)
 
           if (isOther) {
             if (typeof val === 'function') {
@@ -301,14 +315,12 @@ export function getComponentState(id: string): ComponentStateResult {
                 fnName: val.name || key,
                 fnSource: val.toString().slice(0, 200),
               }
-            }
-            else {
+            } else {
               setupOther[key] = {
                 value: ensureJsonSafe(val),
               }
             }
-          }
-          else {
+          } else {
             const entry: ComponentStateEntry = {}
             if (isComputed) {
               entry.stateType = 'computed'
@@ -317,14 +329,14 @@ export function getComponentState(id: string): ComponentStateResult {
               if (rawSource) {
                 entry.raw = rawSource
               }
-              const hasSetter = typeof (refObj as any)?.setter === 'function' || typeof (refObj as any)?.set === 'function'
+              const hasSetter =
+                typeof (refObj as any)?.setter === 'function' ||
+                typeof (refObj as any)?.set === 'function'
               entry.editable = hasSetter && !isReadonly
-            }
-            else if (isRef) {
+            } else if (isRef) {
               entry.stateType = 'ref'
               entry.editable = !isReadonly
-            }
-            else if (isReactive) {
+            } else if (isReactive) {
               entry.stateType = 'reactive'
               entry.editable = !isReadonly
             }
@@ -336,19 +348,16 @@ export function getComponentState(id: string): ComponentStateResult {
             let displayVal: unknown
             if (infoRaw.ref) {
               displayVal = rawBinding.value
-            }
-            else if (infoProp.ref) {
+            } else if (infoProp.ref) {
               displayVal = binding.value
-            }
-            else {
+            } else {
               displayVal = val
             }
 
             entry.value = ensureJsonSafe(displayVal)
             setup[key] = entry
           }
-        }
-        catch {
+        } catch {
           setup[key] = {
             value: '<unserializable>',
           }
@@ -360,12 +369,10 @@ export function getComponentState(id: string): ComponentStateResult {
     const rawAttrs = getAttrs(vm)
     if (rawAttrs && typeof rawAttrs === 'object') {
       for (const key of Object.keys(rawAttrs)) {
-        if (key.startsWith('_') || key.startsWith('$'))
-          continue
+        if (key.startsWith('_') || key.startsWith('$')) continue
         try {
           attrs[key] = ensureJsonSafe(rawAttrs[key])
-        }
-        catch {
+        } catch {
           attrs[key] = '<unserializable>'
         }
       }
@@ -380,36 +387,29 @@ export function getComponentState(id: string): ComponentStateResult {
       id: String(id),
       name,
     }
-    if (Object.keys(props).length > 0)
-      result.props = props
-    if (Object.keys(data).length > 0)
-      result.data = data
-    if (Object.keys(setup).length > 0)
-      result.setup = setup
-    if (Object.keys(setupOther).length > 0)
-      result.setupOther = setupOther
-    if (Object.keys(computed).length > 0)
-      result.computed = computed
-    if (Object.keys(attrs).length > 0)
-      result.attrs = attrs
+    if (Object.keys(props).length > 0) result.props = props
+    if (Object.keys(data).length > 0) result.data = data
+    if (Object.keys(setup).length > 0) result.setup = setup
+    if (Object.keys(setupOther).length > 0) result.setupOther = setupOther
+    if (Object.keys(computed).length > 0) result.computed = computed
+    if (Object.keys(attrs).length > 0) result.attrs = attrs
     if (reactivityGraph.nodes.length > 0)
       result.reactivityGraph = reactivityGraph
 
     return result
-  }
-  catch (err: any) {
-    throw new Error(`[getComponentState] Failed to get state for component "${id}": ${err?.message || err}`)
+  } catch (err: any) {
+    throw new Error(
+      `[getComponentState] Failed to get state for component "${id}": ${err?.message || err}`,
+    )
   }
 }
 
 function previewEditValue(value: unknown): string {
   try {
     const text = typeof value === 'string' ? value : JSON.stringify(value)
-    if (text === undefined)
-      return String(value)
+    if (text === undefined) return String(value)
     return text.length > 60 ? `${text.slice(0, 60)}…` : text
-  }
-  catch {
+  } catch {
     return '<unprintable>'
   }
 }
@@ -418,23 +418,27 @@ function previewEditValue(value: unknown): string {
  * 沿绑定链导航到目标父对象（逐段解 ref）。
  * setupState（proxyRefs）读值天然解包；捕获绑定里的裸 ref 需显式 .value 下钻。
  */
-function navigateToParent(root: any, segments: string[], id: string): { parent: any, last: string } {
+function navigateToParent(
+  root: any,
+  segments: string[],
+  id: string,
+): { parent: any; last: string } {
   let parent = root
   for (let i = 0; i < segments.length - 1; i++) {
     let cur = parent[segments[i]!]
-    if (checkIsRef(cur))
-      cur = cur.value
+    if (checkIsRef(cur)) cur = cur.value
     if (cur === null || typeof cur !== 'object') {
       const walked = segments.slice(0, i + 1).join('.')
       const at = segments.slice(0, i).join('.') || '<root>'
-      const siblings = parent && typeof parent === 'object'
-        ? Object.keys(parent).slice(0, 12).join(',')
-        : '-'
+      const siblings =
+        parent && typeof parent === 'object'
+          ? Object.keys(parent).slice(0, 12).join(',')
+          : '-'
       // 路径与对象形状不一致时，只报 typeof 无法定位；一并带出取值与同级键辅助排查。
       throw new Error(
-        `[updateComponentState] Path "${walked}" is not navigable on component "${id}"`
-        + ` (got ${cur === null ? 'null' : typeof cur}: ${previewEditValue(cur)};`
-        + ` keys of "${at}": ${siblings})`,
+        `[updateComponentState] Path "${walked}" is not navigable on component "${id}"` +
+          ` (got ${cur === null ? 'null' : typeof cur}: ${previewEditValue(cur)};` +
+          ` keys of "${at}": ${siblings})`,
       )
     }
     parent = cur
@@ -457,7 +461,12 @@ function navigateToParent(root: any, segments: string[], id: string): { parent: 
  *
  * @returns 是否已写入宿主；false 表示非 mp 运行时，调用方按原路径处理
  */
-function setPropOnMpHost(vm: any, props: any, path: string[], value: unknown): boolean {
+function setPropOnMpHost(
+  vm: any,
+  props: any,
+  path: string[],
+  value: unknown,
+): boolean {
   const scope = vm?.$scope
   if (!scope || typeof scope.setData !== 'function' || path.length === 0) {
     return false
@@ -466,44 +475,61 @@ function setPropOnMpHost(vm: any, props: any, path: string[], value: unknown): b
   const key = path[0]!
   let next: unknown
   try {
-    next = path.length === 1 ? value : applyPathValue(props?.[key], path.slice(1), value)
-  }
-  catch {
+    next =
+      path.length === 1
+        ? value
+        : applyPathValue(props?.[key], path.slice(1), value)
+  } catch {
     return false
   }
 
   try {
     scope.setData({ [key]: next })
     return true
-  }
-  catch {
+  } catch {
     // 宿主拒收时退回纯 Vue 侧写入，至少保证面板读数一致
     return false
   }
 }
 
-function applyPathValue(root: any, segments: string[], value: unknown): unknown {
+function applyPathValue(
+  root: any,
+  segments: string[],
+  value: unknown,
+): unknown {
   if (segments.length === 0) {
     return value
   }
   const [head, ...rest] = segments
-  const base: any = Array.isArray(root) ? root.slice() : { ...(root ?? {}) }
+  const base: any = Array.isArray(root) ? root.slice() : { ...root }
   base[head!] = applyPathValue(root?.[head!], rest, value)
   return base
 }
 
-function assignFinal(vm: any, target: { parent: any, last: string }, value: unknown, remove: boolean | undefined, id: string): void {
+function assignFinal(
+  vm: any,
+  target: { parent: any; last: string },
+  value: unknown,
+  remove: boolean | undefined,
+  id: string,
+): void {
   const { parent, last } = target
   const current = parent[last]
 
   if (checkIsRef(current)) {
     if (remove)
-      throw new Error(`[updateComponentState] Cannot remove ref binding "${last}" on component "${id}"`)
+      throw new Error(
+        `[updateComponentState] Cannot remove ref binding "${last}" on component "${id}"`,
+      )
     const info = getSetupBindingInfo(current)
     if (info.computed) {
-      const hasSetter = typeof (current as any)?.setter === 'function' || typeof (current as any)?.set === 'function'
+      const hasSetter =
+        typeof (current as any)?.setter === 'function' ||
+        typeof (current as any)?.set === 'function'
       if (!hasSetter || info.readonly) {
-        throw new Error(`[updateComponentState] Cannot update readonly computed ref "${last}" on component "${id}"`)
+        throw new Error(
+          `[updateComponentState] Cannot update readonly computed ref "${last}" on component "${id}"`,
+        )
       }
     }
     current.value = value
@@ -523,11 +549,12 @@ export function updateComponentState(
   onUpdated?: () => void,
 ): UpdateStateResult {
   const { id, section, remove } = params || {}
-  const path = Array.isArray(params?.path) && params.path.length > 0
-    ? params.path.map(String)
-    : params?.key
-      ? [String(params.key)]
-      : []
+  const path =
+    Array.isArray(params?.path) && params.path.length > 0
+      ? params.path.map(String)
+      : params?.key
+        ? [String(params.key)]
+        : []
   const value = params?.value
 
   if (!id) {
@@ -539,12 +566,16 @@ export function updateComponentState(
 
   const vm = getRegisteredInstance(id)
   if (!vm) {
-    throw new Error(`[updateComponentState] Component with id "${id}" not found in registry (may be unmounted)`)
+    throw new Error(
+      `[updateComponentState] Component with id "${id}" not found in registry (may be unmounted)`,
+    )
   }
 
   const internal = getInternal(vm)
   if (isInstanceDestroyed(vm)) {
-    throw new Error(`[updateComponentState] Component with id "${id}" has been unmounted`)
+    throw new Error(
+      `[updateComponentState] Component with id "${id}" has been unmounted`,
+    )
   }
 
   const key = path[0]!
@@ -559,7 +590,9 @@ export function updateComponentState(
 
     if (section === 'props') {
       if (!props || !(key in props)) {
-        throw new Error(`[updateComponentState] Key "${key}" not found in props on component "${id}"`)
+        throw new Error(
+          `[updateComponentState] Key "${key}" not found in props on component "${id}"`,
+        )
       }
       // mp 下 props 真源在宿主 properties，只写 Vue 侧到不了视图（见 setPropOnMpHost）
       if (!remove) {
@@ -568,21 +601,27 @@ export function updateComponentState(
       // Vue 侧同步落地，保证面板紧接着重拉时读到新值（observer 随后会以同值再写一次）
       assignFinal(vm, navigateToParent(props, path, id), value, remove, id)
       updated = true
-    }
-    else if (section === 'computed') {
+    } else if (section === 'computed') {
       if (!proxy || !(key in proxy)) {
-        throw new Error(`[updateComponentState] Key "${key}" not found in computed proxy on component "${id}"`)
+        throw new Error(
+          `[updateComponentState] Key "${key}" not found in computed proxy on component "${id}"`,
+        )
       }
       assignFinal(vm, navigateToParent(proxy, path, id), value, remove, id)
       updated = true
-    }
-    else {
+    } else {
       // section 显式给定走官方语义；缺省保持「setup 优先、data 兜底」探测
-      const useSetup = section ? section === 'setup' : !!(setupState && key in setupState)
-      const useData = section ? section === 'data' : (!useSetup && !!(data && key in data))
+      const useSetup = section
+        ? section === 'setup'
+        : !!(setupState && key in setupState)
+      const useData = section
+        ? section === 'data'
+        : !useSetup && !!(data && key in data)
 
       if (useSetup && setupState && key in setupState) {
-        const isCapturedBindings = typeof internal?.render === 'function' && internal.render[BINDINGS_PROP] === setupState
+        const isCapturedBindings =
+          typeof internal?.render === 'function' &&
+          internal.render[BINDINGS_PROP] === setupState
         const binding = setupState[key]
 
         if (path.length === 1) {
@@ -590,13 +629,16 @@ export function updateComponentState(
           const rawBinding = rawSetup?.[key]
           if (checkIsRef(rawBinding)) {
             if (remove)
-              throw new Error(`[updateComponentState] Cannot remove ref binding "${key}" on component "${id}"`)
+              throw new Error(
+                `[updateComponentState] Cannot remove ref binding "${key}" on component "${id}"`,
+              )
             rawBinding.value = value
             updated = true
-          }
-          else if (checkIsRef(binding)) {
+          } else if (checkIsRef(binding)) {
             if (remove)
-              throw new Error(`[updateComponentState] Cannot remove ref binding "${key}" on component "${id}"`)
+              throw new Error(
+                `[updateComponentState] Cannot remove ref binding "${key}" on component "${id}"`,
+              )
             binding.value = value
             updated = true
           }
@@ -605,31 +647,37 @@ export function updateComponentState(
             if (remove) {
               delete setupState[key]
               updated = true
-            }
-            else if (typeof value === 'object' && value !== null) {
+            } else if (typeof value === 'object' && value !== null) {
               Object.assign(binding, value)
               updated = true
-            }
-            else {
-              throw new Error(`[updateComponentState] Cannot assign non-object value to reactive/object key "${key}" on component "${id}"`)
+            } else {
+              throw new Error(
+                `[updateComponentState] Cannot assign non-object value to reactive/object key "${key}" on component "${id}"`,
+              )
             }
           }
           // (3) 纯值 / proxyRefs 代理穿透场景
           else {
             if (isCapturedBindings) {
-              throw new Error(`[updateComponentState] Cannot edit plain-value binding "${key}" (mp 编译期内联的非响应式 const，仅 ref/reactive 绑定可编辑) on component "${id}"`)
+              throw new Error(
+                `[updateComponentState] Cannot edit plain-value binding "${key}" (mp 编译期内联的非响应式 const，仅 ref/reactive 绑定可编辑) on component "${id}"`,
+              )
             }
             if (remove) {
               delete setupState[key]
-            }
-            else {
+            } else {
               setupState[key] = value
             }
             updated = true
           }
-        }
-        else {
-          assignFinal(vm, navigateToParent(setupState, path, id), value, remove, id)
+        } else {
+          assignFinal(
+            vm,
+            navigateToParent(setupState, path, id),
+            value,
+            remove,
+            id,
+          )
           updated = true
         }
       }
@@ -639,13 +687,11 @@ export function updateComponentState(
         if (path.length === 1) {
           if (remove) {
             deleteReactive(vm, data, key)
-          }
-          else {
+          } else {
             setReactive(vm, data, key, value)
           }
           updated = true
-        }
-        else {
+        } else {
           assignFinal(vm, navigateToParent(data, path, id), value, remove, id)
           updated = true
         }
@@ -653,7 +699,9 @@ export function updateComponentState(
     }
 
     if (!updated) {
-      throw new Error(`[updateComponentState] Key "${key}" not found on component "${id}"`)
+      throw new Error(
+        `[updateComponentState] Key "${key}" not found on component "${id}"`,
+      )
     }
 
     // 响应式赋值不会自动驱动 mp 渲染，需显式触发（见 triggerComponentUpdate）
@@ -664,9 +712,10 @@ export function updateComponentState(
     }
 
     return { ok: true, key, value }
-  }
-  catch (err: any) {
-    throw new Error(`[updateComponentState] Failed to update key "${key}" on component "${id}": ${err?.message || err}`)
+  } catch (err: any) {
+    throw new Error(
+      `[updateComponentState] Failed to update key "${key}" on component "${id}": ${err?.message || err}`,
+    )
   }
 }
 
@@ -676,11 +725,11 @@ const COMPUTED_EVALUATED_FLAG = 128
 
 /** 触发 computed ref 重算（镜像 kit triggerComputedRef） */
 export function triggerComputedRef(computedRef: any): void {
-  if (!computedRef || typeof computedRef !== 'object')
-    return
+  if (!computedRef || typeof computedRef !== 'object') return
 
   if (typeof computedRef.flags === 'number') {
-    computedRef.flags = (computedRef.flags | COMPUTED_DIRTY_FLAG) & ~COMPUTED_EVALUATED_FLAG
+    computedRef.flags =
+      (computedRef.flags | COMPUTED_DIRTY_FLAG) & ~COMPUTED_EVALUATED_FLAG
     if (typeof computedRef.globalVersion === 'number')
       computedRef.globalVersion -= 1
   }
@@ -724,32 +773,43 @@ export function recomputeComponentState(
 
   const vm = getRegisteredInstance(id)
   if (!vm) {
-    throw new Error(`[recomputeComponentState] Component with id "${id}" not found in registry (may be unmounted)`)
+    throw new Error(
+      `[recomputeComponentState] Component with id "${id}" not found in registry (may be unmounted)`,
+    )
   }
 
   if (section !== 'setup') {
-    throw new Error(`[recomputeComponentState] Recompute is only supported for setup section (got "${section}")`)
+    throw new Error(
+      `[recomputeComponentState] Recompute is only supported for setup section (got "${section}")`,
+    )
   }
 
   if (!Array.isArray(path) || path.length !== 1) {
-    throw new Error(`[recomputeComponentState] Recompute requires path of length 1 (got ${JSON.stringify(path)})`)
+    throw new Error(
+      `[recomputeComponentState] Recompute requires path of length 1 (got ${JSON.stringify(path)})`,
+    )
   }
 
   const key = path[0]!
   const internal = vm.$ || vm
   const setupState = resolveSetupSource(vm, internal)
   if (!setupState || !(key in setupState)) {
-    throw new Error(`[recomputeComponentState] Binding "${key}" not found in setup for component "${id}"`)
+    throw new Error(
+      `[recomputeComponentState] Binding "${key}" not found in setup for component "${id}"`,
+    )
   }
 
   const rawSetup = getRaw(setupState)
-  const rawBinding = rawSetup?.[key] !== undefined ? rawSetup[key] : setupState[key]
+  const rawBinding =
+    rawSetup?.[key] !== undefined ? rawSetup[key] : setupState[key]
   const binding = setupState[key]
   const target = rawBinding !== undefined ? rawBinding : binding
 
   const info = getSetupBindingInfo(target)
   if (!info.computed) {
-    throw new Error(`[recomputeComponentState] Binding "${key}" is not a computed ref on component "${id}"`)
+    throw new Error(
+      `[recomputeComponentState] Binding "${key}" is not a computed ref on component "${id}"`,
+    )
   }
 
   triggerComputedRef(target)

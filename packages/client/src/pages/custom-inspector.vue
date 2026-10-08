@@ -13,10 +13,16 @@ const inspectorId = computed(() => {
   return typeof value === 'string' ? value : ''
 })
 
-const inspector = computed(() => inspectors.value.find((item) => item.id === inspectorId.value))
+const inspector = computed(() =>
+  inspectors.value.find((item) => item.id === inspectorId.value),
+)
 
 const missingInspector = computed(
-  () => connected.value && !loading.value && !!inspectorId.value && !inspector.value,
+  () =>
+    connected.value &&
+    !loading.value &&
+    !!inspectorId.value &&
+    !inspector.value,
 )
 
 watch(

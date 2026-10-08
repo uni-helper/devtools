@@ -36,7 +36,10 @@ function refreshPage() {
         type="button"
         @click="setDarkMode(!dark)"
       >
-        <span :class="dark ? 'i-carbon-moon' : 'i-carbon-sun'" aria-hidden="true" />
+        <span
+          :class="dark ? 'i-carbon-moon' : 'i-carbon-sun'"
+          aria-hidden="true"
+        />
         {{ dark ? 'Dark' : 'Light' }}
       </button>
 
@@ -46,13 +49,20 @@ function refreshPage() {
         @click="expandSidebar = !expandSidebar"
       >
         <span
-          :class="expandSidebar ? 'i-carbon-side-panel-close' : 'i-carbon-side-panel-open'"
+          :class="
+            expandSidebar
+              ? 'i-carbon-side-panel-close'
+              : 'i-carbon-side-panel-open'
+          "
           aria-hidden="true"
         />
         {{ expandSidebar ? 'Minimize Sidebar' : 'Expand Sidebar' }}
       </button>
 
-      <RouterLink class="settings-button settings-button-primary no-underline" to="/settings">
+      <RouterLink
+        class="settings-button settings-button-primary no-underline"
+        to="/settings"
+      >
         <span class="i-carbon-settings-adjust" aria-hidden="true" />
         Settings
       </RouterLink>

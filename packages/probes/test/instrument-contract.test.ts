@@ -8,7 +8,10 @@
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
 import { BINDINGS_PROP } from '@uni-helper/devtools-vite/instrument'
-import { collectComponentTree, getRegisteredInstance } from '../src/runtime/tree'
+import {
+  collectComponentTree,
+  getRegisteredInstance,
+} from '../src/runtime/tree'
 import { getComponentState, updateComponentState } from '../src/runtime/state'
 
 function registerPage(pages: any[]) {
@@ -41,7 +44,11 @@ describe('探针读取编译期捕获的绑定（mp script-setup 形态）', () 
     expect(getRegisteredInstance(id)).toBeTruthy()
     const state = getComponentState(id)
     expect(state.name).toBe('Anonymous') // 'components/Anonymous.vue'.vue → Anonymous
-    expect(state.setup.r).toEqual({ stateType: 'ref', value: 1, editable: true })
+    expect(state.setup.r).toEqual({
+      stateType: 'ref',
+      value: 1,
+      editable: true,
+    })
     expect(state.setup.obj).toEqual({ value: { nested: true } })
     expect(state.data).toBeUndefined()
   })
@@ -51,7 +58,11 @@ describe('探针读取编译期捕获的绑定（mp script-setup 形态）', () 
     const page = { route: 'pages/test', $vm: { $: internal } }
     registerPage([page])
 
-    const res = updateComponentState({ id: 'pages/test#63', key: 'r', value: 42 })
+    const res = updateComponentState({
+      id: 'pages/test#63',
+      key: 'r',
+      value: 42,
+    })
     expect(res.ok).toBe(true)
     expect(r.value).toBe(42)
   })
@@ -59,11 +70,21 @@ describe('探针读取编译期捕获的绑定（mp script-setup 形态）', () 
   it('编辑捕获绑定里的纯值（闭包 const）如实报错，不假装成功', () => {
     const renderFn = () => ({})
     renderFn[BINDINGS_PROP] = { plainConst: 1 }
-    const internal = { uid: 64, type: { name: 'X' }, setupState: {}, render: renderFn }
+    const internal = {
+      uid: 64,
+      type: { name: 'X' },
+      setupState: {},
+      render: renderFn,
+    }
     registerPage([{ route: 'pages/test', $vm: { $: internal } }])
 
-    expect(() => updateComponentState({ id: 'pages/test#64', key: 'plainConst', value: 2 }))
-      .toThrow(/非响应式 const/)
+    expect(() =>
+      updateComponentState({
+        id: 'pages/test#64',
+        key: 'plainConst',
+        value: 2,
+      }),
+    ).toThrow(/非响应式 const/)
   })
 })
 
@@ -78,7 +99,12 @@ describe('嵌套路径编辑（官方 editState 深路径语义）', () => {
     const internal = { uid: 70, type: { name: 'Deep' }, setupState: { r } }
     const id = registerWithSetupState(internal)
 
-    const res = updateComponentState({ id, section: 'setup', path: ['r', 'nested', 'count'], value: 7 })
+    const res = updateComponentState({
+      id,
+      section: 'setup',
+      path: ['r', 'nested', 'count'],
+      value: 7,
+    })
     expect(res.ok).toBe(true)
     expect(r.value.nested.count).toBe(7)
   })
@@ -88,33 +114,71 @@ describe('嵌套路径编辑（官方 editState 深路径语义）', () => {
     const plain = { deep: { flag: false } }
     const renderFn = () => ({})
     renderFn[BINDINGS_PROP] = { r, plain }
-    const internal = { uid: 71, type: { name: 'Cap' }, setupState: {}, render: renderFn }
+    const internal = {
+      uid: 71,
+      type: { name: 'Cap' },
+      setupState: {},
+      render: renderFn,
+    }
     const id = registerWithSetupState(internal)
 
     updateComponentState({ id, section: 'setup', path: ['r', 'a'], value: 99 })
     expect(r.value.a).toBe(99)
 
-    updateComponentState({ id, section: 'setup', path: ['plain', 'deep', 'flag'], value: true })
+    updateComponentState({
+      id,
+      section: 'setup',
+      path: ['plain', 'deep', 'flag'],
+      value: true,
+    })
     expect(plain.deep.flag).toBe(true)
   })
 
   it('data section 深路径 + 数组索引写入', () => {
-    const internal = { uid: 72, type: { name: 'D' }, data: { list: ['x', 'y'], obj: { k: 'v' } } }
+    const internal = {
+      uid: 72,
+      type: { name: 'D' },
+      data: { list: ['x', 'y'], obj: { k: 'v' } },
+    }
     const id = registerWithSetupState(internal)
 
-    updateComponentState({ id, section: 'data', path: ['obj', 'k'], value: 'v2' })
+    updateComponentState({
+      id,
+      section: 'data',
+      path: ['obj', 'k'],
+      value: 'v2',
+    })
     expect(internal.data.obj.k).toBe('v2')
-    updateComponentState({ id, section: 'data', path: ['list', '1'], value: 'z' })
+    updateComponentState({
+      id,
+      section: 'data',
+      path: ['list', '1'],
+      value: 'z',
+    })
     expect(internal.data.list).toEqual(['x', 'z'])
   })
 
   it('remove 语义：对象键删除 + 数组索引 splice', () => {
-    const internal = { uid: 73, type: { name: 'R' }, data: { obj: { k: 'v' }, list: ['a', 'b'] } }
+    const internal = {
+      uid: 73,
+      type: { name: 'R' },
+      data: { obj: { k: 'v' }, list: ['a', 'b'] },
+    }
     const id = registerWithSetupState(internal)
 
-    updateComponentState({ id, section: 'data', path: ['obj', 'k'], remove: true })
+    updateComponentState({
+      id,
+      section: 'data',
+      path: ['obj', 'k'],
+      remove: true,
+    })
     expect('k' in internal.data.obj).toBe(false)
-    updateComponentState({ id, section: 'data', path: ['list', '0'], remove: true })
+    updateComponentState({
+      id,
+      section: 'data',
+      path: ['list', '0'],
+      remove: true,
+    })
     expect(internal.data.list).toEqual(['b'])
   })
 
@@ -123,21 +187,33 @@ describe('嵌套路径编辑（官方 editState 深路径语义）', () => {
     const internal = { uid: 74, type: { name: 'N' }, setupState: { r } }
     const id = registerWithSetupState(internal)
 
-    expect(() => updateComponentState({ id, section: 'setup', path: ['r', 'x'], value: 1 }))
-      .toThrow(/not navigable/)
+    expect(() =>
+      updateComponentState({
+        id,
+        section: 'setup',
+        path: ['r', 'x'],
+        value: 1,
+      }),
+    ).toThrow(/not navigable/)
   })
 
   it('section 显式指定但键不存在 → Key not found（不假装成功）', () => {
     const internal = { uid: 75, type: { name: 'M' }, setupState: {}, data: {} }
     const id = registerWithSetupState(internal)
 
-    expect(() => updateComponentState({ id, section: 'setup', path: ['ghost'], value: 1 }))
-      .toThrow(/not found/)
+    expect(() =>
+      updateComponentState({ id, section: 'setup', path: ['ghost'], value: 1 }),
+    ).toThrow(/not found/)
   })
 
   it('legacy 形态（key/value 无 path）保持兼容', () => {
     const r = ref(5)
-    const internal = { uid: 76, type: { name: 'L' }, setupState: { r }, data: {} }
+    const internal = {
+      uid: 76,
+      type: { name: 'L' },
+      setupState: { r },
+      data: {},
+    }
     const id = registerWithSetupState(internal)
     expect(updateComponentState({ id, key: 'r', value: 6 }).ok).toBe(true)
     expect(r.value).toBe(6)
