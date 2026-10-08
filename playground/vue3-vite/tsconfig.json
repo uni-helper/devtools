@@ -3,7 +3,6 @@
   "compilerOptions": {
     "ignoreDeprecations": "5.0",
     "lib": ["esnext", "dom"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },

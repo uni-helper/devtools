@@ -2,8 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ESNext"],
-    "baseUrl": "."
+    "lib": ["ESNext"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules"]
