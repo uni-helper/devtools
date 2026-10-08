@@ -36,6 +36,7 @@ import type {
   PiniaStateResult,
   RouterInfoResult,
 } from '@uni-helper/devtools-shared'
+import { DEVFRAME_RPC } from '@uni-helper/devtools-shared'
 import type { ProbeBackend, ProbeMethod } from './backend.ts'
 import { probeNotSupported } from './backend.ts'
 import { createDevframeBackend, readAuthTokenFromUrl } from './devframe-backend.ts'
@@ -248,7 +249,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
   async function pullTreeOnce(): Promise<void> {
     if (flat !== EMPTY_TREE && flat.apps.some(app => !!app.version))
       return
-    const tree = await callUni<ComponentTreeResult>('get-component-tree')
+    const tree = await callUni<ComponentTreeResult>(DEVFRAME_RPC.getComponentTree)
     applyTreeSnapshot(tree)
   }
 
@@ -260,7 +261,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
 
   async function pullNetworkOnce(): Promise<void> {
     try {
-      const res = await callUni<GetNetworkRecordsResult>('get-network-records')
+      const res = await callUni<GetNetworkRecordsResult>(DEVFRAME_RPC.getNetworkRecords)
       if (res && Array.isArray(res.records))
         applyNetworkRecords(res.records)
     }
@@ -274,7 +275,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
       return [...cachedNetworkRecords]
     },
     async clear(): Promise<void> {
-      await callUni<ClearNetworkRecordsResult>('clear-network-records')
+      await callUni<ClearNetworkRecordsResult>(DEVFRAME_RPC.clearNetworkRecords)
       cachedNetworkRecords = []
       notifyNetwork()
     },
@@ -429,7 +430,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         // 据此自动隐藏入口）；分页树未实现。
         await ensureReady()
         const source = backend
-        const inspect = !!(await callUni<{ available: boolean }>('get-inspect-status').catch(() => ({ available: false })))?.available
+        const inspect = !!(await callUni<{ available: boolean }>(DEVFRAME_RPC.getInspectStatus).catch(() => ({ available: false })))?.available
         return {
           openInEditor: source?.capabilities.openInEditor ?? false,
           pagedComponentTree: false,
@@ -464,7 +465,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         const { inspectorId, filter } = (request.payload ?? {}) as { inspectorId?: string, filter?: string }
         if (inspectorId !== 'pinia')
           return { inspectorId: inspectorId ?? '', rootNodes: [] }
-        const res = await callUni<GetPiniaStoresResult>('get-pinia-stores')
+        const res = await callUni<GetPiniaStoresResult>(DEVFRAME_RPC.getPiniaStores)
         // 官方 pinia 插件语义：「🍍 Pinia (root)」与各 store 平级（stores =
         // [pinia, ..._s.values()]，非父子嵌套）；store 节点无标签；过滤同时匹配
         // 根标签与 store id
@@ -486,16 +487,16 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
           return undefined
         // 聚合根：逐 store 拉取后按官方 _root 语义组装
         if (nodeId === PINIA_ROOT_ID) {
-          const res = await callUni<GetPiniaStoresResult>('get-pinia-stores')
+          const res = await callUni<GetPiniaStoresResult>(DEVFRAME_RPC.getPiniaStores)
           const states: PiniaStateResult[] = []
           for (const store of res?.stores ?? [])
-            states.push(await callUni<PiniaStateResult>('get-pinia-state', { id: store.id }))
+            states.push(await callUni<PiniaStateResult>(DEVFRAME_RPC.getPiniaState, { id: store.id }))
           return toPiniaRootSnapshot(states, inspectorVersionByNode.get(nodeId) ?? 0)
         }
         if (!nodeId?.startsWith('store:'))
           return undefined
         const storeId = nodeId.slice('store:'.length)
-        const state = await callUni<PiniaStateResult>('get-pinia-state', { id: storeId })
+        const state = await callUni<PiniaStateResult>(DEVFRAME_RPC.getPiniaState, { id: storeId })
         return toPiniaStateSnapshot(state, inspectorVersionByNode.get(nodeId) ?? 0)
       }
 
@@ -513,7 +514,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
       case 'components:stateSnapshot': {
         await ensureReady()
         const { componentId } = request.payload as { componentId: string }
-        const state = await callUni<ComponentStateResult>('get-component-state', { id: componentId })
+        const state = await callUni<ComponentStateResult>(DEVFRAME_RPC.getComponentState, { id: componentId })
         // 面板选中即查询一次状态——这是「面板当前在看哪个组件」的唯一可靠来源
         // （MCP/Coding Agent 也调 node 的 get-component-state，但那不经过本层）。
         // 只有面板在看的组件重渲染才值得发失效事件（见 applyRenderedComponents）。
@@ -525,7 +526,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         await ensureReady()
         let registeredRoutes: RouterRouteRecordSnapshot[] = []
         try {
-          const res = await callUni<GetRegisteredRoutesResult>('get-registered-routes')
+          const res = await callUni<GetRegisteredRoutesResult>(DEVFRAME_RPC.getRegisteredRoutes)
           if (Array.isArray(res?.routes) && res.routes.length > 0) {
             registeredRoutes = res.routes.map(r => ({
               path: r.path,
@@ -542,7 +543,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
 
         let routerInfo: RouterInfoResult | undefined
         try {
-          routerInfo = await callUni<RouterInfoResult>('get-router-info')
+          routerInfo = await callUni<RouterInfoResult>(DEVFRAME_RPC.getRouterInfo)
         }
         catch {}
 
@@ -583,7 +584,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         const inputPath = payload?.path || ''
         let allRoutes: RouterRouteRecordSnapshot[] = []
         try {
-          const res = await callUni<GetRegisteredRoutesResult>('get-registered-routes')
+          const res = await callUni<GetRegisteredRoutesResult>(DEVFRAME_RPC.getRegisteredRoutes)
           if (Array.isArray(res?.routes) && res.routes.length > 0)
             allRoutes = res.routes
         }
@@ -614,7 +615,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         if (!componentId)
           return undefined
         // 探针侧失败如实回落 undefined（官方语义：无 render 可展示）；mock 未知 id 同样返回 undefined
-        const res = await callUni<GetComponentRenderCodeResult>('get-component-render-code', { id: componentId }).catch(() => undefined)
+        const res = await callUni<GetComponentRenderCodeResult>(DEVFRAME_RPC.getComponentRenderCode, { id: componentId }).catch(() => undefined)
         return res?.code
       }
 
@@ -646,7 +647,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         // 错误统一转 { status: 0 }（kit runtime 不捕获 handler 抛错，面板
         // mutateComponentState 只对 resolve 的 status:0 亮错误横幅，见方案 §5.1）。
         try {
-          await callUni('update-component-state', {
+          await callUni(DEVFRAME_RPC.updateComponentState, {
             id: payload.componentId,
             section: payload.sectionId,
             path,
@@ -703,7 +704,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         // 错误统一转 { status: 0 }（同 components:editState，探针/mock 的
         // "键不存在"抛错都在这里落为面板可见的错误文案）
         try {
-          await callUni('update-pinia-state', {
+          await callUni(DEVFRAME_RPC.updatePiniaState, {
             id: storeId,
             key: path[0]!,
             path,
@@ -743,7 +744,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         if (!payload?.file)
           return { status: 0, error: '缺少文件路径' }
         try {
-          await callUni('open-in-editor', { file: payload.file })
+          await callUni(DEVFRAME_RPC.openInEditor, { file: payload.file })
           return { status: 1 }
         }
         catch (error) {
@@ -757,7 +758,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         if (!payload?.path)
           return { status: 0, error: '缺少跳转路径' }
         try {
-          const res = await callUni<{ ok: boolean, error?: string }>('navigate-to', { path: payload.path })
+          const res = await callUni<{ ok: boolean, error?: string }>(DEVFRAME_RPC.navigateTo, { path: payload.path })
           if (res?.ok === false)
             return { status: 0, error: res.error || '页面跳转失败' }
           return { status: 1 }
@@ -775,7 +776,7 @@ export function connectUniRpcClient(options: ConnectUniRpcClientOptions = {}): D
         if (!payload?.componentId)
           return { status: 0, error: '缺少 componentId' }
         try {
-          await callUni('recompute-component-state', {
+          await callUni(DEVFRAME_RPC.recomputeComponentState, {
             id: payload.componentId,
             section: payload.sectionId,
             path: payload.path,

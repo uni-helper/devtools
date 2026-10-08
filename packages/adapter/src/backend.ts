@@ -5,27 +5,14 @@
  * docs/MOCK_BACKEND_REFACTOR_PLAN.md §3。
  */
 
+import { DEVFRAME_RPC } from '@uni-helper/devtools-shared'
+
 /**
- * 探针方法全表，与 node 侧 RPC 方法名一一对应。
- * node 侧新增方法时先加这里：方法名漂移在编译期暴露，MockBackend 另有
+ * 探针方法全表，从 shared 的 DEVFRAME_RPC 派生（真源在 @uni-helper/devtools-shared，
+ * node 侧 devframe 注册也以该表为名）：方法名漂移在编译期暴露，MockBackend 另有
  * 运行时未知方法 throw 兜底（fail loud）。
  */
-export type ProbeMethod =
-  | 'get-component-tree'
-  | 'get-component-state'
-  | 'update-component-state'
-  | 'get-component-render-code'
-  | 'get-pinia-stores'
-  | 'get-pinia-state'
-  | 'update-pinia-state'
-  | 'get-network-records'
-  | 'clear-network-records'
-  | 'get-registered-routes'
-  | 'get-router-info'
-  | 'navigate-to'
-  | 'open-in-editor'
-  | 'get-inspect-status'
-  | 'recompute-component-state'
+export type ProbeMethod = typeof DEVFRAME_RPC[keyof typeof DEVFRAME_RPC]
 
 /** push 通道 key，与 node 侧 sharedState key 对应 */
 export type ProbePushKey = 'component-tree' | 'network-records' | 'rendered-components'

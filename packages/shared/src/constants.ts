@@ -62,3 +62,42 @@ export const NODE_RPC = {
    */
   notifyComponentRendered: 'uni-helper-devtools:notify-component-rendered',
 } as const
+
+/**
+ * devframe RPC 函数名表(node 侧 `core/devframe.ts` 注册 ↔ adapter 面板调用)。
+ *
+ * 与 AGENT_RPC 是两层不同契约:面板/agent → node 走本表,node → 探针走 AGENT_RPC。
+ * adapter 的 `ProbeMethod` 联合类型从本表派生(backend.ts),devframe 注册名与面板
+ * 调用名的漂移回到编译期暴露。保持扁平、零 import;同样不要导出本表与其他表的
+ * 展开合并(理由见 AGENT_BASE_RPC 注释)。
+ */
+export const DEVFRAME_RPC = {
+  getComponentTree: 'get-component-tree',
+  getComponentState: 'get-component-state',
+  updateComponentState: 'update-component-state',
+  recomputeComponentState: 'recompute-component-state',
+  getComponentRenderCode: 'get-component-render-code',
+  getNetworkRecords: 'get-network-records',
+  clearNetworkRecords: 'clear-network-records',
+  getRegisteredRoutes: 'get-registered-routes',
+  getRouterInfo: 'get-router-info',
+  navigateTo: 'navigate-to',
+  openInEditor: 'open-in-editor',
+  getInspectStatus: 'get-inspect-status',
+  getPiniaStores: 'get-pinia-stores',
+  getPiniaState: 'get-pinia-state',
+  updatePiniaState: 'update-pinia-state',
+} as const
+
+/**
+ * node 侧注册、但面板不经 `ProbeMethod` 调用的 devframe 函数:ping 健康检查 +
+ * 3 个探针推送 handler。探针端 $call 用的是 NODE_RPC 的带前缀名
+ * (uni-helper-devtools:xxx),node 侧 devframe handler 用本表的裸 kebab 名——
+ * 同一通道两端的既有命名,勿混用。
+ */
+export const DEVFRAME_INTERNAL_RPC = {
+  ping: 'ping',
+  pushComponentTree: 'push-component-tree',
+  pushNetworkRecords: 'push-network-records',
+  notifyComponentRendered: 'notify-component-rendered',
+} as const

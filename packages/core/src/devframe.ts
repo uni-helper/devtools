@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { defineDevframe, defineRpcFunction } from 'devframe'
 import { launchEditor } from 'devframe/utils/launch-editor'
 import type { DevframeDockDefaults } from 'devframe/types'
+import { DEVFRAME_INTERNAL_RPC, DEVFRAME_RPC } from '@uni-helper/devtools-shared'
 import { mergeNetworkRecords } from '@uni-helper/devtools-shared/utils/network-merge'
 import type {
   ClearNetworkRecordsResult,
@@ -242,7 +243,7 @@ export function createUniDevtoolsDevframe(
       let renderedSeq = 0
 
       uni.rpc.register(defineRpcFunction({
-        name: 'push-component-tree',
+        name: DEVFRAME_INTERNAL_RPC.pushComponentTree,
         type: 'action',
         jsonSerializable: true,
         agent: { description: 'Receive and update component tree snapshot pushed by mini-program agent probe.' },
@@ -263,7 +264,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'ping',
+        name: DEVFRAME_INTERNAL_RPC.ping,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Health check. Returns node-side pong and whether a uni-app agent is connected.' },
@@ -276,7 +277,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'get-component-tree',
+        name: DEVFRAME_RPC.getComponentTree,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Get the component tree of the running uni-app mini-program pages.' },
@@ -312,7 +313,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'get-component-state',
+        name: DEVFRAME_RPC.getComponentState,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Get the editable state (data and setup bindings) of one component by id.' },
@@ -324,7 +325,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'notify-component-rendered',
+        name: DEVFRAME_INTERNAL_RPC.notifyComponentRendered,
         type: 'action',
         jsonSerializable: true,
         agent: { description: 'Receive component ids that re-rendered in the mini-program (relayed to the panel, which decides whether the inspected component changed).' },
@@ -344,7 +345,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'recompute-component-state',
+        name: DEVFRAME_RPC.recomputeComponentState,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Trigger recomputation of a computed ref in component setup state.' },
@@ -358,7 +359,7 @@ export function createUniDevtoolsDevframe(
       // 官方 components:getRenderCode 桥（探针取运行时
       // render 函数源码并解插桩包装层，见 probes 的 runtime/render-code.ts）
       uni.rpc.register(defineRpcFunction({
-        name: 'get-component-render-code',
+        name: DEVFRAME_RPC.getComponentRenderCode,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Get the runtime render function source of one component by id.' },
@@ -370,7 +371,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'update-component-state',
+        name: DEVFRAME_RPC.updateComponentState,
         type: 'action',
         jsonSerializable: true,
         agent: { description: 'Update one top-level state binding of a component.' },
@@ -382,7 +383,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'open-in-editor',
+        name: DEVFRAME_RPC.openInEditor,
         type: 'action',
         jsonSerializable: true,
         agent: { description: 'Open a component source file in local editor.' },
@@ -445,7 +446,7 @@ export function createUniDevtoolsDevframe(
       // Vite Inspect：node 本地读盘判断报告是否产出（不经探针——
       // 这是构建管线数据，不是运行时数据），面板据此门控 Inspect tab
       uni.rpc.register(defineRpcFunction({
-        name: 'get-inspect-status',
+        name: DEVFRAME_RPC.getInspectStatus,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Whether vite-plugin-inspect reports have been generated.' },
@@ -461,7 +462,7 @@ export function createUniDevtoolsDevframe(
       // 重推都收敛到「未知插入 / 未完成→已完成才覆盖」；500 容量与探针
       // MAX_NETWORK_RING 字面量两端冻结同步）
       uni.rpc.register(defineRpcFunction({
-        name: 'push-network-records',
+        name: DEVFRAME_INTERNAL_RPC.pushNetworkRecords,
         type: 'action',
         jsonSerializable: true,
         agent: { description: 'Receive network records batch pushed by mini-program agent probe.' },
@@ -489,7 +490,7 @@ export function createUniDevtoolsDevframe(
       // 拉取（面板兜底 + Coding Agent 消费入口）。探针在线走
       // 探针环形缓冲（真源），离线回落 sharedState 历史
       uni.rpc.register(defineRpcFunction({
-        name: 'get-network-records',
+        name: DEVFRAME_RPC.getNetworkRecords,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Get captured network records (incremental by sinceId, newest tail window).' },
@@ -515,7 +516,7 @@ export function createUniDevtoolsDevframe(
       // 清空（面板按钮）。node 清 sharedState + 尽力透传探针
       // （探针离线时仅清 node 侧历史，同样算成功）
       uni.rpc.register(defineRpcFunction({
-        name: 'clear-network-records',
+        name: DEVFRAME_RPC.clearNetworkRecords,
         type: 'action',
         jsonSerializable: true,
         agent: { description: 'Clear captured network records on both node and agent probe.' },
@@ -535,7 +536,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'get-registered-routes',
+        name: DEVFRAME_RPC.getRegisteredRoutes,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Get all registered page routes parsed from pages.json.' },
@@ -548,7 +549,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'get-router-info',
+        name: DEVFRAME_RPC.getRouterInfo,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Get current active mini-program page route and navigation stack from probe.' },
@@ -568,7 +569,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'get-pinia-stores',
+        name: DEVFRAME_RPC.getPiniaStores,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'List Pinia stores registered on the running mini-program app.' },
@@ -585,7 +586,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'get-pinia-state',
+        name: DEVFRAME_RPC.getPiniaState,
         type: 'query',
         jsonSerializable: true,
         agent: { description: 'Get state and getters snapshot of one Pinia store by id.' },
@@ -597,7 +598,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'update-pinia-state',
+        name: DEVFRAME_RPC.updatePiniaState,
         type: 'action',
         jsonSerializable: true,
         agent: { description: 'Edit one Pinia store state key (deep path supported).' },
@@ -609,7 +610,7 @@ export function createUniDevtoolsDevframe(
       }))
 
       uni.rpc.register(defineRpcFunction({
-        name: 'navigate-to',
+        name: DEVFRAME_RPC.navigateTo,
         type: 'action',
         jsonSerializable: true,
         agent: { description: 'Navigate to a mini-program page route via agent probe.' },
