@@ -3,13 +3,14 @@
 /**
  * mp-weixin E2E：驱动微信开发者工具模拟器，端到端验证探针组件树
  *
- * 用法（在仓库根目录执行）：
- *   node scripts/e2e.js --build                 # 脚本自己起 pnpm dev:mp-weixin，从日志解析 token
- *   node scripts/e2e.js --base-url <url> --token <token>   # 构建已在跑时手动指定 sidecar
- *   node scripts/e2e.js --fresh                 # 先 pkill 微信开发者工具再拉起（服务端口未开/实例卡死时用）
- *   node scripts/e2e.js --scenarios baseline,tab-switch    # 只跑指定场景
+ * 用法（可在任意目录执行，仓库根由脚本自动向上探测）：
+ *   node .claude/skills/scripts/e2e.js --build              # 脚本自己起 pnpm dev:mp-weixin，从日志解析 token
+ *   node .claude/skills/scripts/e2e.js --base-url <url> --token <token>  # 构建已在跑时手动指定 sidecar
+ *   node .claude/skills/scripts/e2e.js --fresh              # 先结束微信开发者工具再拉起（端口未开/实例卡死时用）
+ *   node .claude/skills/scripts/e2e.js --scenarios baseline,tab-switch   # 只跑指定场景
  *
- * 依赖：miniprogram-automator（workspace devDependency）、macOS + 微信开发者工具
+ * 依赖：miniprogram-automator（workspace devDependency）、微信开发者工具
+ * 平台：macOS 开箱可用；Windows 需 --wx-cli 指定 cli.bat；Linux 无官方 CLI
  *
  * 每个场景的通过标准（与探针行为对齐）：
  *   1. 中继快照（get-component-tree）无重复节点 id
@@ -26,12 +27,60 @@ import { fileURLToPath } from 'node:url'
 import { execFile, spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const PLAYGROUND_DIR = path.join(ROOT, 'playground/vue3-vite')
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
+
+/**
+ * 向上探测仓库根：脚本位于 .claude/skills/scripts/ 这类深层目录，用 '..' 硬推
+ * 会解析到 .claude/skills（playground 路径全错）——必须以仓库标记文件为准。
+ * 标记：pnpm-workspace.yaml（monorepo）或含 workspaces 字段的 package.json。
+ */
+function findRepoRoot(startDir) {
+  let dir = startDir
+  while (true) {
+    for (const marker of ['pnpm-workspace.yaml', 'pnpm-workspace.yml']) {
+      if (fs.existsSync(path.join(dir, marker))) return dir
+    }
+    const pkg = path.join(dir, 'package.json')
+    if (fs.existsSync(pkg)) {
+      try {
+        if (JSON.parse(fs.readFileSync(pkg, 'utf8')).workspaces) return dir
+      } catch {
+        /* 坏 package.json，继续往上 */
+      }
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir) return null // 到文件系统根仍未找到
+    dir = parent
+  }
+}
+
+const ROOT = findRepoRoot(SCRIPT_DIR) || process.cwd()
+const PLAYGROUND_REL = 'playground/vue3-vite'
 const AUTOMATOR_PORT = 9420
-const WX_CLI = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
-const DEFAULT_PROJECT = path.join(PLAYGROUND_DIR, 'dist/dev/mp-weixin')
 const NAMESPACE = 'uni-helper-devtools'
+
+/** 微信开发者工具 CLI 候选路径（按平台），可用 --wx-cli 或 WX_DEVTOOLS_CLI 覆盖 */
+const WX_CLI_CANDIDATES = {
+  darwin: [
+    '/Applications/wechatwebdevtools.app/Contents/MacOS/cli',
+    path.join(
+      process.env.HOME || '',
+      'Applications/wechatwebdevtools.app/Contents/MacOS/cli',
+    ),
+  ],
+  win32: [
+    'C:\\Program Files (x86)\\Tencent\\微信web开发者工具\\cli.bat',
+    'C:\\Program Files\\Tencent\\微信web开发者工具\\cli.bat',
+  ],
+  linux: [], // 官方未提供 Linux CLI
+}
+
+function resolveWxCli(explicit) {
+  if (explicit) return explicit
+  if (process.env.WX_DEVTOOLS_CLI) return process.env.WX_DEVTOOLS_CLI
+  const candidates = WX_CLI_CANDIDATES[process.platform] || []
+  return candidates.find((p) => p && fs.existsSync(p)) || candidates[0]
+}
 
 // ---------- 参数 ----------
 
@@ -43,7 +92,10 @@ function parseArgs(argv) {
     keepIde: true,
     baseUrl: undefined,
     token: undefined,
-    project: DEFAULT_PROJECT,
+    project: undefined, // 缺省时按 --playground 推导
+    playground: PLAYGROUND_REL,
+    devScript: 'dev:mp-weixin',
+    wxCli: undefined, // 缺省时按平台探测 / WX_DEVTOOLS_CLI
     scenarios: 'baseline,tab-switch,rapid-switch,navigation,keepalive,chaos',
     chaosMs: 30000,
     seed: 20261008,
@@ -64,6 +116,12 @@ function parseArgs(argv) {
       args.token = argv[++i]
     } else if (a === '--project') {
       args.project = path.resolve(argv[++i])
+    } else if (a === '--playground') {
+      args.playground = argv[++i]
+    } else if (a === '--dev-script') {
+      args.devScript = argv[++i]
+    } else if (a === '--wx-cli') {
+      args.wxCli = path.resolve(argv[++i])
     } else if (a === '--scenarios') {
       args.scenarios = argv[++i]
     } else if (a === '--chaos-ms') {
@@ -77,6 +135,11 @@ function parseArgs(argv) {
       args.help = true
     }
   }
+  // 派生：playground 目录与构建产物目录
+  args.playgroundDir = path.resolve(ROOT, args.playground)
+  if (!args.project)
+    args.project = path.join(args.playgroundDir, 'dist/dev/mp-weixin')
+  args.wxCli = resolveWxCli(args.wxCli)
   return args
 }
 
@@ -87,14 +150,20 @@ function printHelp() {
   --build              由脚本启动 pnpm dev:mp-weixin 并从日志解析面板地址/token
   --base-url <url>     sidecar 已在跑时手动指定，如 http://localhost:51939/__uni-devtools/
   --token <token>      与 --base-url 搭配；来自构建日志的 devframe_auth_token
-  --project <path>     小程序构建产物目录（默认 playground/dist/dev/mp-weixin）
+  --project <path>     小程序构建产物目录（默认 <playground>/dist/dev/mp-weixin）
+  --playground <path>  构建所在的 playground 目录（默认 playground/vue3-vite，相对仓库根）
+  --dev-script <name>  启动构建用的 package script（默认 dev:mp-weixin）
+  --wx-cli <path>      微信开发者工具 CLI 路径（默认按平台探测，可用 WX_DEVTOOLS_CLI 覆盖）
   --scenarios <list>   逗号分隔，可选 baseline,tab-switch,rapid-switch,navigation,keepalive,chaos
   --chaos-ms <n>       chaos 场景持续毫秒数（默认 30000）
   --seed <n>           chaos 伪随机种子（默认固定值，保证可复现）
-  --fresh              先 pkill 微信开发者工具再拉起
+  --fresh              先结束微信开发者工具再拉起
   --keep-build         场景结束后保留脚本启动的构建 watcher
   --kill-ide           场景结束后关闭微信开发者工具
-  -h, --help           显示本帮助`)
+  -h, --help           显示本帮助
+
+仓库根自动向上探测（pnpm-workspace.yaml 或含 workspaces 的 package.json），
+故脚本可在任意目录执行。`)
 }
 
 // ---------- 小工具 ----------
@@ -108,8 +177,29 @@ function exec(cmd, args) {
 }
 
 async function portListening(port) {
-  const { stdout } = await exec('lsof', ['-i', `:${port}`, '-sTCP:LISTEN'])
-  return stdout.trim().length > 0
+  // 纯 node 端口探测（原先用 lsof，Windows 上没有该命令）
+  const net = await import('node:net')
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host: '127.0.0.1', port })
+    const done = (result) => {
+      socket.destroy()
+      resolve(result)
+    }
+    socket.setTimeout(1000)
+    socket.on('connect', () => done(true))
+    socket.on('timeout', () => done(false))
+    socket.on('error', () => done(false))
+  })
+}
+
+/** 结束所有微信开发者工具进程（跨平台；--fresh 与重试路径共用） */
+async function killIde() {
+  if (process.platform === 'win32') {
+    await exec('taskkill', ['/F', '/IM', 'wechatdevtools.exe'])
+    await exec('taskkill', ['/F', '/IM', '微信开发者工具.exe'])
+  } else {
+    await exec('pkill', ['-f', 'wechatdevtools'])
+  }
 }
 
 /** mulberry32：可复现的伪随机（chaos 场景用，种子打印在日志里） */
@@ -125,7 +215,8 @@ function mulberry32(seed) {
 }
 
 async function dumpArtifacts(label, payload) {
-  const dir = path.join(ROOT, 'scripts/e2e-artifacts')
+  // 产物落在脚本旁边（.claude/skills/scripts/e2e-artifacts/），与仓库布局无关
+  const dir = path.join(SCRIPT_DIR, 'e2e-artifacts')
   fs.mkdirSync(dir, { recursive: true })
   const file = path.join(
     dir,
@@ -148,7 +239,7 @@ function resolveDep(name) {
   return undefined
 }
 
-async function requireDeps() {
+async function requireDeps(args) {
   if (!resolveDep('miniprogram-automator/package.json')) {
     console.error(
       '缺少依赖 miniprogram-automator。在仓库根目录执行：\n  pnpm add -w -D miniprogram-automator',
@@ -157,13 +248,28 @@ async function requireDeps() {
   }
   if (!resolveDep('devframe/client')) {
     console.error(
-      '缺少依赖 devframe（中继连接用）。请确认在仓库根目录执行本脚本。',
+      '缺少依赖 devframe（中继连接用）。请确认从本仓库内执行本脚本。',
     )
     process.exit(2)
   }
-  if (process.platform !== 'darwin') {
+  if (!fs.existsSync(args.playgroundDir)) {
     console.error(
-      `当前仅支持 macOS（微信开发者工具 CLI 路径 ${WX_CLI}），检测到 ${process.platform}`,
+      `playground 目录不存在: ${args.playgroundDir}\n用 --playground <path> 指定（相对仓库根 ${ROOT}）。`,
+    )
+    process.exit(2)
+  }
+  if (!args.wxCli) {
+    console.error(
+      `未找到微信开发者工具 CLI（平台 ${process.platform}）。\n` +
+        '用 --wx-cli <path> 或环境变量 WX_DEVTOOLS_CLI 指定，例如：\n' +
+        '  macOS : /Applications/wechatwebdevtools.app/Contents/MacOS/cli\n' +
+        '  Windows: C:\\Program Files (x86)\\Tencent\\微信web开发者工具\\cli.bat',
+    )
+    process.exit(2)
+  }
+  if (!fs.existsSync(args.wxCli)) {
+    console.error(
+      `微信开发者工具 CLI 路径不存在: ${args.wxCli}\n用 --wx-cli 指定正确路径。`,
     )
     process.exit(2)
   }
@@ -171,10 +277,10 @@ async function requireDeps() {
 
 // ---------- 构建 watcher 与 sidecar ----------
 
-async function startBuildWatcher() {
+async function startBuildWatcher(args) {
   return new Promise((resolve, reject) => {
-    const child = spawn('pnpm', ['dev:mp-weixin'], {
-      cwd: PLAYGROUND_DIR,
+    const child = spawn('pnpm', [args.devScript], {
+      cwd: args.playgroundDir,
       detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     })
@@ -217,7 +323,7 @@ async function startBuildWatcher() {
         cleanup()
         reject(
           new Error(
-            '等待构建/sidecar 就绪超时（180s）——检查 pnpm dev:mp-weixin 是否能正常启动',
+            `等待构建/sidecar 就绪超时（180s）——检查 pnpm ${args.devScript} 是否能正常启动`,
           ),
         )
       }
@@ -252,8 +358,8 @@ async function ensureIdeAndAutomator(args) {
     let ideChild
     if (!(await portListening(AUTOMATOR_PORT))) {
       if (args.fresh) {
-        console.error('… pkill 微信开发者工具（--fresh）')
-        await exec('pkill', ['-f', 'wechatdevtools'])
+        console.error('… 结束微信开发者工具进程（--fresh）')
+        await killIde()
         await sleep(3000)
       }
       ideChild = await launchIde(args)
@@ -287,7 +393,7 @@ async function ensureIdeAndAutomator(args) {
     ideChild?.kill('SIGTERM')
     if (attempt === 1) {
       console.error('… 重启微信开发者工具后重试')
-      await exec('pkill', ['-f', 'wechatdevtools'])
+      await killIde()
       await sleep(4000)
     }
   }
@@ -300,11 +406,14 @@ async function launchIde(args) {
   console.error(
     '… 启动微信开发者工具（首次拉起较慢，服务端口未开时自动回 y 确认）',
   )
+  // Windows 的 cli.bat 无法被 spawn 直接执行，需经 shell
+  const isWindowsBatch = /\.(bat|cmd)$/i.test(args.wxCli)
   const child = spawn(
-    WX_CLI,
+    args.wxCli,
     ['auto', '--project', args.project, '--auto-port', String(AUTOMATOR_PORT)],
     {
       stdio: ['pipe', 'pipe', 'pipe'],
+      shell: isWindowsBatch,
     },
   )
   // CLI 在服务端口关闭时会交互式询问 "Enable IDE Service (y/N)"
@@ -786,7 +895,7 @@ async function main() {
     printHelp()
     return 0
   }
-  await requireDeps()
+  await requireDeps(args)
 
   const spawned = { build: undefined, ide: undefined }
   process.on('SIGINT', () => {
@@ -800,8 +909,10 @@ async function main() {
   let baseURL = args.baseUrl
   let token = args.token
   if (args.build) {
-    console.error('… 启动 pnpm dev:mp-weixin（等待 sidecar + Build complete）')
-    const build = await startBuildWatcher()
+    console.error(
+      `… 启动 pnpm ${args.devScript}（等待 sidecar + Build complete）`,
+    )
+    const build = await startBuildWatcher(args)
     spawned.build = build.cleanup
     baseURL = build.baseURL
     token = build.token
