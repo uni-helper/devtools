@@ -8,13 +8,28 @@
 
 ### 忽略路径 (Ignores)
 
-所有 ESLint 的 ignores 配置已成功迁移到 oxlintrc.json：
+**重要变更：** 相比 ESLint 配置，我们**移除了 `packages/client/**` 和 `packages/adapter/**` 的忽略**，让这些包也参与代码检查：
 
-- `packages/client/**` - uni-devtools 移植包
-- `packages/adapter/**` - 协议适配器
-- `packages/core/assets/**` - vendored 兜底面板产物
+最终 oxlintrc.json 的 ignores 配置：
+
+- `packages/core/assets/**` - vendored 兜底面板产物（构建产物，不应检查）
 - `**/node_modules/**` - 依赖目录
 - `playground/**` - 示例项目
+
+**移除忽略的原因：**
+
+- `packages/client/**` 和 `packages/adapter/**` 虽然在 ESLint 时代因存量问题被忽略，但它们是我们维护的核心代码
+- Oxlint 检查结果显示问题很少（client: 2个问题，adapter: 2个问题），完全可控
+- 将这些包纳入 lint 有助于保持代码质量
+
+**当前 lint 结果统计：**
+
+- 总计：13 个警告，0 个错误
+- packages/adapter: 2 个问题
+- packages/client: 2 个问题
+- packages/core: 6 个问题
+- packages/probes: 1 个问题
+- playground: 2 个问题（已忽略，不影响 CI）
 
 ### 规则 (Rules)
 

@@ -1,12 +1,6 @@
 {
   "$schema": "https://oxc.rs/schema/oxlintrc.json",
-  "ignores": [
-    "packages/client/**",
-    "packages/adapter/**",
-    "packages/core/assets/**",
-    "**/node_modules/**",
-    "playground/**"
-  ],
+  "ignores": ["packages/core/assets/**", "**/node_modules/**", "playground/**"],
   "rules": {
     "no-console": "warn"
   }
