@@ -7,10 +7,12 @@ import Inspect from 'vite-plugin-inspect'
 import { AGENT_CLIENT_MARKER } from '@uni-helper/devtools-core/relay'
 import { INSPECT_OUTPUT_DIR } from '@uni-helper/devtools-core/inspect-serve'
 import { startUniDevtoolsServer } from '@uni-helper/devtools-core/sidecar'
-import { injectEntryFileGuard, injectPlainRenderHook, injectSetupBindings, resolveVirtualEntryFile } from './instrument.ts'
+import { transformAgentEntry, transformInstrument } from './entry-inject.ts'
+
+export * from './entry-inject.ts'
+export * from './instrument.ts'
 
 const VIRTUAL_AGENT_MODULE = 'virtual:uni-devtools-agent'
-const AGENT_IMPORT_MARKER = '__UNI_DEVTOOLS_AGENT_INJECTED__'
 
 /**
  * 解析 uni-app H5 运行时链（uni-h5 → vue-router → @vue/devtools-api）实际需要的
@@ -146,12 +148,7 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
     transform(code, id) {
       if (!isDev)
         return null
-      if (!/\/src\/main\.[jt]s$/.test(id) || code.includes(AGENT_IMPORT_MARKER))
-        return null
-      return {
-        code: `/* ${AGENT_IMPORT_MARKER} */\nimport { initAgent } from '@uni-helper/devtools-probes/vue3';\ninitAgent();\n${code}`,
-        map: null,
-      }
+      return transformAgentEntry(code, id)
     },
   }
 
@@ -170,33 +167,7 @@ export function UniDevtoolsPlugin(options: UniDevtoolsPluginOptions = {}): Plugi
     transform(code, id) {
       if (!isDev)
         return null
-
-      const bareId = id.split('?')[0]!
-
-      if (bareId.startsWith('uniComponent://') || bareId.startsWith('uniPage://')) {
-        const file = resolveVirtualEntryFile(bareId)
-        if (!file)
-          return null
-        const next = injectEntryFileGuard(code, file)
-        return next ? { code: next, map: null } : null
-      }
-
-      // 组件模块：script setup 闭包绑定捕获 + 渲染钩子
-      if (/\.(?:vue|js|ts|jsx|tsx)$/.test(bareId)) {
-        if (code.includes('setup')) {
-          const next = injectSetupBindings(code, source => this.parse(source))
-          if (next)
-            return { code: next, map: null }
-        }
-        // plain <script>：render 经 _export_sfc 挂在模块层
-        if (code.includes('_export_sfc')) {
-          const next = injectPlainRenderHook(code)
-          if (next)
-            return { code: next, map: null }
-        }
-      }
-
-      return null
+      return transformInstrument(code, id, { parse: source => this.parse(source) })
     },
   }
 

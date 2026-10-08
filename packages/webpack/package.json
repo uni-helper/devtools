@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "pnpm run build:esm",
-    "build:esm": "esbuild src/index.ts --bundle --platform=node --format=esm --external:webpack --external:devframe --external:\"devframe/*\" --outfile=dist/index.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\""
+    "build:esm": "esbuild src/index.ts --bundle --platform=node --format=esm --external:webpack --external:devframe --external:\"devframe/*\" --outfile=dist/index.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\"",
+    "test": "vitest run"
   },
   "dependencies": {
     "@uni-helper/devtools-core": "workspace:*",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^20.14.2",
     "esbuild": "^0.20.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
   }
 }

@@ -10,6 +10,10 @@
     "./instrument": {
       "types": "./src/instrument.ts",
       "default": "./src/instrument.ts"
+    },
+    "./entry-inject": {
+      "types": "./src/entry-inject.ts",
+      "default": "./src/entry-inject.ts"
     }
   },
   "scripts": {
