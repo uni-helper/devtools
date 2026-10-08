@@ -1,38 +1,10 @@
 import nodeCrypto from 'node:crypto'
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
-import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { AGENT_CLIENT_MARKER, AgentRegistry } from '@uni-helper/devtools-core/relay'
-import { createUniDevtoolsDevframe, resolveClientAssets } from '@uni-helper/devtools-core'
-import { createInspectApp } from '@uni-helper/devtools-core/inspect-serve'
-
-// 延迟加载 devframe ESM 依赖（支持 CJS 环境动态 import）
-let devframeModules: {
-  createDevServer: typeof import('devframe/adapters/dev').createDevServer
-  createInteractiveAuth: typeof import('devframe/recipes/interactive-auth').createInteractiveAuth
-  randomToken: typeof import('devframe/utils/crypto-token').randomToken
-} | null = null
-
-async function loadDevframeModules() {
-  if (devframeModules)
-    return devframeModules
-
-  const [devAdapter, auth, cryptoToken] = await Promise.all([
-    import('devframe/adapters/dev'),
-    import('devframe/recipes/interactive-auth'),
-    import('devframe/utils/crypto-token'),
-  ])
-
-  devframeModules = {
-    createDevServer: devAdapter.createDevServer,
-    createInteractiveAuth: auth.createInteractiveAuth,
-    randomToken: cryptoToken.randomToken,
-  }
-  return devframeModules
-}
+import { AGENT_CLIENT_MARKER } from '@uni-helper/devtools-core/relay'
 
 // Node 16 兼容性补丁：webpack 4 / vue-cli 4 工程常运行于 Node 16，
 // 而 devframe / srvx / h3 运行时依赖 Web Crypto 与 Web Standards API。
@@ -87,8 +59,6 @@ if (!(globalThis as any).Response) {
   ;(globalThis as any).Response = Response
 }
 
-const BASE = '/__uni-devtools/'
-
 /**
  * 确保 UNI_CLI_CONTEXT 尽早使用 realpath 设好。
  * 原因：
@@ -112,19 +82,6 @@ export function ensureCliContext(): string {
 
 // 模块加载时立即初始化一次
 ensureCliContext()
-
-function resolveHost(): string {
-  const fromEnv = process.env.UNI_DEVTOOLS_HOST
-  if (fromEnv)
-    return fromEnv
-  for (const infos of Object.values(os.networkInterfaces())) {
-    for (const info of infos ?? []) {
-      if (info.family === 'IPv4' && !info.internal && /^(?:192\.168|10\.|172\.(?:1[6-9]|2\d|3[01]))\./.test(info.address))
-        return info.address
-    }
-  }
-  return 'localhost'
-}
 
 function resolveEntryLoader(): string {
   const here = typeof __dirname !== 'undefined'
@@ -191,73 +148,39 @@ async function startSidecar(options: UniDevtoolsWebpackOptions = {}, cliContext:
   if (globalState)
     return globalState
 
-  const { createDevServer, createInteractiveAuth, randomToken } = await loadDevframeModules()
+  const { startUniDevtoolsServer, resolveAdvertisedHost, BASE } = await import('@uni-helper/devtools-core/sidecar')
 
-  const devToken = randomToken()
-  const registry = new AgentRegistry()
-  const panelDir = resolveClientAssets(options.clientAssets)
-  const def = createUniDevtoolsDevframe(registry, { clientAssets: panelDir })
-
-  // 「绑定地址」与「对外地址」分开，理由同 vite 插件的同名注释：
-  // 绑 0.0.0.0 才能让 MCP 路由的 loopback peer 检查通过；对外仍用真机可达的
-  // LAN IP（devframe 会把 0.0.0.0 规范成 localhost，故 URL 自己拼）。
-  const advertisedHost = options.host ?? resolveHost()
+  const advertisedHost = options.host ?? resolveAdvertisedHost()
   const port = options.port ?? (process.env.UNI_DEVTOOLS_PORT ? Number(process.env.UNI_DEVTOOLS_PORT) : undefined)
+
+  const server = startUniDevtoolsServer({
+    ...options,
+    host: advertisedHost,
+    port,
+    onStarted: ({ wsUrl, devToken }) => {
+      // 用真实分配的端口重写配置模块
+      writeAgentConfig(cliContext, {
+        wsUrl,
+        token: devToken,
+        clientMarker: AGENT_CLIENT_MARKER,
+        inputDir: process.env.UNI_INPUT_DIR,
+      })
+    },
+  })
 
   // 预写初始配置模块，防止构建过早读取
   const initialPort = port ?? 9999
   const initialWsUrl = `ws://${advertisedHost}:${initialPort}${BASE}__ws`
   writeAgentConfig(cliContext, {
     wsUrl: initialWsUrl,
-    token: devToken,
+    token: server.devToken,
     clientMarker: AGENT_CLIENT_MARKER,
     inputDir: process.env.UNI_INPUT_DIR,
   })
 
-  /* eslint-disable no-console */
-  const ready = createDevServer(def, {
-    host: '0.0.0.0',
-    port,
-    basePath: BASE,
-    distDir: panelDir,
-    app: createInspectApp(),
-    // 'auto'：同 vite 插件，装上 @devframes/agentic 后自动挂 `${BASE}__mcp`
-    mcp: 'auto',
-    openBrowser: false,
-    allowedOrigins: false,
-    auth: ((ctx: any) => createInteractiveAuth(ctx, {
-      clientAuthTokens: [devToken],
-      banner: () => {},
-    })) as any,
-    onPeerConnect: registry.connect,
-    onPeerDisconnect: registry.disconnect,
-  }).then((started) => {
-    registry.bind(started.rpcGroup as any)
-    const advertisedOrigin = `http://${advertisedHost}:${started.port}`
-    const wsUrl = `${advertisedOrigin.replace(/^http/, 'ws')}${BASE}__ws`
-    const panelUrl = `${advertisedOrigin}${BASE}?devframe_auth_token=${devToken}`
-    console.log(`\n  Uni DevTools 面板 (带鉴权 token，浏览器打开):`)
-    console.log(`  ${panelUrl}`)
-    console.log(`  探针 WebSocket:            ${wsUrl}\n`)
-
-    // 用真实分配的端口重写配置模块
-    writeAgentConfig(cliContext, {
-      wsUrl,
-      token: devToken,
-      clientMarker: AGENT_CLIENT_MARKER,
-      inputDir: process.env.UNI_INPUT_DIR,
-    })
-
-    return { panelUrl, wsUrl }
-  }).catch((err) => {
-    console.error('[uni-devtools] devframe init failed:', err)
-    return null
-  })
-  /* eslint-enable no-console */
-
   globalState = {
-    ready,
-    devToken,
+    ready: server.ready,
+    devToken: server.devToken,
     started: true,
   }
   return globalState

@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./relay": "./src/relay.ts",
     "./harness": "./src/harness.ts",
-    "./inspect-serve": "./src/inspect-serve.ts"
+    "./inspect-serve": "./src/inspect-serve.ts",
+    "./sidecar": "./src/sidecar.ts"
   },
   "types": "./src/index.ts",
   "scripts": {
