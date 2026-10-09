@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
-import { BINDINGS_PROP } from '@uni-helper/devtools-vite/instrument'
+import { BINDINGS_PROP } from '@uni-helper/devtools-shared'
 import {
   collectComponentTree,
   getRegisteredInstance,
