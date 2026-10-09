@@ -27,7 +27,7 @@ describe('rpc-base: createBaseRpcFunctions', () => {
     clearInstanceRegistry()
   })
 
-  it('导出的 RPC 方法键集合恰好是 8 个契约键', () => {
+  it('导出的 RPC 方法键集合恰好是 10 个契约键', () => {
     const fns = createBaseRpcFunctions()
     const keys = Object.keys(fns).sort()
     const expectedKeys = [
@@ -36,13 +36,28 @@ describe('rpc-base: createBaseRpcFunctions', () => {
       'uni-devtools:agent:getComponentTree',
       'uni-devtools:agent:getNetworkRecords',
       'uni-devtools:agent:getRouterInfo',
+      'uni-devtools:agent:getStorageEntries',
+      'uni-devtools:agent:getStorageInfo',
       'uni-devtools:agent:navigate',
       'uni-devtools:agent:ping',
       'uni-devtools:agent:updateComponentState',
     ].sort()
 
     expect(keys).toEqual(expectedKeys)
-    expect(keys).toHaveLength(8)
+    expect(keys).toHaveLength(10)
+  })
+
+  it('Storage RPC 方法在 uni 缺失时调用抛错，构造期零副作用', async () => {
+    delete (globalThis as any).uni
+    delete (globalThis as any).wx
+    const fns = createBaseRpcFunctions()
+    expect(fns).toBeDefined()
+    await expect(fns['uni-devtools:agent:getStorageInfo']()).rejects.toThrow(
+      /uni.*available/i,
+    )
+    await expect(fns['uni-devtools:agent:getStorageEntries']()).rejects.toThrow(
+      /uni.*available/i,
+    )
   })
 
   it('ping 返回当前时间戳数字', () => {

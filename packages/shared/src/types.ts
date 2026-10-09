@@ -352,3 +352,72 @@ export interface RenderedComponentsSharedState {
   seq: number
   updatedAt: number
 }
+
+/**
+ * Storage 元数据查询结果（`AGENT_BASE_RPC.getStorageInfo`）。
+ *
+ * 只含 keys 列表与容量信息，不含键值——键值走 `getStorageEntries` 按需实时拉取，
+ * 保证一致性（node 侧仅对这份元数据做短 TTL 缓存）。
+ */
+export interface StorageInfoResult {
+  /** 所有 key 的列表 */
+  keys: string[]
+  /** 当前已用容量（KB——微信平台 getStorageInfo 的实际口径，设计稿误标 bytes） */
+  currentSize: number
+  /** 总容量限制（KB，微信为 10240；平台差异动态读取，缺省 10240） */
+  limitSize: number
+  /** key 总数 */
+  keyCount: number
+  /** 查询时间戳（ms） */
+  timestamp: number
+}
+
+/** Storage 键值按需查询参数（`AGENT_BASE_RPC.getStorageEntries`） */
+export interface GetStorageEntriesParams {
+  /** 精确指定要查询的 keys（优先级高于 matchPattern） */
+  keys?: string[]
+  /** 正则匹配模式过滤 keys（如 `^user_`） */
+  matchPattern?: string
+  /** 分页偏移量（默认 0） */
+  offset?: number
+  /** 单次返回上限（默认 50，最大 200） */
+  limit?: number
+  /** 单条 Value 最大字符数（默认 32768 = 32KB），超出截断并标记 */
+  maxValueChars?: number
+  /** 是否返回每条的字节大小（默认 false） */
+  includeSize?: boolean
+}
+
+/** 单条 Storage 键值对 */
+export interface StorageEntry {
+  key: string
+  /** 值（原样返回；截断时为截断后的序列化字符串） */
+  value: unknown
+  /** 字节大小（仅 includeSize 时返回，UTF-8 口径） */
+  size?: number
+  /** 是否被截断 */
+  truncated?: boolean
+  /** 取值失败的错误信息（单条失败不抛整体，错误隔离） */
+  error?: string
+}
+
+/** Storage 键值查询结果 */
+export interface StorageEntriesResult {
+  entries: StorageEntry[]
+  /** 符合过滤条件的总数（分页前的全集） */
+  total: number
+  /** 是否还有更多数据 */
+  hasMore: boolean
+  /** 查询时间戳（ms） */
+  timestamp: number
+}
+
+/** 探针 Storage 写操作通知载荷（`NODE_RPC.notifyStorageChanged`） */
+export interface NotifyStorageChangedParams {
+  /** 写操作发生时间（ms） */
+  timestamp: number
+}
+
+export interface NotifyStorageChangedResult {
+  ok: boolean
+}

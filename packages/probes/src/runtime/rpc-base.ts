@@ -11,6 +11,9 @@ import { AGENT_BASE_RPC } from '@uni-helper/devtools-shared'
 import type {
   ClearNetworkRecordsResult,
   GetNetworkRecordsResult,
+  GetStorageEntriesParams,
+  StorageEntriesResult,
+  StorageInfoResult,
 } from '@uni-helper/devtools-shared'
 import type { PageComponentTree } from './tree'
 import type { ComponentStateResult, UpdateStateResult } from './state'
@@ -19,6 +22,7 @@ import { getComponentState, updateComponentState } from './state'
 import { clearNetworkRecords, getNetworkRecords } from './network'
 import { schedulePushComponentTree } from './push'
 import { navigateInMiniProgram } from './navigate'
+import { createStorageCapability } from './storage'
 
 declare const wx: any
 declare const uni: any
@@ -54,10 +58,9 @@ export function resolveRuntimeUni(runtimeHint?: any): any {
 }
 
 /**
- * 创建 8 个基础 RPC 方法（Vue 2/3 通用）
+ * 创建 10 个基础 RPC 方法（Vue 2/3 通用，含 Storage 收集能力）
  *
  * 返回类型显式声明，确保 TypeScript 完整推导每个方法的签名
- * 修复 Critical 2: 移除 Vuex RPC，保持基座纯净（8 个方法）
  */
 export function createBaseRpcFunctions(): {
   [AGENT_BASE_RPC.ping]: () => number
@@ -90,6 +93,10 @@ export function createBaseRpcFunctions(): {
   [AGENT_BASE_RPC.navigate]: (params: {
     path: string
   }) => Promise<{ ok: boolean; error?: string }>
+  [AGENT_BASE_RPC.getStorageInfo]: () => Promise<StorageInfoResult>
+  [AGENT_BASE_RPC.getStorageEntries]: (
+    params?: GetStorageEntriesParams,
+  ) => Promise<StorageEntriesResult>
 } {
   return {
     [AGENT_BASE_RPC.ping]: (): number => {
@@ -200,6 +207,18 @@ export function createBaseRpcFunctions(): {
 
       // 同页导航在探针侧改用 redirect 防叠栈（决策逻辑与单测见 navigate.ts）
       return navigateInMiniProgram(uniObj, url, getCurrentPagesSafe)
+    },
+
+    [AGENT_BASE_RPC.getStorageInfo]: async (): Promise<StorageInfoResult> => {
+      const capability = createStorageCapability()
+      return capability.getInfo()
+    },
+
+    [AGENT_BASE_RPC.getStorageEntries]: async (
+      params?: GetStorageEntriesParams,
+    ): Promise<StorageEntriesResult> => {
+      const capability = createStorageCapability()
+      return capability.getEntries(params)
     },
   }
 }

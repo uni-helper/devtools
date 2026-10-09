@@ -7,7 +7,7 @@
  * 并固定两件属于「我们的产品决策」的事：
  *
  * 1. **路由设置**：宿主（Vite / Webpack 插件、harness、CLI）一律传 `MCP_SETTING`，
- *    让 devframe 在 agent surface 非空时自动挂 `<base>__mcp`。19 个 RPC 全部带
+ *    让 devframe 在 agent surface 非空时自动挂 `<base>__mcp`。25 个 RPC 全部带
  *    `agent: { description }`（见 core 的 `devframe.ts`），所以 surface 恒非空。
  * 2. **stdio 入口**：给 Claude Desktop / Cursor 这类只能起子进程的客户端用。
  *

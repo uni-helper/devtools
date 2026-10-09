@@ -47,6 +47,11 @@ import type {
 import type { AgentRegistry } from './relay.ts'
 import { isInspectAvailable } from './inspect-serve.ts'
 import { AGENT_RPC } from './rpc-names.ts'
+import {
+  createGetStorageEntriesHandler,
+  createGetStorageInfoHandler,
+  createNotifyStorageChangedHandler,
+} from './storage.ts'
 
 export interface CreateUniDevtoolsDevframeOptions {
   /**
@@ -859,6 +864,54 @@ export function createUniDevtoolsDevframe(
                 args,
               )
             },
+          }),
+        }),
+      )
+
+      // Storage 收集（按需拉取，STORAGE_DESIGN.md §3.1）：缓存与失效语义见
+      // storage.ts。两个查询带 agent 描述即被 MCP 自动暴露，无需另行注册
+      // 工具（设计稿 §4.3 的独立 tools 文件方案不适用于本仓库机制）。
+      uni.rpc.register(
+        defineRpcFunction({
+          name: DEVFRAME_RPC.getStorageInfo,
+          type: 'query',
+          jsonSerializable: true,
+          agent: {
+            description:
+              'Get WeChat Mini Program Storage metadata: key list, used size and capacity limit (short-TTL cached, invalidated on write notifications).',
+          },
+          setup: () => ({
+            handler: createGetStorageInfoHandler(registry),
+          }),
+        }),
+      )
+
+      uni.rpc.register(
+        defineRpcFunction({
+          name: DEVFRAME_RPC.getStorageEntries,
+          type: 'query',
+          jsonSerializable: true,
+          agent: {
+            description:
+              'Query WeChat Mini Program Storage key-value pairs with key/pattern filtering, pagination, per-value truncation (always live from the probe, never cached).',
+          },
+          setup: () => ({
+            handler: createGetStorageEntriesHandler(registry),
+          }),
+        }),
+      )
+
+      uni.rpc.register(
+        defineRpcFunction({
+          name: DEVFRAME_INTERNAL_RPC.notifyStorageChanged,
+          type: 'action',
+          jsonSerializable: true,
+          agent: {
+            description:
+              'Receive storage write notifications from the mini-program agent probe (invalidates the node-side storage metadata cache).',
+          },
+          setup: () => ({
+            handler: createNotifyStorageChangedHandler(),
           }),
         }),
       )

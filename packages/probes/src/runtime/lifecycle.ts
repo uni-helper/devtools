@@ -34,6 +34,7 @@ import {
   resetNetworkPushState,
   scheduleNetworkPush,
 } from './network.ts'
+import { installStorageWriteInterceptors } from './storage.ts'
 
 export interface AgentConfig {
   wsUrl: string
@@ -223,6 +224,12 @@ export function initAgentPipeline(
     getActiveInstance: () => activeAgentInstance,
     adapter: options.adapter,
     // 提供 getUni 回退，通过 globalThis 访问
+    getUni: () => (globalThis as any).uni,
+  })
+
+  // === 步骤 4B：安装 Storage 写拦截器 ===
+  installStorageWriteInterceptors({
+    getActiveInstance: () => activeAgentInstance,
     getUni: () => (globalThis as any).uni,
   })
 

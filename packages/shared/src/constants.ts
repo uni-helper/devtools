@@ -12,7 +12,7 @@
 export const BINDINGS_PROP = '__uni_devtools_bindings__'
 
 /**
- * Vue 2/3 **通用**的 8 个探针方法（`probes` 的 runtime/rpc-base.ts 消费）。
+ * Vue 2/3 **通用**的 10 个探针方法（`probes` 的 runtime/rpc-base.ts 消费）。
  *
  * 与 `AGENT_RPC_VUE3` 分成两张**扁平**表是有意的，也不是冗余：
  *
@@ -32,6 +32,8 @@ export const AGENT_BASE_RPC = {
   clearNetworkRecords: 'uni-devtools:agent:clearNetworkRecords',
   getRouterInfo: 'uni-devtools:agent:getRouterInfo',
   navigate: 'uni-devtools:agent:navigate',
+  getStorageInfo: 'uni-devtools:agent:getStorageInfo',
+  getStorageEntries: 'uni-devtools:agent:getStorageEntries',
 } as const
 
 /**
@@ -71,6 +73,11 @@ export const NODE_RPC = {
    * 组件」由 adapter 判断（只有它知道面板选中态，探针与 node 都不知道）。
    */
   notifyComponentRendered: 'uni-helper-devtools:notify-component-rendered',
+  /**
+   * 探针侧 Storage 写操作（set/remove/clear，含 Sync 变体）后的缓存失效通知。
+   * 载荷仅含时间戳，node 侧收到即作废 Storage 元数据缓存（TTL 兜底照旧）。
+   */
+  notifyStorageChanged: 'uni-helper-devtools:notify-storage-changed',
 } as const
 
 /**
@@ -101,6 +108,9 @@ export const DEVFRAME_RPC = {
   getVuexStores: 'get-vuex-stores',
   getVuexState: 'get-vuex-state',
   updateVuexState: 'update-vuex-state',
+  // Storage 收集（按需拉取，MCP 优先暴露；UI 面板零侵入）
+  getStorageInfo: 'get-storage-info',
+  getStorageEntries: 'get-storage-entries',
 } as const
 
 /**
@@ -114,4 +124,6 @@ export const DEVFRAME_INTERNAL_RPC = {
   pushComponentTree: 'push-component-tree',
   pushNetworkRecords: 'push-network-records',
   notifyComponentRendered: 'notify-component-rendered',
+  /** 探针 Storage 写操作通知的 node 侧 handler（作废 Storage 元数据缓存） */
+  notifyStorageChanged: 'notify-storage-changed',
 } as const

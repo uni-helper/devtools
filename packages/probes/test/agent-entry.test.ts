@@ -20,6 +20,8 @@ const BASE_KEYS = [
   'uni-devtools:agent:getComponentTree',
   'uni-devtools:agent:getNetworkRecords',
   'uni-devtools:agent:getRouterInfo',
+  'uni-devtools:agent:getStorageEntries',
+  'uni-devtools:agent:getStorageInfo',
   'uni-devtools:agent:navigate',
   'uni-devtools:agent:ping',
   'uni-devtools:agent:updateComponentState',
@@ -75,7 +77,7 @@ describe('入口 RPC 方法表', () => {
     vi.useRealTimers()
   })
 
-  it('vue 3 入口 = 8 个基础方法 + 5 个 Vue 3 专属方法', async () => {
+  it('vue 3 入口 = 10 个基础方法 + 5 个 Vue 3 专属方法', async () => {
     const { vue3 } = await freshEntries()
 
     vue3.initAgent(config())
@@ -87,7 +89,7 @@ describe('入口 RPC 方法表', () => {
     vue3.disposeAgent()
   })
 
-  it('vue 2 入口有 8 个基础方法 + 3 个 Vuex 方法，无任何 Vue 3 专属方法', async () => {
+  it('vue 2 入口有 10 个基础方法 + 3 个 Vuex 方法，无任何 Vue 3 专属方法', async () => {
     const { vue2 } = await freshEntries()
 
     vue2.initAgent(config())
