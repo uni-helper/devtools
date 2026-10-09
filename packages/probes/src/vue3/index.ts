@@ -14,7 +14,9 @@
 
 import { AGENT_RPC_VUE3 } from '@uni-helper/devtools-shared'
 import type { AgentConfig, AgentInstance } from '../runtime/lifecycle.ts'
+import { resolveAdapter } from '../adapter/resolve.ts'
 import { createBaseRpcFunctions } from '../runtime/rpc-base.ts'
+import { setVueRuntime } from '../runtime/serialize.ts'
 import {
   disposeAgent,
   getAgentInstance,
@@ -31,47 +33,73 @@ import {
 import { getComponentRenderCode } from '../runtime/render-code.ts'
 import { recomputeComponentState } from '../runtime/state.ts'
 
-declare const uni: any
-
 export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
-  const clientFunctions = {
-    ...createBaseRpcFunctions(), // 8 个基础 RPC 方法（Vue 2/3 通用）
+  try {
+    // 1. 解析 Adapter（自动检测平台）
+    const adapter = resolveAdapter()
 
-    // Vue 3 专属方法
-    [AGENT_RPC_VUE3.getComponentRenderCode]: (
-      params: { id: string } | string,
-    ): { code?: string } => {
-      const id = typeof params === 'string' ? params : params?.id
-      return getComponentRenderCode(id)
-    },
-    [AGENT_RPC_VUE3.recomputeComponentState]: (params: {
-      id: string
-      section: string
-      path: string[]
-    }): { ok: boolean } => {
-      return recomputeComponentState(params.id, params.section, params.path)
-    },
-    [AGENT_RPC_VUE3.getPiniaStores]: (): PiniaStoresResult => {
-      return getPiniaStores()
-    },
-    [AGENT_RPC_VUE3.getPiniaState]: (
-      args: { id: string } | string,
-    ): PiniaStateResult => {
-      const id = typeof args === 'string' ? args : args?.id
-      return getPiniaState(id)
-    },
-    [AGENT_RPC_VUE3.updatePiniaState]: (
-      params: any,
-    ): UpdatePiniaStateResult => {
-      return updatePiniaState(params)
-    },
+    // 2. 设置 Vue 运行时（Vue 3 环境）
+    const vueRuntime = adapter.getVueRuntime?.()
+    if (vueRuntime) {
+      setVueRuntime(vueRuntime)
+    }
+
+    const clientFunctions = {
+      ...createBaseRpcFunctions(), // 8 个基础 RPC 方法（Vue 2/3 通用）
+
+      // Vue 3 专属方法
+      [AGENT_RPC_VUE3.getComponentRenderCode]: (
+        params: { id: string } | string,
+      ): { code?: string } => {
+        const id = typeof params === 'string' ? params : params?.id
+        return getComponentRenderCode(id)
+      },
+      [AGENT_RPC_VUE3.recomputeComponentState]: (params: {
+        id: string
+        section: string
+        path: string[]
+      }): { ok: boolean } => {
+        return recomputeComponentState(params.id, params.section, params.path)
+      },
+      [AGENT_RPC_VUE3.getPiniaStores]: (): PiniaStoresResult => {
+        return getPiniaStores()
+      },
+      [AGENT_RPC_VUE3.getPiniaState]: (
+        args: { id: string } | string,
+      ): PiniaStateResult => {
+        const id = typeof args === 'string' ? args : args?.id
+        return getPiniaState(id)
+      },
+      [AGENT_RPC_VUE3.updatePiniaState]: (
+        params: any,
+      ): UpdatePiniaStateResult => {
+        return updatePiniaState(params)
+      },
+    }
+
+    return initAgentPipeline({
+      adapter,
+      clientFunctions,
+      customConfig,
+    })
+  } catch (error) {
+    // Fail-Open：探针初始化失败时返回 stub 实例，不影响应用启动
+    console.error('[uni-devtools] Vue3 initAgent failed:', error)
+
+    // 返回一个空的 stub 实例
+    return {
+      rpc: new Proxy({}, { get: () => () => Promise.resolve() }),
+      socketHandle: {
+        channel: {
+          post: () => {},
+          on: () => {},
+        },
+        dispose: () => {},
+        isConnected: () => false,
+      },
+      dispose: () => {},
+    }
   }
-
-  return initAgentPipeline({
-    clientFunctions,
-    customConfig,
-    getUni: () => (typeof uni !== 'undefined' ? uni : (globalThis as any).uni),
-  })
 }
 
 export type { AgentConfig, AgentInstance }

@@ -7,40 +7,70 @@
  *
  * 冻结契约见讨论记录 `batch-interface.md`：
  * - 子路径 `@uni-helper/devtools-probes/vue2`，导出 `initAgent()`
- * - 配置模块 `virtual:uni-devtools-agent`，形状 `{ wsUrl, token, clientMarker }`
+ * - 配置通过 `globalThis.__UNI_DEVTOOLS_CONFIG__` 或函数参数传入
  *
  * Vue 2 探针**不注册** Vue 3 专属方法：
  * - recomputeComponentState（Vue 2 computed 不需要重算）
  * - getComponentRenderCode（Vue 2 无 template 编译产物可读）
  * - pinia 三条（Pinia 依赖 Vue 3 Composition API）
+ *
+ * 方案二改造要点：
+ * 1. 引入 Adapter 层，不再直接访问 uni/wx 全局变量
+ * 2. 使用 Bootstrap 层实现 Fail-Open（探针失败不影响应用启动）
+ * 3. 配置从 globalThis.__UNI_DEVTOOLS_CONFIG__ 获取，不再依赖虚拟模块
  */
 
 import type { AgentConfig, AgentInstance } from '../runtime/lifecycle.ts'
+import { resolveAdapter } from '../adapter/resolve.ts'
 import { createBaseRpcFunctions } from '../runtime/rpc-base.ts'
+import { setVueRuntime } from '../runtime/serialize.ts'
 import {
   disposeAgent,
   getAgentInstance,
   initAgentPipeline,
 } from '../runtime/lifecycle.ts'
 
-declare const uni: any
-declare const wx: any
-
+/**
+ * 初始化探针（同步版本，保持向后兼容）
+ *
+ * @param customConfig - 可选的自定义配置
+ * @returns AgentInstance 或在失败时返回 stub 实例
+ */
 export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
-  return initAgentPipeline({
-    clientFunctions: createBaseRpcFunctions(), // 仅 8 个基础 RPC 方法
-    customConfig,
-    // Vue 2 运行时回退逻辑：uni → globalThis.uni → wx → globalThis.wx
-    getUni: () =>
-      typeof uni !== 'undefined'
-        ? uni
-        : (typeof globalThis !== 'undefined' && (globalThis as any).uni) ||
-          (typeof wx !== 'undefined'
-            ? wx
-            : typeof globalThis !== 'undefined'
-              ? (globalThis as any).wx
-              : undefined),
-  })
+  try {
+    // 1. 解析 Adapter（自动检测平台）
+    const adapter = resolveAdapter()
+
+    // 2. 设置 Vue 运行时（如果有）
+    const vueRuntime = adapter.getVueRuntime?.()
+    if (vueRuntime) {
+      setVueRuntime(vueRuntime)
+    }
+
+    // 3. 初始化探针管道
+    return initAgentPipeline({
+      adapter,
+      clientFunctions: createBaseRpcFunctions(), // 仅 8 个基础 RPC 方法
+      customConfig,
+    })
+  } catch (error) {
+    // Fail-Open：探针初始化失败时返回 stub 实例，不影响应用启动
+    console.error('[uni-devtools] initAgent failed:', error)
+
+    // 返回一个空的 stub 实例
+    return {
+      rpc: new Proxy({}, { get: () => () => Promise.resolve() }),
+      socketHandle: {
+        channel: {
+          post: () => {},
+          on: () => {},
+        },
+        dispose: () => {},
+        isConnected: () => false,
+      },
+      dispose: () => {},
+    }
+  }
 }
 
 export type { AgentConfig, AgentInstance }
