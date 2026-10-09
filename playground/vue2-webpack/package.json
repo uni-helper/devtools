@@ -15,7 +15,8 @@
     "@dcloudio/uni-mp-weixin": "2.0.2-5020620260917001",
     "@vue/cli-plugin-babel": "~4.5.19",
     "regenerator-runtime": "^0.14.1",
-    "vue": "~2.6.14"
+    "vue": "~2.6.14",
+    "vuex": "^3.6.2"
   },
   "devDependencies": {
     "@dcloudio/uni-cli-shared": "2.0.2-5020620260917001",
@@ -25,6 +26,7 @@
     "@dcloudio/webpack-uni-pages-loader": "2.0.2-5020620260917001",
     "@vue/cli-service": "~4.5.19",
     "cross-env": "^7.0.3",
+    "jiti": "^2.7.0",
     "postcss-comment": "^2.0.0",
     "vue-template-compiler": "~2.6.14"
   }
