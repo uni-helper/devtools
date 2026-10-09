@@ -3,11 +3,13 @@
   "version": "0.0.1",
   "description": "Uni DevTools 小程序探针：Vue 2/3 双线入口 + 运行时采集（组件树/状态/Pinia/网络/响应式图）",
   "type": "module",
+  "main": "./dist/agent-vue2.js",
   "exports": {
     "./vue3": "./src/vue3/index.ts",
     "./vue2": {
       "types": "./src/vue2/index.ts",
-      "default": "./dist/agent-vue2.mjs"
+      "require": "./dist/agent-vue2.js",
+      "default": "./dist/agent-vue2.js"
     },
     "./render-hook": "./src/runtime/render-hook.ts",
     "./socket": "./src/socket/index.ts",
@@ -15,7 +17,7 @@
   },
   "scripts": {
     "build": "pnpm run build:agent-vue2",
-    "build:agent-vue2": "esbuild src/vue2/index.ts --bundle --platform=browser --format=esm --external:vue --external:virtual:uni-devtools-agent --outfile=dist/agent-vue2.mjs",
+    "build:agent-vue2": "esbuild src/vue2/index.ts --bundle --platform=browser --target=es2017 --format=cjs --external:vue --outfile=dist/agent-vue2.js",
     "test": "vitest run"
   },
   "dependencies": {
