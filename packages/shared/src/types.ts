@@ -227,6 +227,29 @@ export interface UpdatePiniaStateResult {
 }
 
 // ---------------------------------------------------------------------------
+// Vuex：Vue 2 状态管理库支持（对齐 Pinia 架构）
+// ---------------------------------------------------------------------------
+
+export interface VuexStateResult {
+  id: string // '_root' 或 module path (如 'cart/products')
+  state: Record<string, unknown>
+  getters: Record<string, unknown>
+  namespaced?: boolean // Vuex 独有，标记是否为 namespaced module
+}
+
+export interface UpdateVuexStateParams {
+  id: string // '_root' 或 module path
+  path: string[] // 属性路径（简化版，不用 key + path 分离）
+  value?: unknown
+  remove?: boolean // 支持删除操作（修复 CR M2-A）
+}
+
+export interface UpdateVuexStateResult {
+  ok: true
+  id: string
+}
+
+// ---------------------------------------------------------------------------
 // Network：探针包装 uni.request/uploadFile/downloadFile 采集真实请求。
 // 契约同时服务两条消费方：面板 Network tab（sharedState 增量推送）与后续
 // Coding Agent（`get-network-records` 拉取）——字段名按 wire 冻结，两端不得单方改。

@@ -35,6 +35,16 @@ export const AGENT_BASE_RPC = {
 } as const
 
 /**
+ * Vue 2 专属的 3 个探针方法（Vuex 状态管理）。
+ * 修复 Critical 2: 从 AGENT_BASE_RPC 剥离，避免污染 Vue 2/3 通用基座。
+ */
+export const AGENT_RPC_VUE2 = {
+  getVuexStores: 'uni-devtools:agent:getVuexStores',
+  getVuexState: 'uni-devtools:agent:getVuexState',
+  updateVuexState: 'uni-devtools:agent:updateVuexState',
+} as const
+
+/**
  * Vue 3 专属的 5 个探针方法（`probes` 的 vue3 入口消费）。
  * 不要下沉进 `AGENT_BASE_RPC`——理由见上。
  */
@@ -87,6 +97,10 @@ export const DEVFRAME_RPC = {
   getPiniaStores: 'get-pinia-stores',
   getPiniaState: 'get-pinia-state',
   updatePiniaState: 'update-pinia-state',
+  // Vuex 支持（对齐 Pinia 架构）
+  getVuexStores: 'get-vuex-stores',
+  getVuexState: 'get-vuex-state',
+  updateVuexState: 'update-vuex-state',
 } as const
 
 /**

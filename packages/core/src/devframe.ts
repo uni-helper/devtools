@@ -8,6 +8,7 @@ import type { DevframeDockDefaults } from 'devframe/types'
 import {
   DEVFRAME_INTERNAL_RPC,
   DEVFRAME_RPC,
+  AGENT_RPC_VUE2,
 } from '@uni-helper/devtools-shared'
 import { mergeNetworkRecords } from '@uni-helper/devtools-shared/utils/network-merge'
 import type {
@@ -28,6 +29,8 @@ import type {
   OpenInEditorParams,
   OpenInEditorResult,
   PingResult,
+  VuexStateResult,
+  UpdateVuexStateParams,
   PiniaStateResult,
   PushNetworkRecordsParams,
   PushNetworkRecordsResult,
@@ -786,6 +789,73 @@ export function createUniDevtoolsDevframe(
             ): Promise<UpdatePiniaStateResult> => {
               return await registry.callAgent<UpdatePiniaStateResult>(
                 AGENT_RPC.updatePiniaState,
+                args,
+              )
+            },
+          }),
+        }),
+      )
+
+      // Vuex RPC 注册（Vue 2 状态管理）
+      uni.rpc.register(
+        defineRpcFunction({
+          name: DEVFRAME_RPC.getVuexStores,
+          type: 'query',
+          jsonSerializable: true,
+          agent: {
+            description:
+              'List Vuex stores (root + modules) registered on the running mini-program app.',
+          },
+          setup: () => ({
+            handler: async (): Promise<VuexStateResult[]> => {
+              try {
+                return await registry.callAgent<VuexStateResult[]>(
+                  AGENT_RPC_VUE2.getVuexStores,
+                )
+              } catch {
+                return []
+              }
+            },
+          }),
+        }),
+      )
+
+      uni.rpc.register(
+        defineRpcFunction({
+          name: DEVFRAME_RPC.getVuexState,
+          type: 'query',
+          jsonSerializable: true,
+          agent: {
+            description:
+              'Get state and getters snapshot of one Vuex store/module by id.',
+          },
+          setup: () => ({
+            handler: async (args: {
+              id: string
+            }): Promise<VuexStateResult | null> => {
+              return await registry.callAgent<VuexStateResult | null>(
+                AGENT_RPC_VUE2.getVuexState,
+                args,
+              )
+            },
+          }),
+        }),
+      )
+
+      uni.rpc.register(
+        defineRpcFunction({
+          name: DEVFRAME_RPC.updateVuexState,
+          type: 'action',
+          jsonSerializable: true,
+          agent: {
+            description: 'Edit one Vuex store state key (deep path supported).',
+          },
+          setup: () => ({
+            handler: async (
+              args: UpdateVuexStateParams,
+            ): Promise<{ ok: boolean }> => {
+              return await registry.callAgent<{ ok: boolean }>(
+                AGENT_RPC_VUE2.updateVuexState,
                 args,
               )
             },

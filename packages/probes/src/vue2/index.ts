@@ -29,6 +29,12 @@ import {
   getAgentInstance,
   initAgentPipeline,
 } from '../runtime/lifecycle.ts'
+import { AGENT_RPC_VUE2 } from '@uni-helper/devtools-shared'
+import { getVuexStores, updateVuexState } from '../runtime/vuex.ts'
+import type {
+  VuexStateResult,
+  UpdateVuexStateParams,
+} from '@uni-helper/devtools-shared'
 
 /**
  * 初始化探针（同步版本，保持向后兼容）
@@ -47,10 +53,27 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
       setVueRuntime(vueRuntime)
     }
 
-    // 3. 初始化探针管道
+    // 3. 初始化探针管道（修复 Critical 2: Vue 2 扩展 Vuex RPC）
     return initAgentPipeline({
       adapter,
-      clientFunctions: createBaseRpcFunctions(), // 仅 8 个基础 RPC 方法
+      clientFunctions: {
+        ...createBaseRpcFunctions(), // 8 个基础 RPC 方法
+        // Vue 2 专属：Vuex 状态管理（从 AGENT_RPC_VUE2 注册）
+        [AGENT_RPC_VUE2.getVuexStores]: (): VuexStateResult[] => {
+          return getVuexStores()
+        },
+        [AGENT_RPC_VUE2.getVuexState]: (params: {
+          id: string
+        }): VuexStateResult | null => {
+          const stores = getVuexStores()
+          return stores.find((s) => s.id === params.id) || null
+        },
+        [AGENT_RPC_VUE2.updateVuexState]: (
+          params: UpdateVuexStateParams,
+        ): { ok: boolean } => {
+          return updateVuexState(params)
+        },
+      },
       customConfig,
     })
   } catch (error) {

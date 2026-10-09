@@ -7,5 +7,6 @@
 
 export * from './network.ts'
 export * from './pinia.ts'
+export * from './vuex.ts'
 export * from './state.ts'
 export * from './tree.ts'

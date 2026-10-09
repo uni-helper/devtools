@@ -38,6 +38,7 @@ import type {
   NetworkSharedState,
   PiniaStateResult,
   RouterInfoResult,
+  VuexStateResult,
 } from '@uni-helper/devtools-shared'
 import { DEVFRAME_RPC } from '@uni-helper/devtools-shared'
 import type { ProbeBackend, ProbeMethod } from './backend.ts'
@@ -57,6 +58,10 @@ import {
   toPiniaRootSnapshot,
   toPiniaStateSnapshot,
   toStateSnapshot,
+  VUEX_ROOT_ID,
+  VUEX_ROOT_LABEL,
+  toVuexRootSnapshot,
+  toVuexStateSnapshot,
 } from './mapping/index.ts'
 
 export interface UniNetworkApi {
@@ -495,13 +500,19 @@ export function connectUniRpcClient(
         return { plugins: [] }
 
       case 'inspectors:list':
-        // Pinia 走官方 custom inspector 协议（官方 tabs.ts 对 id==='pinia' 有
-        // 内建 tab 映射，无需改 tab 常量）
+        // Pinia 和 Vuex 走官方 custom inspector 协议
         return {
           inspectors: [
             {
               id: 'pinia',
               label: 'Pinia',
+              stateFilterPlaceholder: 'Filter state...',
+              treeFilterPlaceholder: 'Filter stores...',
+              noSelectionText: 'Select a store in the tree to inspect it',
+            },
+            {
+              id: 'vuex',
+              label: 'Vuex',
               stateFilterPlaceholder: 'Filter state...',
               treeFilterPlaceholder: 'Filter stores...',
               noSelectionText: 'Select a store in the tree to inspect it',
@@ -515,24 +526,48 @@ export function connectUniRpcClient(
           inspectorId?: string
           filter?: string
         }
-        if (inspectorId !== 'pinia')
-          return { inspectorId: inspectorId ?? '', rootNodes: [] }
-        const res = await callUni<GetPiniaStoresResult>(
-          DEVFRAME_RPC.getPiniaStores,
-        )
-        // 官方 pinia 插件语义：「🍍 Pinia (root)」与各 store 平级（stores =
-        // [pinia, ..._s.values()]，非父子嵌套）；store 节点无标签；过滤同时匹配
-        // 根标签与 store id
-        const matches = (text: string): boolean =>
-          !filter || text.toLowerCase().includes(filter.toLowerCase())
-        const rootNodes: Array<{ id: string; label: string }> = []
-        if (matches(PINIA_ROOT_LABEL))
-          rootNodes.push({ id: PINIA_ROOT_ID, label: PINIA_ROOT_LABEL })
-        for (const store of res?.stores ?? []) {
-          if (matches(store.id))
-            rootNodes.push({ id: `store:${store.id}`, label: store.id })
+
+        // Pinia inspector
+        if (inspectorId === 'pinia') {
+          const res = await callUni<GetPiniaStoresResult>(
+            DEVFRAME_RPC.getPiniaStores,
+          )
+          const matches = (text: string): boolean =>
+            !filter || text.toLowerCase().includes(filter.toLowerCase())
+          const rootNodes: Array<{ id: string; label: string }> = []
+          if (matches(PINIA_ROOT_LABEL))
+            rootNodes.push({ id: PINIA_ROOT_ID, label: PINIA_ROOT_LABEL })
+          for (const store of res?.stores ?? []) {
+            if (matches(store.id))
+              rootNodes.push({ id: `store:${store.id}`, label: store.id })
+          }
+          return { inspectorId, rootNodes }
         }
-        return { inspectorId, rootNodes }
+
+        // Vuex inspector（对齐 Pinia 的扁平化平级节点结构）
+        if (inspectorId === 'vuex') {
+          const stores = await callUni<VuexStateResult[]>(
+            DEVFRAME_RPC.getVuexStores,
+          )
+          const matches = (text: string): boolean =>
+            !filter || text.toLowerCase().includes(filter.toLowerCase())
+          const rootNodes: Array<{ id: string; label: string }> = []
+
+          // 添加聚合根节点（虚拟节点，用于概览）
+          if (matches(VUEX_ROOT_LABEL))
+            rootNodes.push({ id: VUEX_ROOT_ID, label: VUEX_ROOT_LABEL })
+
+          // 添加各 store/module 节点（修复 Critical 1: 根 store 使用独立 ID）
+          for (const store of stores ?? []) {
+            const nodeId =
+              store.id === '_root' ? 'vuex-root' : `module:${store.id}`
+            const label = store.id === '_root' ? 'Root State' : store.id
+            if (matches(label)) rootNodes.push({ id: nodeId, label })
+          }
+          return { inspectorId, rootNodes }
+        }
+
+        return { inspectorId: inspectorId ?? '', rootNodes: [] }
       }
 
       case 'inspectors:stateSnapshot': {
@@ -541,34 +576,74 @@ export function connectUniRpcClient(
           inspectorId?: string
           nodeId?: string
         }
-        if (inspectorId !== 'pinia') return undefined
-        // 聚合根：逐 store 拉取后按官方 _root 语义组装
-        if (nodeId === PINIA_ROOT_ID) {
-          const res = await callUni<GetPiniaStoresResult>(
-            DEVFRAME_RPC.getPiniaStores,
-          )
-          const states: PiniaStateResult[] = []
-          for (const store of res?.stores ?? [])
-            states.push(
-              await callUni<PiniaStateResult>(DEVFRAME_RPC.getPiniaState, {
-                id: store.id,
-              }),
+
+        // Pinia inspector
+        if (inspectorId === 'pinia') {
+          // 聚合根：逐 store 拉取后按官方 _root 语义组装
+          if (nodeId === PINIA_ROOT_ID) {
+            const res = await callUni<GetPiniaStoresResult>(
+              DEVFRAME_RPC.getPiniaStores,
             )
-          return toPiniaRootSnapshot(
-            states,
+            const states: PiniaStateResult[] = []
+            for (const store of res?.stores ?? [])
+              states.push(
+                await callUni<PiniaStateResult>(DEVFRAME_RPC.getPiniaState, {
+                  id: store.id,
+                }),
+              )
+            return toPiniaRootSnapshot(
+              states,
+              inspectorVersionByNode.get(nodeId) ?? 0,
+            )
+          }
+          if (!nodeId?.startsWith('store:')) return undefined
+          const storeId = nodeId.slice('store:'.length)
+          const state = await callUni<PiniaStateResult>(
+            DEVFRAME_RPC.getPiniaState,
+            { id: storeId },
+          )
+          return toPiniaStateSnapshot(
+            state,
             inspectorVersionByNode.get(nodeId) ?? 0,
           )
         }
-        if (!nodeId?.startsWith('store:')) return undefined
-        const storeId = nodeId.slice('store:'.length)
-        const state = await callUni<PiniaStateResult>(
-          DEVFRAME_RPC.getPiniaState,
-          { id: storeId },
-        )
-        return toPiniaStateSnapshot(
-          state,
-          inspectorVersionByNode.get(nodeId) ?? 0,
-        )
+
+        // Vuex inspector
+        if (inspectorId === 'vuex') {
+          // 聚合根：拉取所有 stores 后组装（虚拟节点，只读概览）
+          if (nodeId === VUEX_ROOT_ID) {
+            const stores = await callUni<VuexStateResult[]>(
+              DEVFRAME_RPC.getVuexStores,
+            )
+            return toVuexRootSnapshot(
+              stores ?? [],
+              inspectorVersionByNode.get(nodeId) ?? 0,
+            )
+          }
+
+          // 单个 store/module（修复 Critical 1: 根 store 使用 vuex-root）
+          let storeId: string
+          if (nodeId === 'vuex-root') {
+            storeId = '_root'
+          } else if (nodeId?.startsWith('module:')) {
+            storeId = nodeId.slice('module:'.length)
+          } else {
+            return undefined
+          }
+
+          const state = await callUni<VuexStateResult>(
+            DEVFRAME_RPC.getVuexState,
+            { id: storeId },
+          )
+          if (!state) return undefined
+
+          return toVuexStateSnapshot(
+            state,
+            inspectorVersionByNode.get(nodeId) ?? 0,
+          )
+        }
+
+        return undefined
       }
 
       case 'components:treeSnapshot': {
@@ -785,63 +860,124 @@ export function connectUniRpcClient(
           value?: unknown
           remove?: boolean
         }
-        if (payload.inspectorId !== 'pinia')
-          return {
-            status: 0,
-            error: probeNotSupported('该 inspector 的状态编辑'),
-          }
-        // 聚合根编辑（官方插件 `path.unshift('state')` 的逆向）：面板 path 已去
-        // sectionId，形如 [storeId, key, ...嵌套]，翻译回目标 store 的键路径
-        let storeId: string
-        let path = payload.path ?? []
-        if (payload.nodeId === PINIA_ROOT_ID) {
-          if (path.length < 2 || !path[0])
+
+        // Pinia inspector
+        if (payload.inspectorId === 'pinia') {
+          // 聚合根编辑（官方插件 `path.unshift('state')` 的逆向）：面板 path 已去
+          // sectionId，形如 [storeId, key, ...嵌套]，翻译回目标 store 的键路径
+          let storeId: string
+          let path = payload.path ?? []
+          if (payload.nodeId === PINIA_ROOT_ID) {
+            if (path.length < 2 || !path[0])
+              return {
+                status: 0,
+                error: '聚合根编辑需要 [storeId, key, ...] 形式的路径',
+              }
+            storeId = path[0]!
+            path = path.slice(1)
+          } else if (payload.nodeId?.startsWith('store:')) {
+            storeId = payload.nodeId.slice('store:'.length)
+          } else {
             return {
               status: 0,
-              error: '聚合根编辑需要 [storeId, key, ...] 形式的路径',
+              error: probeNotSupported('该 inspector 的状态编辑'),
             }
-          storeId = path[0]!
-          path = path.slice(1)
-        } else if (payload.nodeId?.startsWith('store:')) {
-          storeId = payload.nodeId.slice('store:'.length)
-        } else {
-          return {
-            status: 0,
-            error: probeNotSupported('该 inspector 的状态编辑'),
           }
-        }
-        if (path.length === 0) return { status: 0, error: '缺少编辑路径' }
-        // 错误统一转 { status: 0 }（同 components:editState，探针/mock 的
-        // "键不存在"抛错都在这里落为面板可见的错误文案）
-        try {
-          await callUni(DEVFRAME_RPC.updatePiniaState, {
-            id: storeId,
-            key: path[0]!,
-            path,
-            value: payload.value,
-            remove: payload.remove,
+          if (path.length === 0) return { status: 0, error: '缺少编辑路径' }
+
+          try {
+            await callUni(DEVFRAME_RPC.updatePiniaState, {
+              id: storeId,
+              key: path[0]!,
+              path,
+              value: payload.value,
+              remove: payload.remove,
+            })
+          } catch (error) {
+            return {
+              status: 0,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          }
+
+          // 成功后递增版本触发失效通知
+          const targetNodeId = payload.nodeId ?? `store:${storeId}`
+          inspectorVersionByNode.set(
+            targetNodeId,
+            (inspectorVersionByNode.get(targetNodeId) ?? 0) + 1,
+          )
+          emit({
+            type: 'inspectors:stateInvalidated',
+            inspectorId: 'pinia',
+            nodeId: targetNodeId,
+            appId: '0',
           })
-        } catch (error) {
-          return {
-            status: 0,
-            error: error instanceof Error ? error.message : String(error),
-          }
+          return { status: 1 }
         }
-        // 官方刷新语义：inspector 以 nodeId 为维度递增 version（聚合根编辑按
-        // 发起视图的 nodeId 失效——当前选中即根视图，刷新它）
-        const nodeId = payload.nodeId
-        const version = (inspectorVersionByNode.get(nodeId) ?? 0) + 1
-        inspectorVersionByNode.set(nodeId, version)
-        // 事件名是 kit RuntimeDomainEvent 的 `inspectors:stateInvalidated`
-        // （`invalidateState` 是 command 名——写反会被官方事件入口静默丢弃）；
-        // nodeId 必带，官方按它判断是否刷新当前选中 store
-        emit({
-          type: 'inspectors:stateInvalidated',
-          inspectorId: 'pinia',
-          nodeId,
-          reason: 'edit',
-        })
-        return { status: 1 }
+
+        // Vuex inspector
+        if (payload.inspectorId === 'vuex') {
+          let storeId: string
+          let path = payload.path ?? []
+
+          // 聚合根编辑：path 形如 [storeId, key, ...]（只读概览，理论上不可编辑）
+          if (payload.nodeId === VUEX_ROOT_ID) {
+            if (path.length < 2 || !path[0])
+              return {
+                status: 0,
+                error: '聚合根编辑需要 [storeId, key, ...] 形式的路径',
+              }
+            storeId = path[0]!
+            path = path.slice(1)
+          } else if (payload.nodeId === 'vuex-root') {
+            // 修复 Critical 1: 根 store 使用 vuex-root
+            storeId = '_root'
+          } else if (payload.nodeId?.startsWith('module:')) {
+            storeId = payload.nodeId.slice('module:'.length)
+          } else {
+            return {
+              status: 0,
+              error: probeNotSupported('该 inspector 的状态编辑'),
+            }
+          }
+
+          if (path.length === 0) return { status: 0, error: '缺少编辑路径' }
+
+          try {
+            await callUni(DEVFRAME_RPC.updateVuexState, {
+              id: storeId,
+              path,
+              value: payload.value,
+              remove: payload.remove,
+            })
+          } catch (error) {
+            return {
+              status: 0,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          }
+
+          // 成功后递增版本触发失效通知（修复 Critical 1: 使用正确的 nodeId）
+          const targetNodeId =
+            payload.nodeId ??
+            (storeId === '_root' ? 'vuex-root' : `module:${storeId}`)
+          inspectorVersionByNode.set(
+            targetNodeId,
+            (inspectorVersionByNode.get(targetNodeId) ?? 0) + 1,
+          )
+          emit({
+            type: 'inspectors:stateInvalidated',
+            inspectorId: 'vuex',
+            nodeId: targetNodeId,
+            appId: '0',
+          })
+          return { status: 1 }
+        }
+
+        return {
+          status: 0,
+          error: probeNotSupported('该 inspector 的状态编辑'),
+        }
       }
 
       case 'inspectors:selectNode':

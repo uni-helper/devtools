@@ -25,6 +25,12 @@ const BASE_KEYS = [
   'uni-devtools:agent:updateComponentState',
 ].sort()
 
+const VUE2_ONLY_KEYS = [
+  'uni-devtools:agent:getVuexStores',
+  'uni-devtools:agent:getVuexState',
+  'uni-devtools:agent:updateVuexState',
+].sort()
+
 const VUE3_ONLY_KEYS = [
   'uni-devtools:agent:getComponentRenderCode',
   'uni-devtools:agent:recomputeComponentState',
@@ -81,13 +87,15 @@ describe('入口 RPC 方法表', () => {
     vue3.disposeAgent()
   })
 
-  it('vue 2 入口恰好只有 8 个基础方法，无任何 Vue 3 专属方法', async () => {
+  it('vue 2 入口有 8 个基础方法 + 3 个 Vuex 方法，无任何 Vue 3 专属方法', async () => {
     const { vue2 } = await freshEntries()
 
     vue2.initAgent(config())
 
     const fns = lastClientFunctions()
-    expect(Object.keys(fns).sort()).toEqual(BASE_KEYS)
+    expect(Object.keys(fns).sort()).toEqual(
+      [...BASE_KEYS, ...VUE2_ONLY_KEYS].sort(),
+    )
     for (const key of VUE3_ONLY_KEYS) {
       expect(fns).not.toHaveProperty(key)
     }
@@ -105,7 +113,9 @@ describe('入口 RPC 方法表', () => {
     vue3.disposeAgent()
 
     vue2.initAgent(config())
-    expect(Object.keys(lastClientFunctions()).sort()).toEqual(BASE_KEYS)
+    expect(Object.keys(lastClientFunctions()).sort()).toEqual(
+      [...BASE_KEYS, ...VUE2_ONLY_KEYS].sort(),
+    )
 
     vue2.disposeAgent()
   })

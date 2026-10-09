@@ -57,6 +57,7 @@ export function resolveRuntimeUni(runtimeHint?: any): any {
  * 创建 8 个基础 RPC 方法（Vue 2/3 通用）
  *
  * 返回类型显式声明，确保 TypeScript 完整推导每个方法的签名
+ * 修复 Critical 2: 移除 Vuex RPC，保持基座纯净（8 个方法）
  */
 export function createBaseRpcFunctions(): {
   [AGENT_BASE_RPC.ping]: () => number
