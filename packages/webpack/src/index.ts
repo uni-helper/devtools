@@ -8,77 +8,85 @@ import { AGENT_CLIENT_MARKER } from '@uni-helper/devtools-core/relay'
 
 // Node 16 兼容性补丁：webpack 4 / vue-cli 4 工程常运行于 Node 16，
 // 而 devframe / srvx / h3 运行时依赖 Web Crypto 与 Web Standards API。
-if (!globalThis.crypto?.getRandomValues) {
-  const g = globalThis as any
-  g.crypto = (nodeCrypto as any).webcrypto || {
-    getRandomValues: (arr: ArrayBufferView) =>
-      (nodeCrypto as any).randomFillSync(arr),
-    randomUUID: () => (nodeCrypto as any).randomUUID(),
+try {
+  if (!globalThis.crypto?.getRandomValues) {
+    const g = globalThis as any
+    g.crypto = (nodeCrypto as any).webcrypto || {
+      getRandomValues: (arr: ArrayBufferView) =>
+        (nodeCrypto as any).randomFillSync(arr),
+      randomUUID: () => (nodeCrypto as any).randomUUID(),
+    }
   }
-}
-if (!(globalThis as any).Headers) {
-  class Headers {
-    private _map = new Map<string, string>()
-    constructor(init?: any) {
-      if (init) {
-        if (Array.isArray(init)) {
-          for (const [k, v] of init)
-            this._map.set(String(k).toLowerCase(), String(v))
-        } else if (typeof init === 'object') {
-          for (const [k, v] of Object.entries(init))
-            this._map.set(k.toLowerCase(), String(v))
+  if (!(globalThis as any).Headers) {
+    class Headers {
+      private _map = new Map<string, string>()
+      constructor(init?: any) {
+        if (init) {
+          if (Array.isArray(init)) {
+            for (const [k, v] of init)
+              this._map.set(String(k).toLowerCase(), String(v))
+          } else if (typeof init === 'object') {
+            for (const [k, v] of Object.entries(init))
+              this._map.set(k.toLowerCase(), String(v))
+          }
         }
       }
-    }
 
-    get(k: string) {
-      return this._map.get(k.toLowerCase()) ?? null
+      get(k: string) {
+        return this._map.get(k.toLowerCase()) ?? null
+      }
+      set(k: string, v: string) {
+        this._map.set(k.toLowerCase(), String(v))
+      }
+      has(k: string) {
+        return this._map.has(k.toLowerCase())
+      }
+      delete(k: string) {
+        this._map.delete(k.toLowerCase())
+      }
+      forEach(fn: (v: string, k: string) => void) {
+        this._map.forEach(fn)
+      }
+      entries() {
+        return this._map.entries()
+      }
+      keys() {
+        return this._map.keys()
+      }
+      values() {
+        return this._map.values()
+      }
     }
-    set(k: string, v: string) {
-      this._map.set(k.toLowerCase(), String(v))
-    }
-    has(k: string) {
-      return this._map.has(k.toLowerCase())
-    }
-    delete(k: string) {
-      this._map.delete(k.toLowerCase())
-    }
-    forEach(fn: (v: string, k: string) => void) {
-      this._map.forEach(fn)
-    }
-    entries() {
-      return this._map.entries()
-    }
-    keys() {
-      return this._map.keys()
-    }
-    values() {
-      return this._map.values()
-    }
+    ;(globalThis as any).Headers = Headers
   }
-  ;(globalThis as any).Headers = Headers
-}
-if (!(globalThis as any).Request) {
-  class Request {
-    constructor() {
-      Object.defineProperty(this, Symbol.toStringTag, { value: 'Request' })
+  if (!(globalThis as any).Request) {
+    class Request {
+      constructor() {
+        Object.defineProperty(this, Symbol.toStringTag, { value: 'Request' })
+      }
     }
-  }
-  Object.defineProperty(Request.prototype, Symbol.toStringTag, {
-    value: 'Request',
-  })
-  ;(globalThis as any).Request = Request
-}
-if (!(globalThis as any).Response) {
-  class Response {
-    constructor() {
-      Object.defineProperty(this, Symbol.toStringTag, { value: 'Response' })
+    if (Request.prototype) {
+      Object.defineProperty(Request.prototype, Symbol.toStringTag, {
+        value: 'Request',
+      })
     }
+    ;(globalThis as any).Request = Request
   }
-  Object.defineProperty(Response.prototype, Symbol.toStringTag, {
-    value: 'Response',
-  })
-  ;(globalThis as any).Response = Response
+  if (!(globalThis as any).Response) {
+    class Response {
+      constructor() {
+        Object.defineProperty(this, Symbol.toStringTag, { value: 'Response' })
+      }
+    }
+    if (Response.prototype) {
+      Object.defineProperty(Response.prototype, Symbol.toStringTag, {
+        value: 'Response',
+      })
+    }
+    ;(globalThis as any).Response = Response
+  }
+} catch (err: any) {
+  console.warn('[uni-devtools] Polyfill failed:', err?.message || err)
 }
 
 /**
@@ -130,8 +138,11 @@ function resolveAgentVue2(): string {
     // 兼容 exports 仅声明 import 条件或包尚未构建的情况
     const pkgJson = req.resolve('@uni-helper/devtools-probes/package.json')
     const pkgDir = path.dirname(pkgJson)
-    const target = path.resolve(pkgDir, 'dist/agent-vue2.mjs')
-    if (fs.existsSync(target)) return target
+    // 尝试 .js 然后 .mjs
+    const targetJs = path.resolve(pkgDir, 'dist/agent-vue2.js')
+    if (fs.existsSync(targetJs)) return targetJs
+    const targetMjs = path.resolve(pkgDir, 'dist/agent-vue2.mjs')
+    if (fs.existsSync(targetMjs)) return targetMjs
     return path.resolve(pkgDir, 'src/vue2/index.ts')
   }
 }
@@ -161,8 +172,8 @@ function writeAgentConfig(
 ): string {
   const dir = path.resolve(cliContext, 'node_modules/.uni-devtools')
   fs.mkdirSync(dir, { recursive: true })
-  const file = path.join(dir, 'agent-config.js')
-  const content = `// generated by uni-devtools webpack plugin\nexport const config = ${JSON.stringify(config, null, 2)};\n`
+  const file = path.join(dir, 'agent-config.json')
+  const content = JSON.stringify(config, null, 2)
   fs.writeFileSync(file, content, 'utf-8')
   return file
 }
@@ -225,56 +236,65 @@ export function uniDevtoolsWebpack(
   chainableConfig: any,
   options: UniDevtoolsWebpackOptions = {},
 ): any {
-  // 生产构建零注入、零挂载
-  if (process.env.NODE_ENV === 'production') return chainableConfig
+  try {
+    // 生产构建零注入、零挂载
+    if (process.env.NODE_ENV === 'production') return chainableConfig
 
-  const cliContext = ensureCliContext()
+    const cliContext = ensureCliContext()
 
-  // 后台启动 sidecar（不阻塞配置返回）
-  const statePromise = startSidecar(options, cliContext)
+    // 后台启动 sidecar（不阻塞配置返回）
+    const statePromise = startSidecar(options, cliContext)
 
-  // 1. 生成/定位配置模块真实文件，并通过 alias 映射 virtual:uni-devtools-agent 与 agent/vue2
-  const agentConfigFile = path.resolve(
-    cliContext,
-    'node_modules/.uni-devtools/agent-config.js',
-  )
-  const agentVue2Dist = resolveAgentVue2()
+    // 1. 生成/定位配置模块真实文件，并通过 alias 映射 virtual:uni-devtools-agent 与 agent/vue2
+    const agentConfigFile = path.resolve(
+      cliContext,
+      'node_modules/.uni-devtools/agent-config.json',
+    )
+    const agentVue2Dist = resolveAgentVue2()
 
-  chainableConfig.resolve.alias
-    .set('virtual:uni-devtools-agent', agentConfigFile)
-    .set('@uni-helper/devtools-probes/vue2', agentVue2Dist)
+    chainableConfig.resolve.alias
+      .set('virtual:uni-devtools-agent', agentConfigFile)
+      .set('@uni-helper/devtools-probes/vue2', agentVue2Dist)
 
-  // 2. 注入 main.js 探针初始化 loader
-  const inputDir = process.env.UNI_INPUT_DIR
-    ? path.resolve(process.env.UNI_INPUT_DIR)
-    : path.resolve(cliContext, 'src')
-  const mainJsPath = path.resolve(inputDir, 'main.js')
+    // 2. 注入 main.js 探针初始化 loader
+    const inputDir = process.env.UNI_INPUT_DIR
+      ? path.resolve(process.env.UNI_INPUT_DIR)
+      : path.resolve(cliContext, 'src')
+    const mainJsPath = path.resolve(inputDir, 'main.js')
 
-  chainableConfig.module
-    .rule('uni-devtools-entry')
-    .test(mainJsPath)
-    .use('uni-devtools-entry-loader')
-    .loader(resolveEntryLoader())
-    .end()
+    chainableConfig.module
+      .rule('uni-devtools-entry')
+      .test(mainJsPath)
+      .use('uni-devtools-entry-loader')
+      .loader(resolveEntryLoader())
+      .end()
 
-  // 3. Webpack 4 插件：等待 sidecar 就绪后再进入编译，确保真实 wsUrl 写入配置
-  chainableConfig.plugin('uni-devtools-wait-ready').use(
-    class UniDevtoolsWaitReadyPlugin {
-      apply(compiler: any) {
-        if (compiler.hooks?.beforeCompile?.tapPromise) {
-          compiler.hooks.beforeCompile.tapPromise(
-            'UniDevtoolsWebpack',
-            async () => {
-              const state = await statePromise
-              await state.ready
-            },
-          )
+    // 3. Webpack 4 插件：等待 sidecar 就绪后再进入编译，确保真实 wsUrl 写入配置
+    chainableConfig.plugin('uni-devtools-wait-ready').use(
+      class UniDevtoolsWaitReadyPlugin {
+        apply(compiler: any) {
+          if (compiler.hooks?.beforeCompile?.tapPromise) {
+            compiler.hooks.beforeCompile.tapPromise(
+              'UniDevtoolsWebpack',
+              async () => {
+                const state = await statePromise
+                await state.ready
+              },
+            )
+          }
         }
-      }
-    },
-  )
+      },
+    )
 
-  return chainableConfig
+    return chainableConfig
+  } catch (err: any) {
+    console.warn(
+      '[uni-devtools] Failed to load uni-devtools:',
+      err?.message || err,
+    )
+    console.warn('[uni-devtools] Stack:', err?.stack)
+    return chainableConfig
+  }
 }
 
 export const UniDevtoolsWebpack = uniDevtoolsWebpack

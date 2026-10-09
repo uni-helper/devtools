@@ -1,5 +1,81 @@
+const fs = require('fs')
+const path = require('path')
+
 const INJECT_MARKER = '__UNI_DEVTOOLS_AGENT_VUE2_INJECTED__'
-const INJECT_CODE = `/* ${INJECT_MARKER} */\nimport { initAgent } from '@uni-helper/devtools-probes/vue2';\ntry { if (typeof globalThis !== 'undefined' && !globalThis.uni) { globalThis.uni = uni; } } catch (e) {}\ninitAgent();\n`
+
+/**
+ * 构建注入代码
+ *
+ * 方案二改造要点：
+ * 1. 使用 IIFE 立即执行函数，避免 ESM import（防止 Babel 生成 _vue 别名）
+ * 2. 使用 queueMicrotask 脱离关键路径（Fail-Open 原则）
+ * 3. 全程 try/catch 包裹，任何错误都不影响应用启动
+ * 4. 显式校验 initAgent 函数存在性
+ * 5. 配置通过 globalThis.__UNI_DEVTOOLS_CONFIG__ 传递
+ *
+ * @param {string} cliContext - CLI 上下文路径
+ * @returns {string} 注入代码
+ */
+function buildInjectCode(cliContext) {
+  // 1. 尝试读取配置文件
+  let configStr = 'undefined'
+  try {
+    const context = cliContext || process.env.UNI_CLI_CONTEXT || process.cwd()
+    const jsonPath = path.resolve(
+      context,
+      'node_modules/.uni-devtools/agent-config.json',
+    )
+    if (fs.existsSync(jsonPath)) {
+      const agentConfig = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
+      if (agentConfig && agentConfig.wsUrl) {
+        configStr = JSON.stringify({
+          wsUrl: agentConfig.wsUrl,
+          token: agentConfig.token || '',
+        })
+      }
+    }
+  } catch (e) {
+    // 配置读取失败不影响注入，使用 undefined
+  }
+
+  // 2. 构建注入代码（IIFE 形式，使用 CommonJS require）
+  return `/* ${INJECT_MARKER} */
+;(function() {
+  // 脱离关键路径：使用 queueMicrotask 或 setTimeout(0)
+  var scheduleBootstrap = typeof queueMicrotask !== 'undefined'
+    ? queueMicrotask
+    : function(fn) { setTimeout(fn, 0); };
+
+  scheduleBootstrap(function() {
+    try {
+      // 1. 动态 require（CommonJS）
+      var probes = require('@uni-helper/devtools-probes/vue2');
+      var initAgent = probes && probes.initAgent;
+
+      // 2. 显式校验函数存在性（防止模块解析失败）
+      if (typeof initAgent !== 'function') {
+        console.warn('[uni-devtools] initAgent is not a function, skipping bootstrap');
+        return;
+      }
+
+      // 3. 设置全局配置（兜底机制）
+      if (typeof globalThis !== 'undefined' && ${configStr}) {
+        globalThis.__UNI_DEVTOOLS_CONFIG__ = ${configStr};
+      }
+
+      // 4. 初始化探针（传入配置）
+      initAgent(${configStr});
+
+      // 5. 可观测性日志
+      console.log('[uni-devtools] agent bootstrapped');
+    } catch (error) {
+      // Fail-Open：任何错误都只记录日志，不向上传播
+      console.warn('[uni-devtools] bootstrap failed:', error.message);
+    }
+  });
+})();
+`
+}
 
 /**
  * 判断是否应将探针入口注入到当前模块。
@@ -48,9 +124,17 @@ module.exports = function (source, map) {
     return this.callback(null, source, map)
   }
 
-  return this.callback(null, INJECT_CODE + source, map)
+  // 获取 CLI 上下文
+  const cliContext =
+    (this.query && typeof this.query === 'object' && this.query.cliContext) ||
+    process.env.UNI_CLI_CONTEXT ||
+    process.cwd()
+
+  const injectCode = buildInjectCode(cliContext)
+
+  return this.callback(null, injectCode + source, map)
 }
 
 module.exports.shouldInjectAgentEntry = shouldInjectAgentEntry
+module.exports.buildInjectCode = buildInjectCode
 module.exports.INJECT_MARKER = INJECT_MARKER
-module.exports.INJECT_CODE = INJECT_CODE

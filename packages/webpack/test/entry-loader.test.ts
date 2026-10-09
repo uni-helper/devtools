@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 const require = createRequire(import.meta.url)
 const entryLoader = require('../entry-loader.cjs')
 
-const { shouldInjectAgentEntry, INJECT_MARKER, INJECT_CODE } = entryLoader
+const { shouldInjectAgentEntry, INJECT_MARKER, buildInjectCode } = entryLoader
 
 describe('entry-loader: shouldInjectAgentEntry 命名谓词 (LESSONS #2)', () => {
   it('带 query 的模块不注入 (防 uni 页面入口重写导致重复/错误注入)', () => {
@@ -57,22 +57,23 @@ describe('entry-loader: shouldInjectAgentEntry 命名谓词 (LESSONS #2)', () =>
 })
 
 describe('entry-loader: webpack loader 执行', () => {
-  it('满足注入条件时前置注入 INJECT_CODE', () => {
+  it('满足注入条件时前置注入代码', () => {
     const callback = vi.fn()
     const ctx = {
       resourcePath: '/project/src/main.js',
       resourceQuery: '',
       callback,
       cacheable: vi.fn(),
+      query: {},
     }
 
     entryLoader.call(ctx, 'const app = new Vue();', null)
 
-    expect(callback).toHaveBeenCalledWith(
-      null,
-      `${INJECT_CODE}const app = new Vue();`,
-      null,
-    )
+    const calls = callback.mock.calls[0]
+    expect(calls[0]).toBe(null) // error
+    expect(calls[1]).toContain(INJECT_MARKER) // injected code
+    expect(calls[1]).toContain('const app = new Vue();') // original source
+    expect(calls[2]).toBe(null) // map
   })
 
   it('带 query 时放行原代码', () => {
