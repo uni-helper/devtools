@@ -1,17 +1,33 @@
 /**
  * 探针共用序列化与响应式判定助手（state.ts / pinia.ts 共享）。
  * 约束：纯 JSON 安全（浏览器全局禁用由 eslint no-restricted-globals 执法）。
+ *
+ * 方案二改造：
+ * - 移除直接 import Vue，避免 Vue 2 环境调用 Vue 3 API（toRaw）
+ * - 通过运行时传入的 Vue 实例获取 API（如果需要）
  */
 
-import * as Vue from 'vue'
+// 延迟获取 Vue 运行时（由外部通过 setVueRuntime 注入）
+let vueRuntime: any = null
 
-const vueAny = Vue as any
-const vueToRaw = vueAny.toRaw || vueAny.default?.toRaw
-const vueIsRef = vueAny.isRef || vueAny.default?.isRef
+/**
+ * 设置 Vue 运行时（由 adapter 提供）
+ * @param runtime Vue 构造函数或导出对象
+ */
+export function setVueRuntime(runtime: any): void {
+  vueRuntime = runtime
+}
 
 export function getRaw(val: any): any {
   try {
-    return typeof vueToRaw === 'function' ? vueToRaw(val) : val
+    // 仅在 Vue 3 环境下尝试使用 toRaw
+    if (vueRuntime) {
+      const toRaw = vueRuntime.toRaw || vueRuntime.default?.toRaw
+      if (typeof toRaw === 'function') {
+        return toRaw(val)
+      }
+    }
+    return val
   } catch {
     return val
   }
@@ -28,8 +44,11 @@ export function checkIsRef(val: any): boolean {
     return true
   }
   try {
-    if (typeof vueIsRef === 'function' && vueIsRef(val)) {
-      return true
+    if (vueRuntime) {
+      const isRef = vueRuntime.isRef || vueRuntime.default?.isRef
+      if (typeof isRef === 'function' && isRef(val)) {
+        return true
+      }
     }
   } catch {
     // 容错环境无 Vue 导出
@@ -40,8 +59,11 @@ export function checkIsRef(val: any): boolean {
       return true
     }
     try {
-      if (typeof vueIsRef === 'function' && vueIsRef(raw)) {
-        return true
+      if (vueRuntime) {
+        const isRef = vueRuntime.isRef || vueRuntime.default?.isRef
+        if (typeof isRef === 'function' && isRef(raw)) {
+          return true
+        }
       }
     } catch {}
   }

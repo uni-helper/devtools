@@ -28,6 +28,7 @@ import type {
   NetworkRecord,
   NetworkRecordType,
 } from '@uni-helper/devtools-shared'
+import type { RuntimeAdapter } from '../adapter/types.ts'
 
 export const MAX_NETWORK_RING = 500
 export const MAX_NETWORK_BODY_CHARS = 65536
@@ -36,7 +37,8 @@ export const PUSH_NETWORK_DEBOUNCE_MS = 500
 const INTERCEPTED_FLAG = '__uni_devtools_network_intercepted__'
 
 export interface NetworkDeps {
-  getUni?: () => any
+  adapter?: RuntimeAdapter
+  getUni?: () => any // 保留以兼容测试
   getActiveInstance?: () => {
     rpc: any
     socketHandle: { isConnected: () => boolean }
@@ -88,19 +90,6 @@ const dirtyPushIds = new Set<number>()
 let pushTimer: any = null
 let networkDeps: NetworkDeps | null = null
 
-declare const getCurrentPages: any
-declare const uni: any
-
-function defaultGetUni(): any {
-  if (typeof uni !== 'undefined') {
-    return uni
-  }
-  if (typeof globalThis !== 'undefined' && (globalThis as any).uni) {
-    return (globalThis as any).uni
-  }
-  return undefined
-}
-
 function getPagePath(): string | undefined {
   try {
     if (networkDeps?.getCurrentRoute) {
@@ -111,26 +100,20 @@ function getPagePath(): string | undefined {
       return undefined
     }
 
-    const getPages =
-      typeof getCurrentPages === 'function'
-        ? getCurrentPages
-        : typeof globalThis !== 'undefined' &&
-            typeof (globalThis as any).getCurrentPages === 'function'
-          ? (globalThis as any).getCurrentPages
-          : undefined
-    if (!getPages) {
-      return undefined
+    // 通过 adapter 获取当前页面
+    const adapter = networkDeps?.adapter
+    if (adapter) {
+      const pages = adapter.getCurrentPages()
+      if (Array.isArray(pages) && pages.length > 0) {
+        const top = pages[pages.length - 1]
+        const rawRoute = top?.route || top?.__route__ || ''
+        if (rawRoute) {
+          return rawRoute.startsWith('/') ? rawRoute : `/${rawRoute}`
+        }
+      }
     }
-    const pages = getPages()
-    if (!Array.isArray(pages) || pages.length === 0) {
-      return undefined
-    }
-    const top = pages[pages.length - 1]
-    const rawRoute = top?.route || top?.__route__ || ''
-    if (!rawRoute) {
-      return undefined
-    }
-    return rawRoute.startsWith('/') ? rawRoute : `/${rawRoute}`
+
+    return undefined
   } catch {
     return undefined
   }
@@ -522,8 +505,18 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
     networkDeps = { ...networkDeps, ...deps }
   }
 
-  const uniObj = networkDeps?.getUni?.() || defaultGetUni()
+  // 优先使用测试传入的 getUni（兼容测试），否则从 globalThis 获取
+  let uniObj: any
+  if (networkDeps?.getUni) {
+    uniObj = networkDeps.getUni()
+  } else {
+    uniObj = (globalThis as any).uni
+  }
+
   if (!uniObj) {
+    console.warn(
+      '[network] No uni runtime available, network interception disabled',
+    )
     return
   }
 
@@ -540,6 +533,7 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
     const orig = uniObj[name]
     if (typeof orig === 'function' && !orig[INTERCEPTED_FLAG]) {
       uniObj[name] = wrapNetworkMethod(type, orig)
+      uniObj[name][INTERCEPTED_FLAG] = true
     }
   }
 }

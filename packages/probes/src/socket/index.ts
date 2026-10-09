@@ -4,6 +4,7 @@
  */
 
 import { structuredCloneParse } from 'devframe/utils/structured-clone'
+import type { RuntimeAdapter } from '../adapter/types.ts'
 
 // devframe wire codec 的 structured-clone 帧前缀（wire-codec 源码常量）。
 // 不从 'devframe/rpc' 导入：该入口会拖入 ohash → node:crypto 链，小程序构建不兼容。
@@ -43,6 +44,8 @@ export interface BirpcChannel {
 }
 
 export interface UniSocketChannelOptions {
+  /** 运行时适配器（必需） */
+  adapter: RuntimeAdapter
   wsUrl: string
   protocols?: string[]
   maxBackoffMs?: number
@@ -59,66 +62,18 @@ export interface UniSocketChannelHandle {
   isConnected: () => boolean
 }
 
-// 兼容全局 uni 对象（小程序或 mock）
-declare const uni: any
-declare const wx: any
-declare const my: any
-declare const tt: any
-declare const swan: any
-
-function resolveUni(): any {
-  if (
-    typeof uni !== 'undefined' &&
-    uni &&
-    typeof uni.connectSocket === 'function'
-  ) {
-    return uni
-  }
-  const g = typeof globalThis !== 'undefined' ? (globalThis as any) : {}
-  if (g.uni && typeof g.uni.connectSocket === 'function') {
-    return g.uni
-  }
-  if (
-    typeof wx !== 'undefined' &&
-    wx &&
-    typeof wx.connectSocket === 'function'
-  ) {
-    return wx
-  }
-  if (g.wx && typeof g.wx.connectSocket === 'function') {
-    return g.wx
-  }
-  if (
-    typeof my !== 'undefined' &&
-    my &&
-    typeof my.connectSocket === 'function'
-  ) {
-    return my
-  }
-  if (
-    typeof tt !== 'undefined' &&
-    tt &&
-    typeof tt.connectSocket === 'function'
-  ) {
-    return tt
-  }
-  if (
-    typeof swan !== 'undefined' &&
-    swan &&
-    typeof swan.connectSocket === 'function'
-  ) {
-    return swan
-  }
-  return undefined
-}
-
+/**
+ * 创建 WebSocket 通道（通过 adapter）
+ *
+ * 原则 P2 (Late Binding)：
+ * - 不再直接访问 uni/wx/my/tt/swan 全局变量
+ * - 通过 adapter.connectSocket 能力连接 WebSocket
+ */
 export function createUniSocketChannel(
-  optionsOrUrl: string | UniSocketChannelOptions,
+  options: UniSocketChannelOptions,
 ): UniSocketChannelHandle {
-  const options: UniSocketChannelOptions =
-    typeof optionsOrUrl === 'string' ? { wsUrl: optionsOrUrl } : optionsOrUrl
-
   const {
+    adapter,
     wsUrl,
     protocols,
     maxBackoffMs = 5000,
@@ -140,71 +95,40 @@ export function createUniSocketChannel(
   function connect() {
     if (isDisposed) return
 
-    const uniObj = resolveUni()
-    if (!uniObj || typeof uniObj.connectSocket !== 'function') {
-      console.warn(
-        '[uni-devtools-agent] No mini-program socket provider found (neither uni nor wx/my/tt)',
-      )
-      return
-    }
-
     try {
-      socketTask = uniObj.connectSocket({
-        url: wsUrl,
-        protocols,
-        success: () => {},
-        fail: (err: any) => {
-          console.error('[uni-devtools-agent] connectSocket failed:', err)
-          handleDisconnect(err)
-        },
+      // 通过 adapter 创建 WebSocket 连接
+      const socket = adapter.connectSocket(wsUrl)
+      socketTask = socket
+
+      // 监听 open 事件（异步握手完成后触发）
+      socket.onOpen(() => {
+        handleOpen()
+      })
+
+      // 监听 message 事件
+      socket.onMessage((data: string) => {
+        if (messageHandler) {
+          const decoded = decodeWireFrame(data)
+          messageHandler(decoded)
+        }
+      })
+
+      // 监听 error 事件
+      socket.onError((err: any) => {
+        console.error('[uni-devtools-agent] socket error:', err)
+        if (onError) onError(err)
+        handleDisconnect(err)
+      })
+
+      // 监听 close 事件
+      socket.onClose((code?: number, reason?: string) => {
+        if (onClose) onClose({ code, reason })
+        handleDisconnect({ code, reason })
       })
     } catch (err) {
       console.error('[uni-devtools-agent] connectSocket throw:', err)
       handleDisconnect(err)
       return
-    }
-
-    if (socketTask && typeof socketTask.onOpen === 'function') {
-      socketTask.onOpen(() => {
-        handleOpen()
-      })
-      socketTask.onMessage((res: any) => {
-        if (messageHandler) {
-          const decoded = decodeWireFrame(res.data)
-          if (decoded !== undefined) {
-            messageHandler(decoded)
-          }
-        }
-      })
-      socketTask.onError((err: any) => {
-        console.error('[uni-devtools-agent] WebSocket error:', err)
-        if (onError) onError(err)
-        handleDisconnect(err)
-      })
-      socketTask.onClose((res: any) => {
-        if (onClose) onClose(res)
-        handleDisconnect(res)
-      })
-    } else if (uniObj.onSocketOpen) {
-      uniObj.onSocketOpen(() => {
-        handleOpen()
-      })
-      uniObj.onSocketMessage((res: any) => {
-        if (messageHandler) {
-          const decoded = decodeWireFrame(res.data)
-          if (decoded !== undefined) {
-            messageHandler(decoded)
-          }
-        }
-      })
-      uniObj.onSocketError((err: any) => {
-        if (onError) onError(err)
-        handleDisconnect(err)
-      })
-      uniObj.onSocketClose((res: any) => {
-        if (onClose) onClose(res)
-        handleDisconnect(res)
-      })
     }
   }
 
@@ -232,23 +156,12 @@ export function createUniSocketChannel(
     const rawData =
       typeof data === 'string' ? data : JSON.stringify(data, wireReplacer)
     if (socketTask && typeof socketTask.send === 'function') {
-      socketTask.send({
-        data: rawData,
-        fail: (err: any) => {
-          sendQueue.unshift(rawData)
-          handleDisconnect(err)
-        },
-      })
-    } else {
-      const uniObj = resolveUni()
-      if (uniObj?.sendSocketMessage) {
-        uniObj.sendSocketMessage({
-          data: rawData,
-          fail: (err: any) => {
-            sendQueue.unshift(rawData)
-            handleDisconnect(err)
-          },
-        })
+      try {
+        socketTask.send(rawData)
+      } catch (err) {
+        console.error('[uni-devtools-agent] socket.send failed:', err)
+        sendQueue.unshift(rawData)
+        handleDisconnect(err)
       }
     }
   }
@@ -302,15 +215,8 @@ export function createUniSocketChannel(
     messageHandler = null
     if (socketTask && typeof socketTask.close === 'function') {
       try {
-        socketTask.close({})
+        socketTask.close()
       } catch {}
-    } else {
-      const uniObj = resolveUni()
-      if (uniObj?.closeSocket) {
-        try {
-          uniObj.closeSocket({})
-        } catch {}
-      }
     }
   }
 

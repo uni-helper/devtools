@@ -15,7 +15,7 @@
  */
 
 import { createRpcClient } from 'devframe/rpc/client'
-import { config } from 'virtual:uni-devtools-agent'
+import type { RuntimeAdapter } from '../adapter/types.ts'
 import {
   type UniSocketChannelHandle,
   createUniSocketChannel,
@@ -35,9 +35,6 @@ import {
   scheduleNetworkPush,
 } from './network.ts'
 
-declare const wx: any
-declare const uni: any
-
 export interface AgentConfig {
   wsUrl: string
   token: string
@@ -50,11 +47,12 @@ export interface AgentInstance {
 }
 
 export interface AgentPipelineOptions {
+  /** 运行时适配器（必需，显式传入，Runtime 层不再反查平台全局） */
+  adapter: RuntimeAdapter
   /** 由入口组装的 RPC 方法表（基础方法 + 版本专属方法） */
   clientFunctions: Record<string, any>
+  /** 自定义配置（可选，不传则从 globalThis.__UNI_DEVTOOLS_CONFIG__ 获取） */
   customConfig?: Partial<AgentConfig>
-  /** 运行时 uni 对象获取器：Vue 2 线需回退到 wx，Vue 3 线仅 uni */
-  getUni: () => any
 }
 
 /** 模块级单例（由本模块统一持有，避免两个入口各自维护一份） */
@@ -63,41 +61,52 @@ let activeAgentInstance: AgentInstance | null = null
 /** 进程级全局事件钩子是否已安装（只安装一次，永不重置，见文件头说明） */
 let processGlobalHooksInstalled = false
 
-function ensureProcessGlobalHooks(): void {
+/**
+ * 安装进程级全局事件钩子
+ *
+ * 注意：这里仍然需要访问全局变量 wx/uni，因为这些是平台运行时的全局单例事件总线
+ * 但现在通过 adapter 来访问，而不是直接声明全局变量
+ */
+function ensureProcessGlobalHooks(adapter: RuntimeAdapter): void {
   if (processGlobalHooksInstalled) {
     return
   }
   processGlobalHooksInstalled = true
 
   // 小程序原生页面路由事件（wx 全局，仅微信系可用）
-  if (typeof wx !== 'undefined' && typeof wx.onAppRoute === 'function') {
-    try {
+  // 通过 adapter 获取平台运行时，避免直接访问全局 wx
+  try {
+    const app = adapter.getApp()
+    const wx = (globalThis as any).wx
+    if (wx && typeof wx.onAppRoute === 'function') {
       wx.onAppRoute(() => {
         schedulePushComponentTree(200)
       })
-    } catch {}
-  }
+    }
+  } catch {}
 
   // uni 路由跳转拦截（涵盖 navigateTo / redirectTo / switchTab / navigateBack / reLaunch）
-  const uniObj = typeof uni !== 'undefined' ? uni : (globalThis as any).uni
-  if (uniObj && typeof uniObj.addInterceptor === 'function') {
-    const routeMethods = [
-      'navigateTo',
-      'redirectTo',
-      'reLaunch',
-      'switchTab',
-      'navigateBack',
-    ]
-    for (const method of routeMethods) {
-      try {
-        uniObj.addInterceptor(method, {
-          complete() {
-            schedulePushComponentTree(250)
-          },
-        })
-      } catch {}
+  try {
+    const uniObj = (globalThis as any).uni
+    if (uniObj && typeof uniObj.addInterceptor === 'function') {
+      const routeMethods = [
+        'navigateTo',
+        'redirectTo',
+        'reLaunch',
+        'switchTab',
+        'navigateBack',
+      ]
+      for (const method of routeMethods) {
+        try {
+          uniObj.addInterceptor(method, {
+            complete() {
+              schedulePushComponentTree(250)
+            },
+          })
+        } catch {}
+      }
     }
-  }
+  } catch {}
 
   // Vue DevTools 全局钩子接入（组件 mount/update 时触发）
   try {
@@ -157,9 +166,15 @@ export function initAgentPipeline(
     return activeAgentInstance
   }
 
+  // 从全局配置获取兜底值
+  const globalConfig =
+    typeof globalThis !== 'undefined'
+      ? (globalThis as any).__UNI_DEVTOOLS_CONFIG__
+      : undefined
+
   const effectiveConfig: AgentConfig = {
-    wsUrl: options.customConfig?.wsUrl || config?.wsUrl || '',
-    token: options.customConfig?.token || config?.token || '',
+    wsUrl: options.customConfig?.wsUrl || globalConfig?.wsUrl || '',
+    token: options.customConfig?.token || globalConfig?.token || '',
   }
 
   if (!effectiveConfig.wsUrl) {
@@ -176,9 +191,10 @@ export function initAgentPipeline(
     fullWsUrl += `${fullWsUrl.includes('?') ? '&' : '?'}client=uni-agent`
   }
 
-  // === 步骤 1：创建 WebSocket 通道 ===
+  // === 步骤 1：创建 WebSocket 通道（通过 adapter） ===
   const socketHandle = createUniSocketChannel({
     wsUrl: fullWsUrl,
+    adapter: options.adapter, // 显式传入 adapter
     /* eslint-disable no-console */
     onOpen: () => {
       console.log(
@@ -205,7 +221,9 @@ export function initAgentPipeline(
   // === 步骤 4：安装网络拦截器 ===
   installNetworkInterceptors({
     getActiveInstance: () => activeAgentInstance,
-    getUni: options.getUni,
+    adapter: options.adapter,
+    // 提供 getUni 回退，通过 globalThis 访问
+    getUni: () => (globalThis as any).uni,
   })
 
   // === 步骤 5：重置推送门与网络状态门 ===
@@ -215,7 +233,7 @@ export function initAgentPipeline(
   resetNetworkPushState()
 
   // === 步骤 6A：安装进程级全局事件钩子（只执行一次） ===
-  ensureProcessGlobalHooks()
+  ensureProcessGlobalHooks(options.adapter)
 
   // === 步骤 6B：启动实例级快照轮询定时器 ===
   startSnapshotPolling()
