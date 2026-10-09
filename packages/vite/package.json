@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@uni-helper/devtools-core": "workspace:*",
+    "@uni-helper/devtools-probes": "workspace:*",
     "@uni-helper/devtools-shared": "workspace:*",
     "devframe": "1.1.0"
   },
