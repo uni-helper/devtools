@@ -11,6 +11,7 @@ import type {
 } from './backend.ts'
 import type {
   GetRegisteredRoutesResult,
+  GetStorageEntriesParams,
   RouterInfoResult,
 } from '@uni-helper/devtools-shared'
 import { probeNotSupported } from './backend.ts'
@@ -22,9 +23,14 @@ import {
   mockNetworkRecords,
   mockPiniaState,
   mockPiniaStores,
+  mockStorageEntries,
+  mockStorageInfo,
   mockTickNetworkRecords,
   mockUpdateComponentState,
   mockUpdatePiniaState,
+  mockUpdateVuexState,
+  mockVuexState,
+  mockVuexStores,
 } from './fixtures.ts'
 
 export interface MockBackendOptions {
@@ -95,6 +101,28 @@ const handlers: Record<ProbeMethod, (payload: Payload) => unknown> = {
       value: p?.value,
     })
   },
+  // Vuex（Vue 2 探针）：getVuexState 未知 id 返回 null；编辑按嵌套 path 写回
+  //（中间路径创建、支持 remove），未知 module fail loud——见 fixtures.ts 注释
+  'get-vuex-stores': () => mockVuexStores(),
+  'get-vuex-state': (payload) => mockVuexState(idOf(payload)),
+  'update-vuex-state': (payload) => {
+    const p = payload as {
+      id?: string
+      path?: string[]
+      value?: unknown
+      remove?: boolean
+    }
+    return mockUpdateVuexState({
+      id: p?.id ?? '',
+      path: Array.isArray(p?.path) ? p.path : [],
+      value: p?.value,
+      remove: p?.remove,
+    })
+  },
+  // Storage 收集（微信 wx storage，只读查询；元数据与键值分两个方法）
+  'get-storage-info': () => mockStorageInfo(),
+  'get-storage-entries': (payload) =>
+    mockStorageEntries((payload ?? {}) as GetStorageEntriesParams),
   // 真实探针返回 GetNetworkRecordsResult { records }；pull 侧按 res.records 读取
   'get-network-records': () => ({ records: mockNetworkRecords() }),
   'clear-network-records': () => {

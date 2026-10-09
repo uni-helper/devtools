@@ -2,8 +2,13 @@ import type {
   ComponentStateResult,
   ComponentTreeResult,
   GetPiniaStoresResult,
+  GetStorageEntriesParams,
   PiniaStateResult,
   NetworkRecord,
+  StorageEntriesResult,
+  StorageEntry,
+  StorageInfoResult,
+  VuexStateResult,
 } from '@uni-helper/devtools-shared'
 
 /**
@@ -280,6 +285,227 @@ export function mockUpdatePiniaState(params: {
     )
   data.state[params.key] = params.value
   return { ok: true, id: params.id, key: params.key }
+}
+
+// ---------------------------------------------------------------------------
+// Vuex（对齐 Pinia 架构，Vue 2 探针专用）：root + 嵌套 namespaced module。
+// 语义对齐 probes/runtime/vuex.ts：getVuexStores 返回含完整 state/getters 的
+// VuexStateResult 数组（root 固定 id `_root`）；module 的 getters 是去
+// `module/` 前缀后的本模块键（extractModuleGetters），root 的 getters 含全名。
+// ---------------------------------------------------------------------------
+
+function createInitialVuexState(): Record<
+  string,
+  {
+    state: Record<string, unknown>
+    getters: Record<string, unknown>
+    namespaced: boolean
+  }
+> {
+  return {
+    _root: {
+      state: { appVersion: '1.2.0', theme: 'light', launchCount: 3 },
+      getters: { isDarkTheme: false, 'cart/itemCount': 2 },
+      namespaced: false,
+    },
+    cart: {
+      state: { items: [{ sku: 'p1', count: 2 }], coupon: null },
+      getters: { itemCount: 2 },
+      namespaced: true,
+    },
+    'cart/products': {
+      state: { keyword: 'uni', list: ['devtools', 'uni-app', 'pinia'] },
+      getters: { filtered: ['uni-app'] },
+      namespaced: true,
+    },
+  }
+}
+
+let vuexStateById = createInitialVuexState()
+
+export function mockVuexStores(): VuexStateResult[] {
+  return Object.entries(vuexStateById).map(([id, data]) => ({
+    id,
+    state: JSON.parse(JSON.stringify(data.state)),
+    getters: JSON.parse(JSON.stringify(data.getters)),
+    namespaced: data.namespaced,
+  }))
+}
+
+// 探针 getVuexState 对未知 id 返回 null（find 失败），不抛错——如实对齐
+export function mockVuexState(id: string): VuexStateResult | null {
+  const data = vuexStateById[id]
+  if (!data) return null
+  // 深拷贝语义同 mockPiniaState（真实传输层每次全新对象）
+  return {
+    id,
+    state: JSON.parse(JSON.stringify(data.state)),
+    getters: JSON.parse(JSON.stringify(data.getters)),
+    namespaced: data.namespaced,
+  }
+}
+
+export function mockUpdateVuexState(params: {
+  id: string
+  path: string[]
+  value?: unknown
+  remove?: boolean
+}): { ok: true; id: string } {
+  const data = vuexStateById[params.id]
+  // 探针对未知 module 是静默写入临时对象（getModuleState 返回 {}，写完即丢）；
+  // mock 选择 fail loud——静默丢失的编辑只会掩盖面板侧 bug
+  if (!data)
+    throw new Error(`[updateVuexState] Module "${params.id}" not found`)
+  // 空 path 与探针 setValueByPath 同语义：no-op 成功
+  if (params.path.length === 0) return { ok: true, id: params.id }
+  let target: Record<string, unknown> = data.state
+  for (let i = 0; i < params.path.length - 1; i++) {
+    const key = params.path[i]!
+    // 中间路径不存在时创建（对齐探针 setValueByPath）
+    if (!(key in target)) target[key] = {}
+    target = target[key] as Record<string, unknown>
+  }
+  const lastKey = params.path[params.path.length - 1]!
+  if (params.remove) {
+    // 数组元素删除走 splice、不留稀疏空洞（对齐探针 Vue.delete 的数组语义），
+    // 对象键保持 delete
+    const index = Number(lastKey)
+    if (Array.isArray(target) && Number.isInteger(index))
+      target.splice(index, 1)
+    else delete target[lastKey]
+  } else {
+    target[lastKey] = params.value
+  }
+  return { ok: true, id: params.id }
+}
+
+/** 测试用：恢复 Vuex fixtures 初始值（编辑是模块级内存写回，会话内保持） */
+export function mockResetVuexState(): void {
+  vuexStateById = createInitialVuexState()
+}
+
+// ---------------------------------------------------------------------------
+// Storage（微信小程序 storage 收集，MCP 优先暴露）：内存键值对，语义对齐
+// probes/runtime/storage.ts 的 WechatStorageCapability——getInfo 只含元数据；
+// getEntries 支持显式 keys / 正则过滤 / 分页 / 截断 / 字节大小 / 错误隔离。
+// 探针侧 storage 只读（写操作仅发失效通知），mock 同样无写路径。
+// ---------------------------------------------------------------------------
+
+const storageData: Record<string, unknown> = {
+  token: 'eyJhbGciOiJIUzI1NiJ9.mock-signed-token',
+  user_profile: { name: 'uni-helper', city: 'Shanghai', vip: false },
+  search_history: ['devtools', 'uni-app', 'pinia'],
+  settings: { theme: 'dark', language: 'zh-CN', notifications: true },
+  draft_content: '未提交的表单草稿：devtools mock 数据',
+}
+
+// TextEncoder 实例无状态，提升为模块单例避免每次调用重建
+const utf8Encoder = new TextEncoder()
+
+/** UTF-8 字节长度（includeSize 口径，与探针 getUtf8ByteLength 一致） */
+function utf8ByteLength(value: string): number {
+  return utf8Encoder.encode(value).length
+}
+
+/** 值的序列化字节估算；不可序列化的值按 0 计（条目级错误隔离见 mockStorageEntries） */
+function serializedByteLength(value: unknown): number {
+  try {
+    return utf8ByteLength(JSON.stringify(value) ?? '')
+  } catch {
+    return 0
+  }
+}
+
+export function mockStorageInfo(): StorageInfoResult {
+  const keys = Object.keys(storageData)
+  // currentSize 与微信 getStorageInfo 同为 KB 口径（空存储为 0）：
+  // 按键 + 值的序列化字节估算向上取整
+  const bytes = keys.reduce(
+    (sum, key) =>
+      sum + utf8ByteLength(key) + serializedByteLength(storageData[key]),
+    0,
+  )
+  return {
+    keys,
+    currentSize: Math.ceil(bytes / 1024),
+    limitSize: 10240,
+    keyCount: keys.length,
+    timestamp: Date.now(),
+  }
+}
+
+export function mockStorageEntries(
+  params: GetStorageEntriesParams = {},
+): StorageEntriesResult {
+  const storageKeys = Object.keys(storageData)
+  const storageKeySet = new Set(storageKeys)
+
+  // 目标 key 选择：显式 keys（不存在的保留为显式 miss 条目，对齐探针锁定行为）
+  // > matchPattern 正则（无效正则抛错）> 全量
+  let targetKeys: string[]
+  if (Array.isArray(params.keys) && params.keys.length > 0) {
+    targetKeys = Array.from(new Set(params.keys.map(String)))
+  } else if (params.matchPattern) {
+    let regex: RegExp
+    try {
+      regex = new RegExp(params.matchPattern)
+    } catch (err) {
+      throw new Error(
+        `Invalid matchPattern "${params.matchPattern}": ${err instanceof Error ? err.message : String(err)}`,
+      )
+    }
+    targetKeys = storageKeys.filter((k) => regex.test(k))
+  } else {
+    targetKeys = storageKeys.slice()
+  }
+
+  const total = targetKeys.length
+  let offset = params.offset !== undefined ? Number(params.offset) : 0
+  if (Number.isNaN(offset) || offset < 0) offset = 0
+  let limit = params.limit !== undefined ? Number(params.limit) : 50
+  if (Number.isNaN(limit) || limit <= 0) limit = 50
+  if (limit > 200) limit = 200
+
+  const pagedKeys = targetKeys.slice(offset, offset + limit)
+  const hasMore = offset + limit < total
+
+  const maxValueChars =
+    typeof params.maxValueChars === 'number' && params.maxValueChars > 0
+      ? params.maxValueChars
+      : 32768
+  const includeSize = Boolean(params.includeSize)
+
+  const entries: StorageEntry[] = pagedKeys.map((key) => {
+    if (!storageKeySet.has(key))
+      return { key, value: null, error: 'key not found' }
+    // 序列化 → 反序列化得到全新副本（对齐探针 wx.getStorage 每次返回新对象，
+    // 也避免调用方就地修改条目时污染模块级 fixtures）；错误隔离对齐探针
+    // fetchEntry：单条失败不抛整体
+    try {
+      const serialized = JSON.stringify(storageData[key])
+      if (serialized === undefined)
+        return { key, value: null, error: 'Unserializable value (undefined)' }
+      const entry: StorageEntry = { key, value: JSON.parse(serialized) }
+      if (serialized.length > maxValueChars) {
+        // 截断后的 value 是序列化字符串前缀（对齐探针 fetchEntry）
+        entry.value = serialized.slice(0, maxValueChars)
+        entry.truncated = true
+      }
+      if (includeSize) entry.size = utf8ByteLength(serialized)
+      return entry
+    } catch (err) {
+      return {
+        key,
+        value: null,
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Failed to process storage entry',
+      }
+    }
+  })
+
+  return { entries, total, hasMore, timestamp: Date.now() }
 }
 
 /**
