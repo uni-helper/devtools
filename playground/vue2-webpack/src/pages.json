@@ -7,6 +7,12 @@
       }
     },
     {
+      "path": "pages/network/network",
+      "style": {
+        "navigationBarTitleText": "④ 网络请求测试"
+      }
+    },
+    {
       "path": "pages/state/state",
       "style": {
         "navigationBarTitleText": "① 数据捕捉压测"

@@ -505,21 +505,6 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
     networkDeps = { ...networkDeps, ...deps }
   }
 
-  // 优先使用测试传入的 getUni（兼容测试），否则从 globalThis 获取
-  let uniObj: any
-  if (networkDeps?.getUni) {
-    uniObj = networkDeps.getUni()
-  } else {
-    uniObj = (globalThis as any).uni
-  }
-
-  if (!uniObj) {
-    console.warn(
-      '[network] No uni runtime available, network interception disabled',
-    )
-    return
-  }
-
   const methods: Array<{
     name: 'request' | 'uploadFile' | 'downloadFile'
     type: NetworkRecordType
@@ -529,12 +514,116 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
     { name: 'downloadFile', type: 'download' },
   ]
 
-  for (const { name, type } of methods) {
-    const orig = uniObj[name]
-    if (typeof orig === 'function' && !orig[INTERCEPTED_FLAG]) {
-      uniObj[name] = wrapNetworkMethod(type, orig)
-      uniObj[name][INTERCEPTED_FLAG] = true
+  let totalInstalled = 0
+  let totalPending = 0
+
+  // 尝试拦截多个目标：uni（首选）和 wx（降级兼容）
+  const targets: Array<{ obj: any; label: string }> = []
+
+  // 1. 优先拦截 uni（标准 uni-app API）
+  let uniObj: any
+  if (networkDeps?.getUni) {
+    uniObj = networkDeps.getUni()
+  } else {
+    uniObj = (globalThis as any).uni
+  }
+  if (uniObj) {
+    targets.push({ obj: uniObj, label: 'uni' })
+  }
+
+  // 2. 降级拦截 wx（兼容直接使用 wx.request 的情况）
+  const wxObj = (globalThis as any).wx
+  if (wxObj) {
+    targets.push({ obj: wxObj, label: 'wx' })
+  }
+
+  if (targets.length === 0) {
+    console.warn(
+      '[uni-devtools:network] No uni/wx runtime available, network interception disabled',
+    )
+    return
+  }
+
+  // 对每个目标对象安装拦截器
+  for (const target of targets) {
+    let installedCount = 0
+    let pendingCount = 0
+
+    for (const { name, type } of methods) {
+      const orig = target.obj[name]
+
+      if (typeof orig === 'function' && !orig[INTERCEPTED_FLAG]) {
+        // 方法已就绪，直接包装
+        target.obj[name] = wrapNetworkMethod(type, orig)
+        target.obj[name][INTERCEPTED_FLAG] = true
+        installedCount++
+      } else if (typeof orig !== 'function') {
+        // 方法未就绪，使用 Object.defineProperty 劫持属性赋值
+        try {
+          let originalMethod: any = orig // 保留初始值（可能是 undefined）
+          let intercepted = false
+
+          Object.defineProperty(target.obj, name, {
+            configurable: true,
+            enumerable: true,
+            get() {
+              return originalMethod
+            },
+            set(fn) {
+              // 当方法被赋值时，如果是函数且未被拦截，则包装它
+              if (
+                typeof fn === 'function' &&
+                !intercepted &&
+                !fn[INTERCEPTED_FLAG]
+              ) {
+                originalMethod = wrapNetworkMethod(type, fn)
+                originalMethod[INTERCEPTED_FLAG] = true
+                intercepted = true
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log(
+                    `[uni-devtools:network] Installed interceptor for ${target.label}.${name} (deferred)`,
+                  )
+                }
+              } else {
+                originalMethod = fn
+              }
+            },
+          })
+          pendingCount++
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(
+              `[uni-devtools:network] Watching ${target.label}.${name} for deferred installation`,
+            )
+          }
+        } catch (err) {
+          // 如果属性不可配置，降级为警告
+          console.warn(
+            `[uni-devtools:network] Cannot install interceptor for ${target.label}.${name}: property not configurable`,
+          )
+        }
+      }
     }
+
+    totalInstalled += installedCount
+    totalPending += pendingCount
+
+    // 输出每个目标的安装结果
+    if (installedCount > 0) {
+      console.log(
+        `[uni-devtools:network] Installed ${installedCount} interceptors on ${target.label}`,
+      )
+    }
+  }
+
+  // 输出总体结果
+  if (totalInstalled === 0 && totalPending === 0) {
+    console.warn(
+      '[uni-devtools:network] No network methods found on uni/wx, interception may not work',
+    )
+  } else if (totalPending > 0 && process.env.NODE_ENV !== 'production') {
+    console.log(
+      `[uni-devtools:network] ${totalPending} interceptors pending (will install when methods are assigned)`,
+    )
   }
 }
 
