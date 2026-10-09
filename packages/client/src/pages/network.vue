@@ -251,7 +251,7 @@ function formatBody(body: unknown): string {
       class="border-b border-base px-3 py-2 flex items-center justify-between gap-3"
     >
       <div class="flex items-center gap-2">
-        <span class="i-carbon-api text-base op70" />
+        <span class="i-carbon-activity text-base op70" />
         <span class="font-500 text-sm">Network</span>
         <span
           class="rounded bg-gray-400/10 px-1.5 py-0.5 font-mono text-xs text-gray-500"
@@ -323,7 +323,7 @@ function formatBody(body: unknown): string {
           v-else-if="records.length === 0"
           class="h-full flex flex-col items-center justify-center gap-2 p-12 text-center op50"
         >
-          <span class="i-carbon-api text-3xl" />
+          <span class="i-carbon-activity text-3xl" />
           <span class="text-sm">No requests captured yet</span>
           <span class="text-xs"
             >Mini-program network requests (request / upload / download) will

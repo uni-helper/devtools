@@ -22,9 +22,6 @@ export interface DevtoolsTabDefinition {
   order: number
   description: string
   path?: string
-  /** uni-devtools：探针尚未提供该页所需协议时禁用（置灰不可点，如实呈现能力边界）。 */
-  disabled?: boolean
-  disabledReason?: string
 }
 
 export type DevtoolsTab = DevtoolsTabDefinition

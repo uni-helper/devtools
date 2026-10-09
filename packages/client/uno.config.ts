@@ -43,7 +43,6 @@ export default defineConfig({
       'side-nav-logo': 'h-7 w-7 shrink-0',
       'side-nav-item':
         'relative mt-1 h-10 w-10 box-border shrink-0 rounded-xl border-0 bg-transparent color-muted op65 flex items-center justify-center hover:bg-active hover:op-100',
-      'side-nav-item-disabled': 'op25 cursor-not-allowed',
       'side-nav-item-active': 'bg-active color-active op-100',
       'side-nav-item-expanded':
         'self-stretch max-w-full !w-auto justify-start gap-3 !rounded-none px-3',
@@ -136,7 +135,6 @@ export default defineConfig({
     'i-carbon-play-filled',
     'i-carbon-plug',
     'i-carbon-renew',
-    'i-carbon-roadmap',
     'i-carbon-save',
     'i-carbon-search',
     'i-carbon-select-window',

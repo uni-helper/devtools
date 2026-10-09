@@ -42,8 +42,6 @@ export function useDevtoolsTabCatalog() {
     )
 
     return [
-      // graph tab 不做可见性门禁：运行时 Vue < 3.5 时页面内会说明原因（见 pages/graph.vue）。
-      // 静默隐藏会让用户以为工具坏了。
       ...builtinTabs.filter(
         (tab) => tab.id !== 'inspect' || inspectEnabled.value,
       ),
@@ -177,16 +175,7 @@ function createCategorizedTabs(
 }
 
 function getTabCategory(tab: DevtoolsTab): string {
-  if (
-    [
-      'overview',
-      'components',
-      'graph',
-      'pages',
-      'network',
-      'timeline',
-    ].includes(tab.id)
-  )
+  if (['overview', 'components', 'graph', 'pages', 'network'].includes(tab.id))
     return 'app'
   return 'modules'
 }
