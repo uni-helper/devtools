@@ -1,8 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { proxyRefs } from 'vue'
+import * as Vue from 'vue'
 import { buildReactivityGraph } from '../src/runtime/reactivity-graph'
+import { setVueRuntime } from '../src/runtime/serialize'
 
 const BINDINGS_PROP = '__uni_devtools_bindings__'
+
+// 在所有测试之前设置 Vue 运行时
+beforeAll(() => {
+  setVueRuntime(Vue)
+})
 
 // Vue 3.6 类模拟
 class SetupRenderEffect {

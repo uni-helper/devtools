@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { NullAdapter } from '../src/adapter/types'
 
 /**
  * lifecycle.ts 持有模块级单例与「进程级全局钩子已安装」标记，二者都不可从外部重置。
@@ -13,9 +14,9 @@ async function freshLifecycle(): Promise<
 
 function baseOptions() {
   return {
+    adapter: new NullAdapter(),
     clientFunctions: { 'uni-devtools:agent:ping': () => Date.now() },
     customConfig: { wsUrl: 'ws://test', token: 'test-token' },
-    getUni: () => undefined,
   }
 }
 
@@ -35,8 +36,8 @@ describe('initAgentPipeline 配置装配', () => {
 
     expect(() =>
       lifecycle.initAgentPipeline({
+        adapter: new NullAdapter(),
         clientFunctions: {},
-        getUni: () => undefined,
       }),
     ).toThrow(/wsUrl is missing/)
 
