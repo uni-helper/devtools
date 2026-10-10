@@ -128,21 +128,66 @@ function resolveEntryLoader(): string {
   return candidates[0]
 }
 
+/**
+ * 开发期陈旧产物检测：resolveAgentVue2 优先消费 gitignored 的 dist/agent-vue2.js
+ * 预构建产物，探针源码更新后若未重新 build，webpack 会静默打包旧 bundle——
+ * 「改了源码但行为没变」的经典排查陷阱。这里比对 dist 与 probes src 的最新
+ * mtime，过期则在控制台高亮告警（生产构建零开销，检查失败静默跳过）。
+ */
+function warnIfStaleAgentDist(distPath: string): void {
+  if (process.env.NODE_ENV === 'production') return
+  try {
+    const distDir = path.dirname(distPath)
+    if (path.basename(distDir) !== 'dist') return // 源码直发（兜底路径）无陈旧问题
+    const pkgDir = path.dirname(distDir)
+    const srcDir = path.join(pkgDir, 'src')
+    if (!fs.existsSync(srcDir)) return
+
+    const distMtime = fs.statSync(distPath).mtimeMs
+    const entries = fs.readdirSync(srcDir, { recursive: true }) as string[]
+    let newestSrcMtime = 0
+    for (const entry of entries) {
+      const rel = String(entry)
+      if (!/\.(ts|mts|js|mjs)$/.test(rel)) continue
+      const mtime = fs.statSync(path.join(srcDir, rel)).mtimeMs
+      if (mtime > newestSrcMtime) newestSrcMtime = mtime
+    }
+
+    if (newestSrcMtime > distMtime) {
+      console.warn(
+        `[uni-devtools] Stale agent bundle detected: ${distPath} is older than packages/probes/src. ` +
+          `Run "pnpm --filter @uni-helper/devtools-probes build" and rebuild, ` +
+          `or the probe behavior may not match the source.`,
+      )
+    }
+  } catch {
+    // 检测自身的任何异常都不影响构建
+  }
+}
+
 function resolveAgentVue2(): string {
   const req =
     typeof require !== 'undefined' ? require : createRequire(import.meta.url)
 
   try {
-    return req.resolve('@uni-helper/devtools-probes/vue2')
+    const resolved = req.resolve('@uni-helper/devtools-probes/vue2')
+    warnIfStaleAgentDist(resolved)
+    return resolved
   } catch {
     // 兼容 exports 仅声明 import 条件或包尚未构建的情况
     const pkgJson = req.resolve('@uni-helper/devtools-probes/package.json')
     const pkgDir = path.dirname(pkgJson)
     // 尝试 .js 然后 .mjs
     const targetJs = path.resolve(pkgDir, 'dist/agent-vue2.js')
-    if (fs.existsSync(targetJs)) return targetJs
+    if (fs.existsSync(targetJs)) {
+      warnIfStaleAgentDist(targetJs)
+      return targetJs
+    }
     const targetMjs = path.resolve(pkgDir, 'dist/agent-vue2.mjs')
-    if (fs.existsSync(targetMjs)) return targetMjs
+    if (fs.existsSync(targetMjs)) {
+      warnIfStaleAgentDist(targetMjs)
+      return targetMjs
+    }
     return path.resolve(pkgDir, 'src/vue2/index.ts')
   }
 }
