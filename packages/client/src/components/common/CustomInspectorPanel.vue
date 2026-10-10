@@ -47,10 +47,13 @@ let stateRequest = 0
 
 const inspectorId = computed(() => props.inspector.id)
 // uni-devtools 改点 8：mp 多页 = 多 app（Components 需要 app 列隔离页面树），
-// 但 Pinia 是全局单例（探针经 getApp() 单实例枚举 _s，与页面无关）——app 列对
-// pinia inspector 无意义，且官方 Web 单 app 场景从不显示；对齐官方，pinia 下隐藏。
+// 但 Pinia 和 Vuex 是全局单例（探针经 getApp() 单实例枚举 _s，与页面无关）——app 列对
+// pinia/vuex inspector 无意义，且官方 Web 单 app 场景从不显示；对齐官方，pinia/vuex 下隐藏。
 const showAppList = computed(
-  () => apps.value.length > 1 && props.inspector.id !== 'pinia',
+  () =>
+    apps.value.length > 1 &&
+    props.inspector.id !== 'pinia' &&
+    props.inspector.id !== 'vuex',
 )
 const selectedNode = computed(() =>
   flattenTreeNodes(tree.value).find((node) => node.id === selectedNodeId.value),
