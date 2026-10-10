@@ -94,6 +94,8 @@ let lastPushedId = 0
 const dirtyPushIds = new Set<number>()
 let pushTimer: any = null
 let networkDeps: NetworkDeps | null = null
+let isPushing = false
+let pushAgainRequested = false
 
 function getPagePath(): string | undefined {
   try {
@@ -411,6 +413,7 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
       const wrappedOptions: any = { ...options }
       let successHandled = false
       let failHandled = false
+      let completeHandled = false
 
       wrappedOptions.success = function (this: any, ...args: any[]) {
         try {
@@ -436,9 +439,12 @@ function wrapNetworkMethod(type: NetworkRecordType, orig: any): any {
         }
       }
 
+      // 必须强制注入 complete 回调，确保 handleComplete 被调用
+      // 即使用户没有提供 complete 回调，也要包装一个
       wrappedOptions.complete = function (this: any, ...args: any[]) {
         try {
-          if (record) {
+          if (record && !completeHandled) {
+            completeHandled = true
             if (!successHandled && !failHandled) {
               handleFallbackFromComplete(record, args[0], type)
             }
@@ -717,35 +723,66 @@ export async function pushNetworkRecordsNow(): Promise<void> {
     return
   }
 
-  // 环形淘汰的脏 id 不再追：记录已出局，推送无主可寻
-  if (dirtyPushIds.size > 0) {
-    const ringIds = new Set(ringBuffer.map((r) => r.id))
-    for (const id of dirtyPushIds) {
-      if (!ringIds.has(id)) {
-        dirtyPushIds.delete(id)
-      }
-    }
-  }
-
-  const incremental = ringBuffer.filter(
-    (r) => r.id > lastPushedId || dirtyPushIds.has(r.id),
-  )
-  if (incremental.length === 0) {
+  // 1. 并发锁控制：如果当前已有推送在进行，标记需要再次推送并退出
+  if (isPushing) {
+    pushAgainRequested = true
     return
   }
-
-  const maxId = incremental[incremental.length - 1].id
-  const pushedIds = incremental.map((r) => r.id)
+  isPushing = true
+  pushAgainRequested = false
 
   try {
-    await instance.rpc.$call(NODE_RPC.pushNetworkRecords, {
-      records: incremental,
-    })
-    lastPushedId = Math.max(lastPushedId, maxId)
+    // 2. 清理已被环形缓冲区淘汰的脏 ID（优化：避免 Set(map) 分配开销）
+    if (dirtyPushIds.size > 0 && ringBuffer.length > 0) {
+      const oldestRingId = ringBuffer[0].id
+      const newestRingId = ringBuffer[ringBuffer.length - 1].id
+      for (const id of dirtyPushIds) {
+        if (id < oldestRingId || id > newestRingId) {
+          dirtyPushIds.delete(id)
+        }
+      }
+    }
+
+    // 3. 提取增量记录
+    const incremental = ringBuffer.filter(
+      (r) => r.id > lastPushedId || dirtyPushIds.has(r.id),
+    )
+    if (incremental.length === 0) {
+      return
+    }
+
+    const maxId = incremental[incremental.length - 1].id
+    const pushedIds = incremental.map((r) => r.id)
+
+    // 4. 关键：创建浅拷贝快照，避免网络序列化期间被事件回调原地篡改
+    const recordsSnapshot = incremental.map((r) => ({ ...r }))
+
+    // 5. 关键：在 await 之前预出清本次推送涉及的脏 ID！
+    // 如果在 await 期间某个请求从 pending 变为 complete，
+    // handleComplete 会再次调用 dirtyPushIds.add(id)，不会被后续逻辑覆盖抹掉！
     for (const id of pushedIds) {
       dirtyPushIds.delete(id)
     }
-  } catch {}
+
+    try {
+      await instance.rpc.$call(NODE_RPC.pushNetworkRecords, {
+        records: recordsSnapshot,
+      })
+      lastPushedId = Math.max(lastPushedId, maxId)
+    } catch {
+      // 推送失败回滚：将本次推送的 ID 重新加回脏集
+      for (const id of pushedIds) {
+        dirtyPushIds.add(id)
+      }
+    }
+  } finally {
+    isPushing = false
+
+    // 6. 如果在推送执行期间收到了新的推送请求，或者仍有未出清的脏数据，顺延调度下一次推送
+    if (pushAgainRequested || dirtyPushIds.size > 0) {
+      scheduleNetworkPush()
+    }
+  }
 }
 
 export function __resetNetworkForTest(): void {
@@ -756,6 +793,8 @@ export function __resetNetworkForTest(): void {
   dirtyPushIds.clear()
   cancelScheduledNetworkPush()
   networkDeps = null
+  isPushing = false
+  pushAgainRequested = false
 }
 
 export function __initRecordIdForReloadTest(): void {
