@@ -499,26 +499,53 @@ export function connectUniRpcClient(
       case 'plugins:snapshot':
         return { plugins: [] }
 
-      case 'inspectors:list':
+      case 'inspectors:list': {
         // Pinia 和 Vuex 走官方 custom inspector 协议
-        return {
-          inspectors: [
-            {
-              id: 'pinia',
-              label: 'Pinia',
-              stateFilterPlaceholder: 'Filter state...',
-              treeFilterPlaceholder: 'Filter stores...',
-              noSelectionText: 'Select a store in the tree to inspect it',
-            },
-            {
-              id: 'vuex',
-              label: 'Vuex',
-              stateFilterPlaceholder: 'Filter state...',
-              treeFilterPlaceholder: 'Filter stores...',
-              noSelectionText: 'Select a store in the tree to inspect it',
-            },
-          ],
+        // 动态检测：只返回运行时真正支持的 inspector
+        await ensureReady()
+
+        const inspectors: Array<{
+          id: string
+          label: string
+          stateFilterPlaceholder: string
+          treeFilterPlaceholder: string
+          noSelectionText: string
+        }> = []
+
+        // 检测 Pinia 是否可用（尝试调用 getPiniaStores）
+        const piniaAvailable = await callUni<{ stores: any[] }>(
+          DEVFRAME_RPC.getPiniaStores,
+        )
+          .then((res) => res && Array.isArray(res.stores))
+          .catch(() => false)
+
+        if (piniaAvailable) {
+          inspectors.push({
+            id: 'pinia',
+            label: 'Pinia',
+            stateFilterPlaceholder: 'Filter state...',
+            treeFilterPlaceholder: 'Filter stores...',
+            noSelectionText: 'Select a store in the tree to inspect it',
+          })
         }
+
+        // 检测 Vuex 是否可用（尝试调用 getVuexStores）
+        const vuexAvailable = await callUni<any[]>(DEVFRAME_RPC.getVuexStores)
+          .then((res) => res && Array.isArray(res))
+          .catch(() => false)
+
+        if (vuexAvailable) {
+          inspectors.push({
+            id: 'vuex',
+            label: 'Vuex',
+            stateFilterPlaceholder: 'Filter state...',
+            treeFilterPlaceholder: 'Filter stores...',
+            noSelectionText: 'Select a store in the tree to inspect it',
+          })
+        }
+
+        return { inspectors }
+      }
 
       case 'inspectors:treeSnapshot': {
         await ensureReady()
