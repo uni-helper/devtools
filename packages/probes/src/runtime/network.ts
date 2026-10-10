@@ -5,13 +5,18 @@
  * 请求为 NetworkRecord，环形缓冲区持有，防抖增量推送到 node 侧 sharedState。
  *
  * 拦截层级定案与证据（边界说明）：
- * 只包 uni.* 三个 API，不碰 wx.*。
- * 证据（playground 产物 vendor.js 实测）：
- * uni mp 运行时在 vendor 求值期 initWx() 拷贝 newWx[key] = wx[key]、
- * initUni(shims, protocols, wx) 固化 API 引用——探针注入（main.ts）晚于该时刻，事后
- * 补丁 wx.request 拦不住 uni.request（漏记）；而 uni 是 Proxy，对 uni.request = wrapper
- * 赋值落 target 自有属性且 get 优先命中，单点无双记。直接 wx.request 调用
- * （非 uni-app 惯用法）不采集。
+ * 包 uni.* 三个 API（主目标）+ wx.* 三个 API（降级兼容，b38b993 起）。
+ * 证据（@dcloudio/uni-mp-weixin@2.0.2 dist/wx.js、index.js 实读）：
+ * uni.request 必须补 uni 本身——uni 是 Proxy，get trap 惰性读 wx[name]，
+ * set trap 落 target 自有属性且 get 优先命中，单点无双记；补 wx 拦不住已通过
+ * Proxy 固化的 uni 调用路径。直接 wx.request 调用（非 uni-app 惯用法）则靠
+ * wx 降级补丁采集：wx.js 在 vendor 求值期把 globalThis.wx 整体替换为「拷贝出的
+ * 新普通对象」（target['wx'] = initWx()），探针注入（main.js）晚于该时刻，
+ * 此时 wx.request 是可写的普通属性——即使宿主基座原生 wx 方法只读（真机 iOS），
+ * 拷贝出的对象也可直接赋值补丁。
+ * 已知边界：业务代码若在 vendor 求值期（早于探针注入）以模块顶层
+ * `const req = wx.request` 形式提前捕获原始引用，事后补丁覆盖不了已捕获引用
+ * （见 test/network-wx-fallback.test.ts 边界用例）。
  *
  * 约束：
  * - 探针禁浏览器 API（window/document/location 由 eslint no-restricted-globals 执法）
@@ -515,7 +520,7 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
   ]
 
   let totalInstalled = 0
-  let totalPending = 0
+  let alreadyInstalled = 0
 
   // 尝试拦截多个目标：uni（首选）和 wx（降级兼容）
   const targets: Array<{ obj: any; label: string }> = []
@@ -531,9 +536,10 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
     targets.push({ obj: uniObj, label: 'uni' })
   }
 
-  // 2. 降级拦截 wx（兼容直接使用 wx.request 的情况）
+  // 2. 降级拦截 wx（兼容直接使用 wx.request 的情况）；个别宿主会把 uni
+  //    指向同一对象，同引用时跳过，避免重复遍历
   const wxObj = (globalThis as any).wx
-  if (wxObj) {
+  if (wxObj && wxObj !== uniObj) {
     targets.push({ obj: wxObj, label: 'wx' })
   }
 
@@ -547,65 +553,64 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
   // 对每个目标对象安装拦截器
   for (const target of targets) {
     let installedCount = 0
-    let pendingCount = 0
+    let skippedCount = 0
 
     for (const { name, type } of methods) {
       const orig = target.obj[name]
 
-      if (typeof orig === 'function' && !orig[INTERCEPTED_FLAG]) {
-        // 方法已就绪，直接包装
-        target.obj[name] = wrapNetworkMethod(type, orig)
-        target.obj[name][INTERCEPTED_FLAG] = true
-        installedCount++
-      } else if (typeof orig !== 'function') {
-        // 方法未就绪，使用 Object.defineProperty 劫持属性赋值
-        try {
-          let originalMethod: any = orig // 保留初始值（可能是 undefined）
-          let intercepted = false
+      if (typeof orig !== 'function') {
+        // 方法缺失：两条真实运行时线（新版 wx.js 替换 / 老版原生 wx）在探针
+        // 注入时三个 API 均已就绪，且运行时不会事后向 uni.* 赋值（uni Proxy
+        // 惰性解析）。不做延迟监听——对 uni Proxy 执行 defineProperty 会在
+        // target 留下自有 accessor，永久遮蔽 get trap 的惰性 API 解析。
+        continue
+      }
 
+      if (orig[INTERCEPTED_FLAG]) {
+        // 已装过（重复 install：HMR / 多页面重入），计入幂等避免误报
+        skippedCount++
+        continue
+      }
+
+      const wrapper = wrapNetworkMethod(type, orig)
+
+      // 直接赋值可能失败：老版 uni 运行时（无 wx.js 替换）下探针面对的是
+      // 宿主基座原生 wx 对象，其方法属性可能只读（真机）。strict mode 下
+      // 赋值抛 TypeError、sloppy mode 下静默不生效——两种都要兜住，且
+      // 绝不能让单个属性的失败把整个安装流程炸掉（否则 uni 侧已装好的
+      // 拦截器随 initAgentPipeline 一起报废，agent 降级为 stub）。
+      let installed = false
+      try {
+        target.obj[name] = wrapper
+        installed = target.obj[name] === wrapper
+      } catch {
+        installed = false
+      }
+
+      if (!installed) {
+        // 赋值失败降级 defineProperty：对「只读但 configurable」的属性仍可生效
+        try {
           Object.defineProperty(target.obj, name, {
             configurable: true,
+            writable: true,
             enumerable: true,
-            get() {
-              return originalMethod
-            },
-            set(fn) {
-              // 当方法被赋值时，如果是函数且未被拦截，则包装它
-              if (
-                typeof fn === 'function' &&
-                !intercepted &&
-                !fn[INTERCEPTED_FLAG]
-              ) {
-                originalMethod = wrapNetworkMethod(type, fn)
-                originalMethod[INTERCEPTED_FLAG] = true
-                intercepted = true
-                if (process.env.NODE_ENV !== 'production') {
-                  console.log(
-                    `[uni-devtools:network] Installed interceptor for ${target.label}.${name} (deferred)`,
-                  )
-                }
-              } else {
-                originalMethod = fn
-              }
-            },
+            value: wrapper,
           })
-          pendingCount++
-          if (process.env.NODE_ENV !== 'production') {
-            console.log(
-              `[uni-devtools:network] Watching ${target.label}.${name} for deferred installation`,
-            )
-          }
-        } catch (err) {
-          // 如果属性不可配置，降级为警告
+          installed = true
+        } catch {
           console.warn(
-            `[uni-devtools:network] Cannot install interceptor for ${target.label}.${name}: property not configurable`,
+            `[uni-devtools:network] Cannot intercept ${target.label}.${name}: property is read-only/non-configurable`,
           )
         }
+      }
+
+      if (installed) {
+        installedCount++
       }
     }
 
     totalInstalled += installedCount
-    totalPending += pendingCount
+    alreadyInstalled += skippedCount
 
     // 输出每个目标的安装结果
     if (installedCount > 0) {
@@ -615,14 +620,10 @@ export function installNetworkInterceptors(deps?: NetworkDeps): void {
     }
   }
 
-  // 输出总体结果
-  if (totalInstalled === 0 && totalPending === 0) {
+  // 输出总体结果：全部已装过（幂等重入）不算异常
+  if (totalInstalled === 0 && alreadyInstalled === 0) {
     console.warn(
       '[uni-devtools:network] No network methods found on uni/wx, interception may not work',
-    )
-  } else if (totalPending > 0 && process.env.NODE_ENV !== 'production') {
-    console.log(
-      `[uni-devtools:network] ${totalPending} interceptors pending (will install when methods are assigned)`,
     )
   }
 }
