@@ -46,17 +46,429 @@ const MOCK_ROUTES: GetRegisteredRoutesResult['routes'] = [
   {
     path: '/pages/index/index',
     name: 'pages/index/index',
-    meta: { title: '首页', type: 'home' },
+    meta: { navigationStyle: 'custom', disableScroll: true },
   },
   {
-    path: '/pages/settings/settings',
-    name: 'pages/settings/settings',
-    meta: { title: '设置', type: 'page' },
+    path: '/pages/home/index',
+    name: 'pages/home/index',
+    meta: {
+      navigationStyle: 'custom',
+      navigationBarTitleText: '首页',
+      disableScroll: true,
+    },
+  },
+  {
+    path: '/pages/mine/index',
+    name: 'pages/mine/index',
+    meta: {
+      navigationStyle: 'custom',
+      navigationBarTitleText: '我的',
+      disableScroll: true,
+    },
+  },
+  {
+    path: '/pages/common/webview/index',
+    name: 'pages/common/webview/index',
+    meta: { navigationBarTitleText: '网页' },
+  },
+  {
+    path: '/pages/common/error/index',
+    name: 'pages/common/error/index',
+    meta: {},
+  },
+  {
+    path: '/demo_sdk/index/index',
+    name: 'demo_sdk/index/index',
+    meta: { navigationBarTitleText: 'Demo SDK 授权' },
+  },
+  {
+    path: '/pages/launch/index',
+    name: 'pages/launch/index',
+    meta: {},
+  },
+  {
+    path: '/pages/upgrade/index',
+    name: 'pages/upgrade/index',
+    meta: {},
+  },
+  {
+    path: '/pages/user/launch/index',
+    name: 'pages/user/launch/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/bindPhone/index',
+    name: 'pages/user/bindPhone/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/profile/index',
+    name: 'pages/user/profile/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/verify/index',
+    name: 'pages/user/verify/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/fillName/index',
+    name: 'pages/user/fillName/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/fillKey/index',
+    name: 'pages/user/fillKey/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/loginType/index',
+    name: 'pages/user/loginType/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/basicInfo/index',
+    name: 'pages/user/basicInfo/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/guide/index',
+    name: 'pages/user/guide/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/policy/index',
+    name: 'pages/user/policy/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/service/index',
+    name: 'pages/user/service/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/agreement/index',
+    name: 'pages/user/agreement/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/confirm/index',
+    name: 'pages/user/confirm/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/checkCode/index',
+    name: 'pages/user/checkCode/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/nickname/index',
+    name: 'pages/user/nickname/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/phone/index',
+    name: 'pages/user/phone/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/phoneCode/index',
+    name: 'pages/user/phoneCode/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/logout/index',
+    name: 'pages/user/logout/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/logout/reason/index',
+    name: 'pages/user/logout/reason/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/user/logout/progress/index',
+    name: 'pages/user/logout/progress/index',
+    meta: { subPackage: 'pages/user' },
+  },
+  {
+    path: '/pages/feed/article/index',
+    name: 'pages/feed/article/index',
+    meta: { subPackage: 'pages/feed' },
+  },
+  {
+    path: '/pages/feed/topic/index',
+    name: 'pages/feed/topic/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/feed' },
+  },
+  {
+    path: '/pages/vip/vip/index',
+    name: 'pages/vip/vip/index',
+    meta: { subPackage: 'pages/vip' },
+  },
+  {
+    path: '/pages/vip/highScore/index',
+    name: 'pages/vip/highScore/index',
+    meta: {
+      backgroundTextStyle: 'light',
+      navigationStyle: 'custom',
+      subPackage: 'pages/vip',
+    },
+  },
+  {
+    path: '/pages/profile/ageLimit/index',
+    name: 'pages/profile/ageLimit/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/contact/index',
+    name: 'pages/profile/contact/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/invalidTel/index',
+    name: 'pages/profile/invalidTel/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/joinGroup/index',
+    name: 'pages/profile/joinGroup/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/playVideo/index',
+    name: 'pages/profile/playVideo/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/security/index',
+    name: 'pages/profile/security/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/auth/index',
+    name: 'pages/profile/auth/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/card/index',
+    name: 'pages/profile/card/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/cert/index',
+    name: 'pages/profile/cert/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/credit/index',
+    name: 'pages/profile/credit/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/growth/index',
+    name: 'pages/profile/growth/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/invite/index',
+    name: 'pages/profile/invite/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/level/index',
+    name: 'pages/profile/level/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/medal/index',
+    name: 'pages/profile/medal/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/points/index',
+    name: 'pages/profile/points/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/record/index',
+    name: 'pages/profile/record/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/profile/setting/index',
+    name: 'pages/profile/setting/index',
+    meta: { subPackage: 'pages/profile' },
+  },
+  {
+    path: '/pages/module/addPublish/index',
+    name: 'pages/module/addPublish/index',
+    meta: { subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/addContact/index',
+    name: 'pages/module/addContact/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/applySuccess/index',
+    name: 'pages/module/applySuccess/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/blackList/index',
+    name: 'pages/module/blackList/index',
+    meta: { subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/contactService/index',
+    name: 'pages/module/contactService/index',
+    meta: { subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/detail/index',
+    name: 'pages/module/detail/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/edit/index',
+    name: 'pages/module/edit/index',
+    meta: { subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/list/index',
+    name: 'pages/module/list/index',
+    meta: { subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/report/index',
+    name: 'pages/module/report/index',
+    meta: { navigationStyle: 'custom', subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/module/search/index',
+    name: 'pages/module/search/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/module' },
+  },
+  {
+    path: '/pages/settings/about/index',
+    name: 'pages/settings/about/index',
+    meta: { subPackage: 'pages/settings' },
+  },
+  {
+    path: '/pages/settings/feedback/index',
+    name: 'pages/settings/feedback/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/settings' },
+  },
+  {
+    path: '/pages/settings/notification/index',
+    name: 'pages/settings/notification/index',
+    meta: { subPackage: 'pages/settings' },
+  },
+  {
+    path: '/pages/settings/privacy/index',
+    name: 'pages/settings/privacy/index',
+    meta: { subPackage: 'pages/settings' },
+  },
+  {
+    path: '/pages/settings/theme/index',
+    name: 'pages/settings/theme/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/settings' },
+  },
+  {
+    path: '/pages/settings/language/index',
+    name: 'pages/settings/language/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/settings' },
+  },
+  {
+    path: '/pages/social/comment/index',
+    name: 'pages/social/comment/index',
+    meta: {
+      backgroundTextStyle: 'light',
+      navigationStyle: 'custom',
+      subPackage: 'pages/social',
+    },
+  },
+  {
+    path: '/pages/social/detail/index',
+    name: 'pages/social/detail/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/social' },
+  },
+  {
+    path: '/pages/social/history/index',
+    name: 'pages/social/history/index',
+    meta: { subPackage: 'pages/social' },
+  },
+  {
+    path: '/pages/social/like/index',
+    name: 'pages/social/like/index',
+    meta: {
+      backgroundTextStyle: 'light',
+      navigationStyle: 'custom',
+      subPackage: 'pages/social',
+    },
+  },
+  {
+    path: '/pages/social/publish/index',
+    name: 'pages/social/publish/index',
+    meta: { subPackage: 'pages/social' },
+  },
+  {
+    path: '/pages/activity/normal/index',
+    name: 'pages/activity/normal/index',
+    meta: { subPackage: 'pages/activity' },
+  },
+  {
+    path: '/pages/activity/rules/index',
+    name: 'pages/activity/rules/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/activity' },
+  },
+  {
+    path: '/pages/upload/index',
+    name: 'pages/upload/index',
+    meta: { subPackage: 'pages/upload' },
+  },
+  {
+    path: '/pages/verify/index/index',
+    name: 'pages/verify/index/index',
+    meta: { navigationBarTitleText: '详情', subPackage: 'pages/verify' },
+  },
+  {
+    path: '/demo_sdk/protocol/eid/eid',
+    name: 'demo_sdk/protocol/eid/eid',
+    meta: { subPackage: 'demo_sdk/protocol' },
+  },
+  {
+    path: '/demo_sdk/protocol/privacy/privacy',
+    name: 'demo_sdk/protocol/privacy/privacy',
+    meta: { navigationBarTitleText: '详情', subPackage: 'demo_sdk/protocol' },
+  },
+  {
+    path: '/demo_sdk/protocol/service/service',
+    name: 'demo_sdk/protocol/service/service',
+    meta: {
+      backgroundTextStyle: 'light',
+      navigationStyle: 'custom',
+      subPackage: 'demo_sdk/protocol',
+    },
+  },
+  {
+    path: '/demo_sdk/protocol/userAuth/userAuth',
+    name: 'demo_sdk/protocol/userAuth/userAuth',
+    meta: { subPackage: 'demo_sdk/protocol' },
+  },
+  {
+    path: '/pages/misc/complaint/index',
+    name: 'pages/misc/complaint/index',
+    meta: { subPackage: 'pages/misc' },
   },
 ]
 
 const MOCK_CURRENT_ROUTE: RouterInfoResult = {
-  currentRoute: { path: '/pages/index/index', fullPath: '/pages/index/index' },
+  currentRoute: {
+    path: '/pages/index/index',
+    fullPath: '/pages/index/index',
+  },
   stack: [],
 }
 

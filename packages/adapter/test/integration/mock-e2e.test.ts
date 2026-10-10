@@ -69,7 +69,7 @@ describe('mock 模式全链路 connectUniRpcClient({ mock: true })', () => {
       path: '/pages/index/index',
       name: 'pages/index/index',
     })
-    expect(router.routes).toHaveLength(2)
+    expect(router.routes).toHaveLength(79)
 
     const render = (await client.query({
       type: 'components:getRenderCode',

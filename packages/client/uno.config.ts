@@ -96,6 +96,7 @@ export default defineConfig({
   safelist: [
     'i-carbon-add',
     'i-carbon-add-alt',
+    'i-carbon-application',
     'i-carbon-arrow-down',
     'i-carbon-arrow-left',
     'i-carbon-arrow-right',
@@ -112,6 +113,7 @@ export default defineConfig({
     'i-carbon-color-palette',
     'i-carbon-code',
     'i-carbon-copy',
+    'i-carbon-cube',
     'i-carbon-data-enrichment',
     'i-carbon-data-view',
     'i-carbon-debug',

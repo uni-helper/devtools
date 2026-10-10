@@ -9,6 +9,20 @@ interface RouteRow extends RouterRouteRecordSnapshot {
   id: string
 }
 
+/** 分包分组：主包（mainPackage）+ 各 subpackage root。 */
+interface RouteGroup {
+  /** 分组标识：'__main__' 或分包 root（如 pages/userinfo） */
+  id: string
+  /** 展示名：主包显示为 Main Package */
+  label: string
+  isMainPackage: boolean
+  routes: RouteRow[]
+  /** 组内含当前激活路由（折叠时组头仍可提示） */
+  hasActive: boolean
+  /** 组内含 routeInput 匹配路由（折叠时组头仍可提示） */
+  hasMatch: boolean
+}
+
 const {
   error,
   getMatchedRoutes,
@@ -41,6 +55,60 @@ const metaFieldVisible = computed(() =>
   routes.value.some((route) => hasMeta(route)),
 )
 
+/**
+ * 按 uni-app 分包分组：主包在首位，其后为各 subpackage root。
+ * 分组信号取 core parsePagesJsonRoutes 写入的 meta.subPackage（pages.json 的
+ * subPackages[].root）；非 uni-app 项目无该字段时全部落入主包，退化为原平铺视图。
+ */
+const routeGroups = computed<RouteGroup[]>(() => {
+  const groups = new Map<string, RouteGroup>()
+  const ensure = (id: string, label: string, isMainPackage: boolean) => {
+    let group = groups.get(id)
+    if (!group) {
+      group = {
+        id,
+        label,
+        isMainPackage,
+        routes: [],
+        hasActive: false,
+        hasMatch: false,
+      }
+      groups.set(id, group)
+    }
+    return group
+  }
+
+  for (const route of routes.value) {
+    const subPackage = getSubPackage(route)
+    const group = subPackage
+      ? ensure(subPackage, subPackage, false)
+      : ensure(MAIN_PACKAGE_ID, 'Main Package', true)
+    group.routes.push(route)
+    // 折叠后组内路由不可见，组头需独立提示，否则搜索/导航落在折叠组内成盲区。
+    if (routeMatches(currentRoute.value?.matched ?? [], route))
+      group.hasActive = true
+    if (routeMatches(matchedRoutes.value, route)) group.hasMatch = true
+  }
+
+  return [...groups.values()].sort((a, b) => {
+    if (a.isMainPackage !== b.isMainPackage) return a.isMainPackage ? -1 : 1
+    return a.label.localeCompare(b.label)
+  })
+})
+
+const collapsedGroups = ref<Set<string>>(new Set())
+
+function isGroupCollapsed(groupId: string): boolean {
+  return collapsedGroups.value.has(groupId)
+}
+
+function toggleGroup(groupId: string) {
+  const next = new Set(collapsedGroups.value)
+  if (next.has(groupId)) next.delete(groupId)
+  else next.add(groupId)
+  collapsedGroups.value = next
+}
+
 watch(
   [currentPath, selectedAppId],
   ([path]) => {
@@ -50,6 +118,11 @@ watch(
   },
   { immediate: true },
 )
+
+// 切换应用实例时清空折叠状态：不同应用的 routes 集不同，折叠 id 会跨应用残留。
+watch(selectedAppId, () => {
+  collapsedGroups.value = new Set()
+})
 
 watch(routeInput, (value) => {
   if (matchTimer) clearTimeout(matchTimer)
@@ -102,6 +175,14 @@ function routeMatches(
 
 function hasMeta(route: RouterRouteRecordSnapshot): boolean {
   return !!route.meta && Object.keys(route.meta).length > 0
+}
+
+const MAIN_PACKAGE_ID = '__main__'
+
+/** 读取 core 写入的分包标识（meta.subPackage = pages.json 的 subPackages[].root）。 */
+function getSubPackage(route: RouterRouteRecordSnapshot): string | undefined {
+  const value = route.meta?.subPackage
+  return typeof value === 'string' && value ? value : undefined
 }
 
 function metaToString(
@@ -242,9 +323,64 @@ function isParamPart(part: string): boolean {
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody v-for="group in routeGroups" :key="group.id">
+                  <tr class="group-header border-b border-base">
+                    <td colspan="4" class="p-0">
+                      <button
+                        class="flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-1.5 text-left color-inherit hover:bg-active"
+                        type="button"
+                        :aria-expanded="!isGroupCollapsed(group.id)"
+                        @click="toggleGroup(group.id)"
+                      >
+                        <span
+                          class="i-carbon-chevron-right shrink-0 text-12px op60 transition"
+                          :class="isGroupCollapsed(group.id) ? '' : 'rotate-90'"
+                          aria-hidden="true"
+                        />
+                        <span
+                          v-if="group.isMainPackage"
+                          class="i-carbon-application shrink-0 op60"
+                          aria-hidden="true"
+                        />
+                        <span
+                          v-else
+                          class="i-carbon-cube shrink-0 op60"
+                          aria-hidden="true"
+                        />
+                        <span class="text-sm font-500 font-mono">
+                          {{ group.label }}
+                        </span>
+                        <span
+                          v-if="group.isMainPackage"
+                          class="rounded-1 bg-primary-500/10 px-1.5 py-0.25 text-11px text-primary-600 dark:text-primary-300"
+                        >
+                          main
+                        </span>
+                        <span
+                          v-if="group.hasActive"
+                          class="rounded-1 bg-green-400/10 px-1.5 py-0.25 text-11px text-green-400"
+                          title="contains active route"
+                        >
+                          active
+                        </span>
+                        <span
+                          v-if="group.hasMatch"
+                          class="rounded-1 bg-teal-400/10 px-1.5 py-0.25 text-11px text-teal-400"
+                          title="contains matched route"
+                        >
+                          next
+                        </span>
+                        <span class="flex-auto" />
+                        <span class="text-12px op50">
+                          {{ group.routes.length }}
+                          {{ group.routes.length === 1 ? 'route' : 'routes' }}
+                        </span>
+                      </button>
+                    </td>
+                  </tr>
                   <tr
-                    v-for="item in routes"
+                    v-for="item in group.routes"
+                    v-show="!isGroupCollapsed(group.id)"
                     :key="item.id"
                     class="group h-7 border-b border-dashed border-transparent hover:border-base"
                   >
