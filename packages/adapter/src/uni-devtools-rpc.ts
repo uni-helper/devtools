@@ -513,11 +513,16 @@ export function connectUniRpcClient(
         }> = []
 
         // 检测 Pinia 是否可用（尝试调用 getPiniaStores）
-        const piniaAvailable = await callUni<{ stores: any[] }>(
+        // 注意：Vue 2 探针不注册 getPiniaStores，devframe 会 catch 并返回空数组
+        // 所以需要检查 stores 数组是否非空
+        const piniaResult = await callUni<{ stores: any[] }>(
           DEVFRAME_RPC.getPiniaStores,
-        )
-          .then((res) => res && Array.isArray(res.stores))
-          .catch(() => false)
+        ).catch(() => null)
+
+        const piniaAvailable =
+          piniaResult &&
+          Array.isArray(piniaResult.stores) &&
+          piniaResult.stores.length > 0
 
         if (piniaAvailable) {
           inspectors.push({
@@ -530,9 +535,13 @@ export function connectUniRpcClient(
         }
 
         // 检测 Vuex 是否可用（尝试调用 getVuexStores）
-        const vuexAvailable = await callUni<any[]>(DEVFRAME_RPC.getVuexStores)
-          .then((res) => res && Array.isArray(res))
-          .catch(() => false)
+        // 同样需要检查返回的数组是否非空
+        const vuexResult = await callUni<any[]>(
+          DEVFRAME_RPC.getVuexStores,
+        ).catch(() => null)
+
+        const vuexAvailable =
+          vuexResult && Array.isArray(vuexResult) && vuexResult.length > 0
 
         if (vuexAvailable) {
           inspectors.push({
