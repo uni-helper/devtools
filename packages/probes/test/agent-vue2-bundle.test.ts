@@ -1,20 +1,42 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
- * `dist/agent-vue2.mjs` 运行时冒烟——直接跑**构建产物**，而不是源码。
+ * `dist/agent-vue2.js` 运行时冒烟——直接跑**构建产物**，而不是源码。
  *
  * 其余单测全部 import 源码，覆盖不到打包这一层：esbuild 的 external 处理、
  * `virtual:uni-devtools-agent` 的解析、以及产物里 Vue 3 方法是否真的被剔干净，
  * 只有加载真实 bundle 才能验证。这正是 Vue 2 线的交付物（webpack 消费的是它）。
  *
- * 依赖 `pnpm run build:agent-vue2` 先产出文件；缺失时整组跳过（不伪装通过）。
+ * `pnpm test` 会先跑 `build:agent-vue2` 产出文件；直接跑 vitest 且产物缺失时整组跳过（不伪装通过）。
  */
 const BUNDLE_PATH = fileURLToPath(
-  new URL('../dist/agent-vue2.mjs', import.meta.url),
+  new URL('../dist/agent-vue2.js', import.meta.url),
 )
 const bundleExists = existsSync(BUNDLE_PATH)
+
+/**
+ * 产物是 CJS（webpack 4 用 require 消费），而本包 `"type": "module"` 会让 Node 把
+ * `.js` 当 ESM 加载——所以按 CommonJS 包装函数手动求值。只求值一次：产物内的
+ * 探针单例跨用例共享，与真实运行时一致（用例间靠 disposeAgent 复位）。
+ */
+let bundle: any
+function loadBundle(): any {
+  if (!bundle) {
+    const module = { exports: {} as any }
+    const code = readFileSync(BUNDLE_PATH, 'utf8')
+    // eslint-disable-next-line no-new-func
+    new Function('module', 'exports', 'require', code)(
+      module,
+      module.exports,
+      createRequire(BUNDLE_PATH),
+    )
+    bundle = module.exports
+  }
+  return bundle
+}
 
 /** 造一个最小的小程序 socket 宿主：记录 send 出去的数据，暴露 onXxx 回调供测试驱动 */
 function createUniHost() {
@@ -58,7 +80,7 @@ function createUniHost() {
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe.skipIf(!bundleExists)(
-  'dist/agent-vue2.mjs 运行时冒烟（Vue 2 冻结产物）',
+  'dist/agent-vue2.js 运行时冒烟（Vue 2 冻结产物）',
   () => {
     let host: ReturnType<typeof createUniHost>
 
@@ -73,7 +95,7 @@ describe.skipIf(!bundleExists)(
     })
 
     afterEach(async () => {
-      const mod = await import(BUNDLE_PATH)
+      const mod = loadBundle()
       mod.disposeAgent()
       delete (globalThis as any).uni
       delete (globalThis as any).getCurrentPages
@@ -81,7 +103,7 @@ describe.skipIf(!bundleExists)(
     })
 
     it('导出冻结契约的 3 个 API', async () => {
-      const mod = await import(BUNDLE_PATH)
+      const mod = loadBundle()
 
       expect(typeof mod.initAgent).toBe('function')
       expect(typeof mod.getAgentInstance).toBe('function')
@@ -89,7 +111,7 @@ describe.skipIf(!bundleExists)(
     })
 
     it('initAgent 用带 token 与 client=uni-agent 标记的 URL 建连，disposeAgent 后单例清空', async () => {
-      const mod = await import(BUNDLE_PATH)
+      const mod = loadBundle()
 
       const instance = mod.initAgent({
         wsUrl: 'ws://127.0.0.1:9999/__uni-devtools/__ws',
@@ -107,7 +129,7 @@ describe.skipIf(!bundleExists)(
     })
 
     it('wire 层：ping 可应答，Vue 3 专属方法不存在', async () => {
-      const mod = await import(BUNDLE_PATH)
+      const mod = loadBundle()
       mod.initAgent({
         wsUrl: 'ws://127.0.0.1:9999/__uni-devtools/__ws',
         token: 'tok-123',
@@ -140,7 +162,7 @@ describe.skipIf(!bundleExists)(
     })
 
     it('wire 层：getComponentTree 返回 { pages, vueVersion } 结构', async () => {
-      const mod = await import(BUNDLE_PATH)
+      const mod = loadBundle()
       mod.initAgent({
         wsUrl: 'ws://127.0.0.1:9999/__uni-devtools/__ws',
         token: 'tok-123',

@@ -69,12 +69,14 @@ export async function pushComponentTreeNow(): Promise<void> {
   if (treeJson === lastPushedTreeJson) {
     return
   }
+  // 先占位再发送：发送期间到来的同内容推送直接被门挡住，不重复发
   lastPushedTreeJson = treeJson
 
   try {
     await instance.rpc.$call(NODE_RPC.pushComponentTree, snapshot)
   } catch {
-    // 允许网络暂未就绪或未注册该方法时静默跳过
+    // 没送达就撤销占位，下一轮轮询/渲染钩子会重推同一份内容
+    if (lastPushedTreeJson === treeJson) lastPushedTreeJson = ''
   }
 }
 

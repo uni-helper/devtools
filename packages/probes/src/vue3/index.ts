@@ -8,7 +8,7 @@
  * - 变更推送：主动采集树快照并调用 'uni-helper-devtools:push-component-tree'
  * （浏览器全局禁用由 eslint no-restricted-globals 执法）
  *
- * 入口只负责「Vue 3 专属方法」的组装与运行时差异；通用 8 个 RPC 方法在
+ * 入口只负责「Vue 3 专属方法」的组装与运行时差异；Vue 2/3 通用的 RPC 方法在
  * `rpc-base.ts`，生命周期与单例在 `lifecycle.ts`。
  */
 
@@ -45,7 +45,7 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     }
 
     const clientFunctions = {
-      ...createBaseRpcFunctions(), // 8 个基础 RPC 方法（Vue 2/3 通用）
+      ...createBaseRpcFunctions(), // Vue 2/3 通用的基础 RPC 方法
 
       // Vue 3 专属方法
       [AGENT_RPC_VUE3.getComponentRenderCode]: (

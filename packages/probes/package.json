@@ -12,13 +12,12 @@
       "default": "./dist/agent-vue2.js"
     },
     "./render-hook": "./src/runtime/render-hook.ts",
-    "./socket": "./src/socket/index.ts",
     "./package.json": "./package.json"
   },
   "scripts": {
     "build": "pnpm run build:agent-vue2",
     "build:agent-vue2": "esbuild src/vue2/index.ts --bundle --platform=browser --target=es2017 --format=cjs --external:vue --outfile=dist/agent-vue2.js",
-    "test": "vitest run"
+    "test": "pnpm run build:agent-vue2 && vitest run"
   },
   "dependencies": {
     "@uni-helper/devtools-shared": "workspace:*",

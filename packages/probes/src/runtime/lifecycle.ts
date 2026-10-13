@@ -24,10 +24,10 @@ import {
   bindPushDeps,
   cancelScheduledPush,
   cancelScheduledRenderNotify,
+  pushComponentTreeNow,
   resetPushGate,
   schedulePushComponentTree,
 } from './push.ts'
-import { collectComponentTree } from './tree.ts'
 import {
   cancelScheduledNetworkPush,
   installNetworkInterceptors,
@@ -65,19 +65,17 @@ let processGlobalHooksInstalled = false
 /**
  * 安装进程级全局事件钩子
  *
- * 注意：这里仍然需要访问全局变量 wx/uni，因为这些是平台运行时的全局单例事件总线
- * 但现在通过 adapter 来访问，而不是直接声明全局变量
+ * 直接读 globalThis 上的 wx/uni：它们是平台运行时的全局单例事件总线，
+ * RuntimeAdapter 没有（也不必）抽象这几个事件源。
  */
-function ensureProcessGlobalHooks(adapter: RuntimeAdapter): void {
+function ensureProcessGlobalHooks(): void {
   if (processGlobalHooksInstalled) {
     return
   }
   processGlobalHooksInstalled = true
 
   // 小程序原生页面路由事件（wx 全局，仅微信系可用）
-  // 通过 adapter 获取平台运行时，避免直接访问全局 wx
   try {
-    const app = adapter.getApp()
     const wx = (globalThis as any).wx
     if (wx && typeof wx.onAppRoute === 'function') {
       wx.onAppRoute(() => {
@@ -125,9 +123,11 @@ function ensureProcessGlobalHooks(adapter: RuntimeAdapter): void {
  * 实例级快照轮询定时器（随 Agent 实例生命周期启停）
  *
  * 快照轮询是兜底机制：uni 的 mp 构建里 __VUE_DEVTOOLS_GLOBAL_HOOK__ 通常不存在，
- * 「小程序里改 data」没有任何事件可听——这恰恰是用户最高频的场景。轻量轮询只做
- * 一次序列化比对，内容没变就不推送；有 hook 事件时大部分变更已被防抖推送消费，
- * 这里多为空转。采集深度受 tree.ts 的 maxDepth 约束，dev 探针场景代价可接受。
+ * 「小程序里改 data」没有任何事件可听——这恰恰是用户最高频的场景。
+ *
+ * 开销控制：未连上 node 时整轮跳过（不采集组件树，避免在没人看的时候占用逻辑层
+ * 线程）；连上时直接走 pushComponentTreeNow——它只采集、序列化一次，并用同一份
+ * 序列化结果做「内容没变就不推」的比对。
  */
 let snapshotPollingTimer: any = null
 
@@ -136,15 +136,9 @@ function startSnapshotPolling(): void {
     return // 已启动，避免重复
   }
 
-  let lastSnapshot = ''
   snapshotPollingTimer = setInterval(() => {
-    try {
-      const snapshot = JSON.stringify({ pages: collectComponentTree() })
-      if (snapshot !== lastSnapshot) {
-        lastSnapshot = snapshot
-        schedulePushComponentTree(0)
-      }
-    } catch {}
+    if (!activeAgentInstance?.socketHandle.isConnected()) return
+    pushComponentTreeNow().catch(() => {})
   }, 2000)
 }
 
@@ -201,6 +195,9 @@ export function initAgentPipeline(
       console.log(
         '[uni-devtools-agent] DevTools connected, pushing initial state',
       )
+      // 每次（重）连上都要放行首推：node 侧可能已重启、或刚把本探针切成活跃探针，
+      // 它手上的树是空的——内容比对门不能挡住「内容相同但对端没有」的快照
+      resetPushGate()
       schedulePushComponentTree(100)
       resetNetworkPushState()
       scheduleNetworkPush(100)
@@ -240,7 +237,7 @@ export function initAgentPipeline(
   resetNetworkPushState()
 
   // === 步骤 6A：安装进程级全局事件钩子（只执行一次） ===
-  ensureProcessGlobalHooks(options.adapter)
+  ensureProcessGlobalHooks()
 
   // === 步骤 6B：启动实例级快照轮询定时器 ===
   startSnapshotPolling()

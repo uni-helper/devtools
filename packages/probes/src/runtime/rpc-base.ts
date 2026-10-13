@@ -16,7 +16,11 @@ import type {
   StorageInfoResult,
 } from '@uni-helper/devtools-shared'
 import type { PageComponentTree } from './tree'
-import type { ComponentStateResult, UpdateStateResult } from './state'
+import type {
+  ComponentStateResult,
+  UpdateStateParams,
+  UpdateStateResult,
+} from './state'
 import { collectComponentTree, getVueRuntimeVersion } from './tree'
 import { getComponentState, updateComponentState } from './state'
 import { clearNetworkRecords, getNetworkRecords } from './network'
@@ -74,9 +78,7 @@ export function createBaseRpcFunctions(): {
     params: { id: string } | string,
   ) => ComponentStateResult
   [AGENT_BASE_RPC.updateComponentState]: (
-    params: any,
-    maybeKey?: string,
-    maybeVal?: unknown,
+    params: UpdateStateParams,
   ) => UpdateStateResult
   [AGENT_BASE_RPC.getRouterInfo]: () => {
     currentRoute: {
@@ -131,18 +133,9 @@ export function createBaseRpcFunctions(): {
     },
 
     [AGENT_BASE_RPC.updateComponentState]: (
-      params: any,
-      maybeKey?: string,
-      maybeVal?: unknown,
+      params: UpdateStateParams,
     ): UpdateStateResult => {
-      const res =
-        typeof params === 'object' && params !== null && 'id' in params
-          ? updateComponentState(params)
-          : updateComponentState({
-              id: params,
-              key: maybeKey!,
-              value: maybeVal,
-            })
+      const res = updateComponentState(params)
       schedulePushComponentTree(100)
       return res
     },

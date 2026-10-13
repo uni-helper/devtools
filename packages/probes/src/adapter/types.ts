@@ -7,7 +7,7 @@
  * 设计原则（P2 Late Binding）：
  * - Runtime 核心模块只依赖此接口，不出现任何平台全局变量（uni/wx/getApp/...）
  * - 每个平台实现一个 Adapter，唯一允许探测平台全局的地方
- * - Adapter 在 bootstrap 阶段显式传入，而非运行时反查
+ * - Adapter 由入口（vue2 / vue3 的 initAgent）解析后显式传入，而非运行时反查
  */
 
 /**

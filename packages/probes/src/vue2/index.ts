@@ -57,7 +57,7 @@ export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
     return initAgentPipeline({
       adapter,
       clientFunctions: {
-        ...createBaseRpcFunctions(), // 8 个基础 RPC 方法
+        ...createBaseRpcFunctions(), // Vue 2/3 通用的基础 RPC 方法
         // Vue 2 专属：Vuex 状态管理（从 AGENT_RPC_VUE2 注册）
         [AGENT_RPC_VUE2.getVuexStores]: (): VuexStateResult[] => {
           return getVuexStores()

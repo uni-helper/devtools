@@ -102,23 +102,15 @@ describe('rpc-base: createBaseRpcFunctions', () => {
     expect(clearRes).toEqual({ ok: true })
   })
 
-  it('updateComponentState 支持两种入参形态并返回结果', () => {
+  it('updateComponentState 按对象入参改值并返回结果', () => {
     const fns = createBaseRpcFunctions()
-    const resObj = fns['uni-devtools:agent:updateComponentState']({
+    const res = fns['uni-devtools:agent:updateComponentState']({
       id: 'comp-test',
       key: 'count',
       value: 2,
     })
-    expect(resObj.ok).toBe(true)
-    expect(resObj.key).toBe('count')
-
-    const resArgs = fns['uni-devtools:agent:updateComponentState'](
-      'comp-test',
-      'count',
-      3,
-    )
-    expect(resArgs.ok).toBe(true)
-    expect(resArgs.key).toBe('count')
+    expect(res.ok).toBe(true)
+    expect(res.key).toBe('count')
   })
 
   it('navigate 缺 path 时返回错误', async () => {

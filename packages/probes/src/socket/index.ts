@@ -38,6 +38,12 @@ function decodeWireFrame(raw: unknown): any {
   }
 }
 
+/**
+ * 未连上时最多缓存的出站帧数。node 不在线时探针仍会产生推送与 RPC 应答，
+ * 无上限缓存会在长时间离线后堆积内存，且重连时一次性冲刷大量过期帧。
+ */
+export const MAX_PENDING_FRAMES = 100
+
 export interface BirpcChannel {
   post: (data: any, ...extra: any[]) => void | Promise<void>
   on: (fn: (data: any) => void) => void
@@ -95,41 +101,38 @@ export function createUniSocketChannel(
   function connect() {
     if (isDisposed) return
 
+    let socket: ReturnType<RuntimeAdapter['connectSocket']>
     try {
-      // 通过 adapter 创建 WebSocket 连接
-      const socket = adapter.connectSocket(wsUrl)
-      socketTask = socket
-
-      // 监听 open 事件（异步握手完成后触发）
-      socket.onOpen(() => {
-        handleOpen()
-      })
-
-      // 监听 message 事件
-      socket.onMessage((data: string) => {
-        if (messageHandler) {
-          const decoded = decodeWireFrame(data)
-          messageHandler(decoded)
-        }
-      })
-
-      // 监听 error 事件
-      socket.onError((err: any) => {
-        console.error('[uni-devtools-agent] socket error:', err)
-        if (onError) onError(err)
-        handleDisconnect(err)
-      })
-
-      // 监听 close 事件
-      socket.onClose((code?: number, reason?: string) => {
-        if (onClose) onClose({ code, reason })
-        handleDisconnect({ code, reason })
-      })
+      socket = adapter.connectSocket(wsUrl)
     } catch (err) {
       console.error('[uni-devtools-agent] connectSocket throw:', err)
       handleDisconnect(err)
       return
     }
+    socketTask = socket
+    // 只处理当前连接的事件：旧连接被替换后迟到的 close/error 不能把新连接标成断开
+    const isCurrent = () => socketTask === socket
+
+    socket.onOpen(() => {
+      if (isCurrent()) handleOpen()
+    })
+
+    socket.onMessage((data: string) => {
+      if (isCurrent() && messageHandler) messageHandler(decodeWireFrame(data))
+    })
+
+    socket.onError((err: any) => {
+      if (!isCurrent()) return
+      console.error('[uni-devtools-agent] socket error:', err)
+      if (onError) onError(err)
+      handleDisconnect(err)
+    })
+
+    socket.onClose((code?: number, reason?: string) => {
+      if (!isCurrent()) return
+      if (onClose) onClose({ code, reason })
+      handleDisconnect({ code, reason })
+    })
   }
 
   function handleOpen() {
@@ -140,7 +143,8 @@ export function createUniSocketChannel(
       reconnectTimer = null
     }
 
-    while (sendQueue.length > 0) {
+    // 冲刷中途发送失败会断开连接（isOpen 置 false），剩余帧留待下次重连
+    while (isOpen && sendQueue.length > 0) {
       const pendingData = sendQueue.shift()
       if (pendingData !== undefined) {
         doSend(pendingData)
@@ -152,22 +156,42 @@ export function createUniSocketChannel(
     }
   }
 
+  function enqueue(data: any) {
+    sendQueue.push(data)
+    if (sendQueue.length > MAX_PENDING_FRAMES)
+      sendQueue.splice(0, sendQueue.length - MAX_PENDING_FRAMES)
+  }
+
   function doSend(data: any) {
     const rawData =
       typeof data === 'string' ? data : JSON.stringify(data, wireReplacer)
-    if (socketTask && typeof socketTask.send === 'function') {
+    if (!socketTask || typeof socketTask.send !== 'function') {
+      enqueue(rawData)
+      return
+    }
+    try {
+      socketTask.send(rawData)
+    } catch (err) {
+      console.error('[uni-devtools-agent] socket.send failed:', err)
+      sendQueue.unshift(rawData)
+      handleDisconnect(err)
+    }
+  }
+
+  /** 关闭并丢弃当前连接（出错后不关，小程序侧同时打开的 socket 数有上限，会挤占业务连接） */
+  function releaseSocket() {
+    const socket = socketTask
+    socketTask = null
+    if (socket && typeof socket.close === 'function') {
       try {
-        socketTask.send(rawData)
-      } catch (err) {
-        console.error('[uni-devtools-agent] socket.send failed:', err)
-        sendQueue.unshift(rawData)
-        handleDisconnect(err)
-      }
+        socket.close()
+      } catch {}
     }
   }
 
   function handleDisconnect(_reason?: any) {
     isOpen = false
+    releaseSocket()
     if (isDisposed) return
 
     if (!reconnectTimer) {
@@ -195,8 +219,8 @@ export function createUniSocketChannel(
       if (isOpen) {
         doSend(data)
       } else {
-        // 未 open 时缓存，避免丢消息
-        sendQueue.push(data)
+        // 未 open 时缓存，避免丢消息（有上限，超出丢最旧的）
+        enqueue(data)
       }
     },
     on: (fn: (data: any) => void) => {
@@ -213,11 +237,7 @@ export function createUniSocketChannel(
     }
     sendQueue.length = 0
     messageHandler = null
-    if (socketTask && typeof socketTask.close === 'function') {
-      try {
-        socketTask.close()
-      } catch {}
-    }
+    releaseSocket()
   }
 
   return {
