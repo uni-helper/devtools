@@ -47,10 +47,7 @@ import Uni from '@dcloudio/vite-plugin-uni'
 import { UniDevtoolsPlugin } from '@uni-helper/devtools'
 
 export default defineConfig({
-  plugins: [
-    UniDevtoolsPlugin(),
-    Uni(),
-  ],
+  plugins: [UniDevtoolsPlugin(), Uni()],
 })
 ```
 
@@ -97,12 +94,21 @@ pnpm serve:mp-weixin
 
 Uni DevTools 内置对 Model Context Protocol (MCP) 的原生支持。AI Coding Agent（Cursor、Claude Desktop、Windsurf、Antigravity 等）可直接消费运行期数据：
 
+**推荐：连接 dev server 的 MCP 路由**（Streamable HTTP，仅接受本机请求）。启动开发后，把 MCP 客户端指向：
+
+```text
+http://localhost:<端口>/__uni-devtools/__mcp
+```
+
+该路由与面板共用同一个中继，Agent 拿到的是实时运行数据：组件树、组件状态（可编辑）、Pinia / Vuex、网络记录、路由栈、Storage。每个工具都带参数 schema 与读写安全标注（`clear-network-records` 标为 destructive）。
+
+只能启动子进程的客户端可用 stdio 模式：
+
 ```bash
-# 启动 stdio 模式的 MCP 适配服务
 npx @uni-helper/devtools mcp
 ```
 
-Agent 可直接调用组件树、Pinia / Vuex 状态、网络抓包及路由堆栈等 RPC 进行自动化故障诊断与代码分析。
+stdio 是独立进程，**连不到小程序**，只有 `get-registered-routes`（解析 pages.json）与 `get-inspect-status` 能返回真实结果；其余工具会报错并提示改连上面的 HTTP 路由。
 
 ---
 
@@ -148,7 +154,7 @@ Uni DevTools 解决了 uni-app 小程序开发中编译后信息丢失、闭包�
 
 ### 网络请求看板（Network Inspector）
 
-- **单点代理全链路捕获**：深度拦截 `uni.request`、`uni.uploadFile`、`uni.downloadFile`，不碰底层 `wx.*` 以避免重复计数；透明透传原回调与 Promise 语义。
+- **全链路捕获**：拦截 `uni.request`、`uni.uploadFile`、`uni.downloadFile`，并降级拦截直接调用的 `wx.*` 同名 API（先装 uni 再装 wx，uni 的原始引用在装 wx 补丁之前已固化，不会重复计数）；透明透传原回调与 Promise 语义。
 - **环形缓冲与增量同步**：探针端维护最多 500 条记录的环形缓冲区，单条报文进行 64KB 截断保护，500ms 防抖增量合并推送到 Node 侧。
 - **瀑布图与报文抽屉**：按时序呈现请求流与精准瀑布耗时条形图，动态展示在途 pending 状态；抽屉支持查看 Headers、Query、Request Body、Response Body 及性能耗时指标。
 - **AI Agent 诊断接口**：通过 `get-network-records`、`clear-network-records` 等 RPC，让外部 AI 助手直接获取网络调用诊断上下文。
@@ -215,7 +221,7 @@ Uni DevTools 采用**双消费者（人类开发者 UI + AI Coding Agent）**的
 │  ┌─────────────────────────┐          ┌──────────────────────────────────────┐  │
 │  │   AgentRegistry Relay   │ ◄──────► │     Devframe 核心定义 (@uni-helper/    │  │
 │  │     (WebSocket 中继)    │          │      devtools-core)                  │  │
-│  └─────────────────────────┘          │  - 19 个核心 RPC (带 agent 元数据)     │  │
+│  └─────────────────────────┘          │  - 21 个 agent 工具（描述+参数 schema）│  │
 │                                       │  - Vite Inspect 静态托管             │  │
 │                                       └──────────────────┬───────────────────┘  │
 └───────────────────────┬──────────────────────────────────┼──────────────────────┘
@@ -243,8 +249,8 @@ Uni DevTools 采用**双消费者（人类开发者 UI + AI Coding Agent）**的
 2. **小程序沙箱探针（Probe，运行在小程序逻辑层）**：
    轻量级沙箱采集器，适配 Vue 3 与 Vue 2 运行时，拦截组件树、Pinia / Vuex 状态、路由栈与网络请求，通过标准 WebSocket 与本地 Node 端双向通信。
 3. **Node 核心中继与服务（Core / Devframe Sidecar）**：
-   - **AgentRegistry Relay**：管理探针 WebSocket 连接，负责安全定向调用与状态同步。
-   - **Devframe RPC**：注册 19 个核心 RPC（均携带严格的 Zod Schema 与 Agent 描述元数据），同时托管 Vite Inspect 静态报告与面板资产。
+   - **AgentRegistry Relay**：管理探针 WebSocket 连接。**同一时刻只认一个探针——最新连上的那个**：模拟器与真机（或多台真机）同时在线时，读写都只落到最后连上的设备，其余设备的推送被丢弃；它断开后回落到仍在线的次新设备，并主动从新设备重新拉取组件树与网络记录。
+   - **Devframe RPC**：20 个面板 / Agent 可调的公开 RPC 外加 `ping` 健康检查，均带 Agent 描述、参数 schema（运行时校验 + MCP 的 JSON Schema）与读写安全标注；另有 4 个探针 → node 的内部推送入口，不暴露给 MCP。同时托管 Vite Inspect 静态报告与面板资产。
 4. **双路消费者架构（Dual Consumers）**：
    - **人类开发者（浏览器 UI）**：**协议适配层（Adapter）与 UI 面板（Client）均运行在浏览器端**。Adapter 负责将 Devframe RPC 翻译为 `@vue/devtools-kit` 的领域契约（扁平树拓扑、多 App 映射、版本去陈旧），无缝驱动官方 Vue DevTools v9 SPA。
    - **AI Coding Agent（MCP 端点）**：通过 `@uni-helper/devtools-mcp` 将 Core RPC 暴露为标准的 Model Context Protocol (MCP) 接口，供外部 AI 编程助手直接获取小程序运行期上下文。
