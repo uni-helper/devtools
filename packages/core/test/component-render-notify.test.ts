@@ -6,64 +6,22 @@
  * agent 调用污染）。过滤放在 adapter——`components:stateSnapshot` 是面板专有入口。
  * 这里只锁「原样转发 + seq 单调」这一层。
  */
-import { describe, expect, it, vi } from 'vitest'
-import { createUniDevtoolsDevframe } from '../src/devframe.ts'
+import { describe, expect, it } from 'vitest'
 import { AGENT_RPC } from '../src/rpc-names.ts'
-
-/** devframe 的 scope：只实现本用例触及的 sharedState / register 两个入口 */
-function createFakeScope() {
-  const sharedStates = new Map<string, any>()
-  const functions = new Map<string, any>()
-
-  const scope = {
-    rpc: {
-      async sharedState(key: string, options?: { initialValue?: unknown }) {
-        if (!sharedStates.has(key)) {
-          const value = options?.initialValue
-          sharedStates.set(key, {
-            value: () => value,
-            mutate: (fn: (draft: any) => void) => {
-              fn(value)
-            },
-          })
-        }
-        return sharedStates.get(key)
-      },
-      register(fn: any) {
-        functions.set(fn.name, fn)
-      },
-    },
-  }
-
-  return { scope, sharedStates, functions }
-}
+import { setupFakeDevframe } from './helpers/fake-devframe.ts'
 
 async function setupDevframe() {
-  const registry = {
-    bind: vi.fn(),
-    setCachedTree: vi.fn(),
-    getCachedTree: vi.fn(() => null),
-    connected: true,
-    callAgent: vi.fn(async (method: string, args: any) => {
-      if (method === AGENT_RPC.getComponentState)
-        return {
-          id: args?.id,
-          name: 'CounterCard',
-          setup: { count: { value: 1 } },
-        }
-      return {}
-    }),
-  }
-
-  const { scope, sharedStates, functions } = createFakeScope()
-  const def = createUniDevtoolsDevframe(registry as any)
-  await def.setup!({ rpc: {}, scope: () => scope } as any)
-
-  const invoke = (name: string, payload: unknown) =>
-    functions.get(name)!.setup().handler(payload)
-  const rendered = () => sharedStates.get('rendered-components').value()
-
-  return { registry, invoke, rendered }
+  const ctx = await setupFakeDevframe()
+  ctx.connectAgent(async (method: string, args: any) => {
+    if (method === AGENT_RPC.getComponentState)
+      return {
+        id: args?.id,
+        name: 'CounterCard',
+        setup: { count: { value: 1 } },
+      }
+    return {}
+  })
+  return { ...ctx, rendered: () => ctx.state('rendered-components') }
 }
 
 describe('组件重渲染上报', () => {

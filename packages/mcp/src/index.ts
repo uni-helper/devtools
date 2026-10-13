@@ -7,8 +7,9 @@
  * 并固定两件属于「我们的产品决策」的事：
  *
  * 1. **路由设置**：宿主（Vite / Webpack 插件、harness、CLI）一律传 `MCP_SETTING`，
- *    让 devframe 在 agent surface 非空时自动挂 `<base>__mcp`。25 个 RPC 全部带
- *    `agent: { description }`（见 core 的 `devframe.ts`），所以 surface 恒非空。
+ *    让 devframe 在 agent surface 非空时自动挂 `<base>__mcp`。面板/Agent 可调的
+ *    公开 RPC 都带 `agent` 描述与参数 schema（见 core 的 `devframe.ts`），所以
+ *    surface 恒非空；探针 → node 的推送入口不带，不会出现在工具列表里。
  * 2. **stdio 入口**：给 Claude Desktop / Cursor 这类只能起子进程的客户端用。
  *
  * 两种用法的能力边界（实测口径，不要按想象宣传）：
@@ -61,7 +62,11 @@ export interface McpStdioOptions {
 export async function serveUniDevtoolsMcpStdio(
   options: McpStdioOptions = {},
 ): Promise<void> {
-  const registry = new AgentRegistry()
+  // 这里永远不会有探针连上：把「该去哪拿实时数据」写进错误文案，Agent 读到就能自己纠正
+  const registry = new AgentRegistry({
+    unavailableHint:
+      'This stdio MCP server has no relay to the mini-program. For live data, connect the MCP client to the dev server route printed at startup: http://<host>:<port>/__uni-devtools/__mcp',
+  })
   const def = createUniDevtoolsDevframe(registry, {
     clientAssets: options.clientAssets,
   })

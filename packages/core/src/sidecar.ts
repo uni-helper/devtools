@@ -29,6 +29,35 @@ export function resolveAdvertisedHost(): string {
   return 'localhost'
 }
 
+/**
+ * standalone dev server 的公共选项（sidecar 与 harness 共用，保证冒烟路径与
+ * 真实插件一致）。
+ */
+export function createDevServerOptions(registry: AgentRegistry, token: string) {
+  return {
+    // Vite Inspect 静态托管：挂到 sidecar 的 inspect 路径下供面板 iframe。经预配置
+    // app 挂载的中间件先于 devframe 自身 handler（含 auth）执行——静态报告无 token
+    // 门禁，dev 工具可接受；目录不可枚举（仅能按文件名取）
+    app: createInspectApp(),
+    // 'auto'：agent surface 非空（公开 RPC 都带 agent 元数据），装上可选 peer
+    // @devframes/agentic 后 MCP 路由自动挂到 `<base>__mcp`
+    mcp: 'auto' as const,
+    openBrowser: false,
+    // 小程序 connectSocket 不发 Origin 头，默认 loopback-only 检查会拒绝升级；
+    // token 鉴权仍守门
+    allowedOrigins: false as const,
+    // auth 的函数形态（(ctx) => handler）在类型上未声明，但 dev 适配器与
+    // instance-shell 的 resolveAuth 运行时均支持，用 as any 绕过类型
+    auth: ((ctx: any) =>
+      createInteractiveAuth(ctx, {
+        clientAuthTokens: [token],
+        banner: () => {},
+      })) as any,
+    onPeerConnect: registry.connect,
+    onPeerDisconnect: registry.disconnect,
+  }
+}
+
 export interface UniDevtoolsServerOptions {
   host?: string
   port?: number
@@ -60,14 +89,6 @@ export function startUniDevtoolsServer(
   const panelDir = resolveClientAssets(options.clientAssets)
   const def = createUniDevtoolsDevframe(registry, { clientAssets: panelDir })
 
-  // 「绑定地址」与「对外地址」必须分开：
-  // - 绑定必须覆盖全部接口（0.0.0.0）。只绑 LAN IP 时，MCP 路由的
-  //   loopback peer 检查永远失败——server 收不到 loopback 对端，任何
-  //   MCP 请求都 403（实测：非 loopback Origin / loopback Origin / 无 Origin
-  //   三种全拒）。绑 0.0.0.0 后本机 agent 走 127.0.0.1 即通过。
-  // - 对外必须用真机可达的 LAN IP：探针跑在手机上的小程序沙箱里，
-  //   `ws://localhost` 指向设备自身。devframe 会把 0.0.0.0 规范成 localhost，
-  //   所以这里的 URL 自己拼，不取 started.origin。
   const advertisedHost = options.host ?? resolveAdvertisedHost()
   const port =
     options.port ??
@@ -75,37 +96,21 @@ export function startUniDevtoolsServer(
       ? Number(process.env.UNI_DEVTOOLS_PORT)
       : undefined)
 
-  // Vite Inspect 静态托管：把 vite-plugin-inspect 的 build 产物目录（自包含
-  // client UI + reports）挂到 sidecar 的 inspect 路径下供面板 iframe（官方
-  // v7 Inspect tab 同款方案）。注意：经预配置 app 挂载的中间件先于 devframe
-  // 自身 handler（含 auth）执行——静态报告无 token 门禁，dev 工具可接受；
-  // 目录不可枚举（仅能按文件名取）
-  // auth 的函数形态（(ctx) => handler）在类型上未声明，但 dev 适配器与
-  // instance-shell 的 resolveAuth 运行时均支持，用 as any 绕过类型
-  // 插件启动日志（面板 URL / 探针地址）是 CLI 场景的核心输出，属合理 console 使用
   /* eslint-disable no-console */
   let serverHandle: { close: () => Promise<void> } | null = null
 
+  // 「绑定地址」与「对外地址」必须分开：
+  // - 绑定必须覆盖全部接口（0.0.0.0）。只绑 LAN IP 时，MCP 路由的
+  //   loopback peer 检查永远失败——server 收不到 loopback 对端，任何
+  //   MCP 请求都 403。绑 0.0.0.0 后本机 agent 走 127.0.0.1 即通过。
+  // - 对外必须用真机可达的 LAN IP（见 resolveAdvertisedHost）。devframe 会把
+  //   0.0.0.0 规范成 localhost，所以下面的 URL 自己拼，不取 started.origin。
   const ready = createDevServer(def, {
+    ...createDevServerOptions(registry, devToken),
     host: '0.0.0.0',
     port,
     basePath: BASE,
     distDir: panelDir,
-    app: createInspectApp(),
-    // 'auto'：agent surface 恒非空（19 个 RPC 都带 agent 元数据），装上可选 peer
-    // @devframes/agentic 后 MCP 路由自动挂到 `${BASE}__mcp`
-    mcp: 'auto',
-    openBrowser: false,
-    // 小程序 connectSocket 不发 Origin 头，默认 loopback-only 检查会拒绝升级；
-    // token 鉴权仍守门
-    allowedOrigins: false,
-    auth: ((ctx: any) =>
-      createInteractiveAuth(ctx, {
-        clientAuthTokens: [devToken],
-        banner: () => {},
-      })) as any,
-    onPeerConnect: registry.connect,
-    onPeerDisconnect: registry.disconnect,
   })
     .then(async (started) => {
       serverHandle = started

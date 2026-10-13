@@ -110,6 +110,8 @@ export interface ComponentTreeResult {
   pages: PageComponentTree[]
   /** 探针侧 Vue 运行时版本（app.version）；面板用它开 Reactivity Graph tab 门禁 */
   vueVersion?: string
+  /** true = 探针当前不可达，这是 node 侧缓存的最后一份快照 */
+  stale?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -148,6 +150,8 @@ export type PushComponentTreeParams = ComponentTreeResult
 
 export interface PushComponentTreeResult {
   ok: boolean
+  /** true = 推送方不是当前活跃探针，载荷被丢弃 */
+  ignored?: boolean
 }
 
 export interface OpenInEditorParams {
@@ -309,6 +313,8 @@ export interface GetNetworkRecordsResult {
   records: NetworkRecord[]
   /** 探针环形缓冲内最大 id（拉齐水位用；空缓冲为 0） */
   latestId: number
+  /** true = 探针当前不可达，这是 node 侧 sharedState 里的历史记录 */
+  stale?: boolean
 }
 
 export interface PushNetworkRecordsParams {
@@ -317,10 +323,14 @@ export interface PushNetworkRecordsParams {
 
 export interface PushNetworkRecordsResult {
   ok: boolean
+  /** true = 推送方不是当前活跃探针，载荷被丢弃 */
+  ignored?: boolean
 }
 
 export interface ClearNetworkRecordsResult {
   ok: boolean
+  /** 探针侧环形缓冲是否也已清空（探针离线时只清 node 侧历史） */
+  agentCleared?: boolean
 }
 
 /** sharedState('network-records') 的值形状（node 侧持有，面板订阅渲染） */

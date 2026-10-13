@@ -202,17 +202,17 @@ try {
   }
   console.log('✓ [4/5] ping 调用成功，agentConnected === true')
 
-  // 4.5 push-component-tree（探针 → node 写 sharedState 的入口）可调用
+  // 4.5 非探针会话（面板）调用推送入口：载荷被丢弃，且不能抢走活跃探针
   const pushRes = await panel.$call('uni-helper-devtools:push-component-tree', {
     fetchedAt: Date.now(),
     pages: [],
   })
-  if (!pushRes || pushRes.ok !== true) {
+  if (!pushRes || pushRes.ok !== true || pushRes.ignored !== true) {
     throw new Error(
-      `push-component-tree 期望 { ok: true }，实际: ${JSON.stringify(pushRes)}`,
+      `面板推送期望 { ok: true, ignored: true }，实际: ${JSON.stringify(pushRes)}`,
     )
   }
-  console.log('✓ [4.5/5] push-component-tree 推送入口可用（经 panel 调用）')
+  console.log('✓ [4.5/5] 非探针会话的推送被丢弃，不影响活跃探针')
 
   // 5. Test relay get-component-tree
   const treeRes = await panel.$call('uni-helper-devtools:get-component-tree')
@@ -267,7 +267,7 @@ try {
     )
   }
 
-  console.log('✓ [5/5] relay 4 大冻结 RPC + recompute 全量定向往返验证通过')
+  console.log('✓ [5/5] 组件树 / 状态读写 / recompute 定向往返验证通过')
 
   // 5.3 Verify router RPCs (W5)
   const routesRes = await panel.$call(

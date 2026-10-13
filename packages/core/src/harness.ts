@@ -3,10 +3,9 @@ import { createServer } from 'node:http'
 import type { HubInstance } from '@devframes/hub/initiate'
 import { DEVFRAMES_HUB_BASE, initHub } from '@devframes/hub/initiate'
 import { createDevServer } from 'devframe/adapters/dev'
-import { createInteractiveAuth } from 'devframe/recipes/interactive-auth'
 import { createUniDevtoolsDevframe } from './devframe.ts'
-import { createInspectApp } from './inspect-serve.ts'
 import { AgentRegistry } from './relay.ts'
+import { createDevServerOptions } from './sidecar.ts'
 
 export interface HarnessOptions {
   host?: string
@@ -36,23 +35,10 @@ export async function startDevServerHarness(options: HarnessOptions = {}) {
   })
 
   const started = await createDevServer(def, {
+    ...createDevServerOptions(registry, token),
     host,
     port,
     basePath,
-    app: createInspectApp(),
-    // 'auto'：19 个 RPC 都带 agent 元数据，装上可选 peer @devframes/agentic 后
-    // MCP 路由会自动挂到 `<base>__mcp`（Streamable-HTTP，无状态）
-    mcp: 'auto',
-    openBrowser: false,
-    // Mini-program connectSocket does not set Origin header; disable loopback origin check
-    allowedOrigins: false,
-    auth: ((ctx: any) =>
-      createInteractiveAuth(ctx, {
-        clientAuthTokens: [token],
-        banner: () => {},
-      })) as any,
-    onPeerConnect: registry.connect,
-    onPeerDisconnect: registry.disconnect,
   })
 
   registry.bind(started.rpcGroup as any)
