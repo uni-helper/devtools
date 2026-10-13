@@ -12,12 +12,13 @@ const INJECT_MARKER = '__UNI_DEVTOOLS_AGENT_VUE2_INJECTED__'
  * 3. 全程 try/catch 包裹，任何错误都不影响应用启动
  * 4. 显式校验 initAgent 函数存在性
  * 5. 配置通过 globalThis.__UNI_DEVTOOLS_CONFIG__ 传递
+ * 6. 整段注入代码**单行、无换行**：loader 原样透传上游 source map，前置多行会让
+ *    main.js 之后每一行的映射都错位；单行前缀只影响第 1 行的列号
  *
  * @param {string} cliContext - CLI 上下文路径
- * @returns {string} 注入代码
+ * @returns {string} 注入代码（单行，末尾不带换行）
  */
 function buildInjectCode(cliContext) {
-  // 1. 尝试读取配置文件
   let configStr = 'undefined'
   try {
     const context = cliContext || process.env.UNI_CLI_CONTEXT || process.cwd()
@@ -34,47 +35,25 @@ function buildInjectCode(cliContext) {
         })
       }
     }
-  } catch (e) {
+  } catch {
     // 配置读取失败不影响注入，使用 undefined
   }
 
-  // 2. 构建注入代码（IIFE 形式，使用 CommonJS require）
-  return `/* ${INJECT_MARKER} */
-;(function() {
-  // 脱离关键路径：使用 queueMicrotask 或 setTimeout(0)
-  var scheduleBootstrap = typeof queueMicrotask !== 'undefined'
-    ? queueMicrotask
-    : function(fn) { setTimeout(fn, 0); };
-
-  scheduleBootstrap(function() {
-    try {
-      // 1. 动态 require（CommonJS）
-      var probes = require('@uni-helper/devtools-probes/vue2');
-      var initAgent = probes && probes.initAgent;
-
-      // 2. 显式校验函数存在性（防止模块解析失败）
-      if (typeof initAgent !== 'function') {
-        console.warn('[uni-devtools] initAgent is not a function, skipping bootstrap');
-        return;
-      }
-
-      // 3. 设置全局配置（兜底机制）
-      if (typeof globalThis !== 'undefined' && ${configStr}) {
-        globalThis.__UNI_DEVTOOLS_CONFIG__ = ${configStr};
-      }
-
-      // 4. 初始化探针（传入配置）
-      initAgent(${configStr});
-
-      // 5. 可观测性日志
-      console.log('[uni-devtools] agent bootstrapped');
-    } catch (error) {
-      // Fail-Open：任何错误都只记录日志，不向上传播
-      console.warn('[uni-devtools] bootstrap failed:', error.message);
-    }
-  });
-})();
-`
+  // 生成代码里不能有 `//` 注释（单行拼接后会吞掉后续代码）
+  return [
+    `/* ${INJECT_MARKER} */;(function(){`,
+    `var schedule = typeof queueMicrotask !== 'undefined' ? queueMicrotask : function(fn){ setTimeout(fn, 0) };`,
+    `schedule(function(){ try {`,
+    `var probes = require('@uni-helper/devtools-probes/vue2');`,
+    `var initAgent = probes && probes.initAgent;`,
+    `if (typeof initAgent !== 'function') { console.warn('[uni-devtools] initAgent is not a function, skipping agent init'); return; }`,
+    `var config = ${configStr};`,
+    `if (typeof globalThis !== 'undefined' && config) { globalThis.__UNI_DEVTOOLS_CONFIG__ = config; }`,
+    `initAgent(config);`,
+    `console.log('[uni-devtools] agent initialized');`,
+    `} catch (error) { console.warn('[uni-devtools] agent init failed:', error && error.message); } });`,
+    `})();`,
+  ].join(' ')
 }
 
 /**
@@ -113,7 +92,7 @@ function shouldInjectAgentEntry(...args) {
 
 /**
  * uni-app Vue 2（webpack 4）入口注入 loader：
- * 将探针初始化代码注入到 src/main.js 顶部。
+ * 将探针初始化代码注入到 `<UNI_INPUT_DIR>/main.[jt]s` 顶部（规则见 src/index.ts）。
  */
 module.exports = function (source, map) {
   if (this.cacheable) {

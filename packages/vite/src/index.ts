@@ -1,6 +1,7 @@
 import path from 'node:path'
 import process from 'node:process'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 
 import type { Alias, Plugin, ResolvedConfig } from 'vite'
 import Inspect from 'vite-plugin-inspect'
@@ -13,6 +14,9 @@ export * from './entry-inject.ts'
 export * from './instrument.ts'
 
 const VIRTUAL_AGENT_MODULE = 'virtual:uni-devtools-agent'
+const PROBES_PACKAGE = '@uni-helper/devtools-probes'
+/** 本插件自己的位置：探针是插件的依赖，从这里解析一定找得到 */
+const PLUGIN_FILE = fileURLToPath(import.meta.url)
 
 /**
  * 解析 uni-app H5 运行时链（uni-h5 → vue-router → @vue/devtools-api）实际需要的
@@ -120,8 +124,18 @@ export function UniDevtoolsPlugin(
       start(config)
     },
 
-    resolveId(id) {
+    async resolveId(id, importer) {
       if (id === VIRTUAL_AGENT_MODULE) return `\0${VIRTUAL_AGENT_MODULE}`
+      // 注入到用户代码里的探针 import（入口 initAgent、组件渲染钩子）按用户文件
+      // 位置解析会失败：pnpm 严格模式下用户只装了门面包时，探针是传递依赖，
+      // 用户目录下看不到。改从插件自身位置解析。
+      if (
+        isDev &&
+        (id === PROBES_PACKAGE || id.startsWith(`${PROBES_PACKAGE}/`)) &&
+        importer !== PLUGIN_FILE
+      ) {
+        return this.resolve(id, PLUGIN_FILE, { skipSelf: true })
+      }
       return null
     },
 

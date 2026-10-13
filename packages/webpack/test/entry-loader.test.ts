@@ -76,6 +76,25 @@ describe('entry-loader: webpack loader 执行', () => {
     expect(calls[2]).toBe(null) // map
   })
 
+  it('注入代码是单行前缀：原文件每一行的行号不变（上游 source map 仍然对得上）', () => {
+    const callback = vi.fn()
+    const source =
+      'const Vue = function () {}\nconst app = new Vue()\napp.$mount = () => {}'
+    const ctx = {
+      resourcePath: '/project/src/main.js',
+      resourceQuery: '',
+      callback,
+      cacheable: vi.fn(),
+      query: {},
+    }
+
+    entryLoader.call(ctx, source, null)
+
+    const output: string = callback.mock.calls[0][1]
+    expect(output.split('\n').slice(1)).toEqual(source.split('\n').slice(1))
+    expect(() => new Function(output)).not.toThrow()
+  })
+
   it('带 query 时放行原代码', () => {
     const callback = vi.fn()
     const ctx = {

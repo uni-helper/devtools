@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { parse } from 'acorn'
 import {
   AGENT_IMPORT_LINE,
@@ -75,13 +75,47 @@ describe('entry-inject: shouldInjectAgentEntry 命名谓词 (LESSONS #2)', () =>
   })
 })
 
+describe('entry-inject: 有 UNI_INPUT_DIR 时按输入目录精确识别主入口', () => {
+  const original = process.env.UNI_INPUT_DIR
+  afterEach(() => {
+    if (original === undefined) delete process.env.UNI_INPUT_DIR
+    else process.env.UNI_INPUT_DIR = original
+  })
+
+  it('HBuilderX 项目（main.js 在项目根、没有 src）也能注入', () => {
+    process.env.UNI_INPUT_DIR = '/hbx-project'
+    expect(shouldInjectAgentEntry('/hbx-project/main.js')).toBe(true)
+    expect(shouldInjectAgentEntry('/hbx-project/main.ts')).toBe(true)
+  })
+
+  it('输入目录之外同名的 src/main.ts 不注入', () => {
+    process.env.UNI_INPUT_DIR = '/project/src'
+    expect(shouldInjectAgentEntry('/project/src/main.ts')).toBe(true)
+    expect(
+      shouldInjectAgentEntry('/project/node_modules/some-lib/src/main.ts'),
+    ).toBe(false)
+  })
+})
+
 describe('entry-inject: transformAgentEntry 纯函数', () => {
   it('正确前置注入 initAgent 代码', () => {
     const source = 'const app = createApp(App);'
     const result = transformAgentEntry(source, '/project/src/main.ts')
     expect(result).not.toBeNull()
     expect(result!.code).toBe(`${AGENT_IMPORT_LINE}${source}`)
-    expect(result!.map).toBeNull()
+  })
+
+  it('产出 source map：注入的行不映射，原第 1 行映射回源码第 1 行', () => {
+    const source = 'const app = createApp(App);'
+    const result = transformAgentEntry(source, '/project/src/main.ts')!
+    const injectedLines = AGENT_IMPORT_LINE.split('\n').length - 1
+
+    expect(result.map.sources).toEqual(['/project/src/main.ts'])
+    expect(result.map.sourcesContent).toEqual([source])
+    // VLQ：每个 ';' 是一行；注入行没有映射段，紧随其后的第一段是 (0,0)→(0,0)
+    expect(
+      result.map.mappings.startsWith(`${';'.repeat(injectedLines)}AAAA`),
+    ).toBe(true)
   })
 
   it('不符合条件时返回 null', () => {
@@ -168,6 +202,52 @@ export default /* @__PURE__ */ _export_sfc(_sfc_main, [['render', _sfc_render]])
 
     expect(result).not.toBeNull()
     expect(result!.code).toContain('__uniDevtoolsNotifyRender')
+  })
+
+  it('node_modules 里的组件不插桩（组件库发布的 .vue 源码）', () => {
+    const code = `const _sfc_main = defineComponent({
+      setup(__props) {
+        const r = ref(1);
+        return (_ctx, _cache) => ({ a: r.value });
+      }
+    });`
+
+    expect(
+      transformInstrument(
+        code,
+        '/project/node_modules/.pnpm/wot-design-uni@1.0.0/node_modules/wot-design-uni/components/wd-button/wd-button.vue',
+        { parse: parseWithAcorn },
+      ),
+    ).toBeNull()
+  })
+
+  it('依赖里的组件虚拟入口仍注入 __file（只补属性，不引入 import）', () => {
+    const encoded = Buffer.from(
+      '/project/node_modules/lib/Button.vue',
+      'utf8',
+    ).toString('base64url')
+    const code = `import C from '/project/node_modules/lib/Button.vue'\nwx.createComponent(C)`
+
+    const result = transformInstrument(code, `uniComponent://${encoded}`)
+
+    expect(result!.code).toContain('__file')
+    expect(result!.code).not.toContain('import { __uniDevtoolsNotifyRender')
+  })
+
+  it('插桩产出指向原文件的 source map', () => {
+    const code = `const _sfc_main = defineComponent({
+      setup(__props) {
+        const r = ref(1);
+        return (_ctx, _cache) => ({ a: r.value });
+      }
+    });`
+
+    const result = transformInstrument(code, '/project/src/A.vue', {
+      parse: parseWithAcorn,
+    })!
+
+    expect(result.map.sources).toEqual(['/project/src/A.vue'])
+    expect(result.map.mappings.length).toBeGreaterThan(0)
   })
 
   it('非组件模块或无匹配点时返回 null', () => {

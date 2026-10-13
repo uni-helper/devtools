@@ -301,15 +301,17 @@ export function uniDevtoolsWebpack(
       .set('virtual:uni-devtools-agent', agentConfigFile)
       .set('@uni-helper/devtools-probes/vue2', agentVue2Dist)
 
-    // 2. 注入 main.js 探针初始化 loader
+    // 2. 注入入口探针初始化 loader（main.js 或 TS 工程的 main.ts）
     const inputDir = process.env.UNI_INPUT_DIR
       ? path.resolve(process.env.UNI_INPUT_DIR)
       : path.resolve(cliContext, 'src')
-    const mainJsPath = path.resolve(inputDir, 'main.js')
+    const entryFiles = new Set(
+      ['main.js', 'main.ts'].map((name) => path.resolve(inputDir, name)),
+    )
 
     chainableConfig.module
       .rule('uni-devtools-entry')
-      .test(mainJsPath)
+      .test((file: string) => entryFiles.has(path.resolve(file)))
       .use('uni-devtools-entry-loader')
       .loader(resolveEntryLoader())
       .end()

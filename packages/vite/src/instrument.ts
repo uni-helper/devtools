@@ -28,6 +28,7 @@ import { Buffer } from 'node:buffer'
 import path from 'node:path'
 import process from 'node:process'
 
+import MagicString from 'magic-string'
 import { BINDINGS_PROP } from '@uni-helper/devtools-shared'
 
 export { BINDINGS_PROP }
@@ -41,18 +42,39 @@ const RENDER_HOOK_FN = '__uni_devtools_notify_render'
 const RENDER_HOOK_IMPORT_LINE = `import { __uniDevtoolsNotifyRender as ${RENDER_HOOK_FN} } from '${RENDER_HOOK_IMPORT}'`
 
 /**
+ * 所有插桩都以 MagicString 原位编辑表达：调用方据此生成 source map，
+ * 插入/改写的代码不会让断点与报错行号错位。
+ * `apply*` 返回是否发生了编辑；`inject*` 是给单测与独立调用用的字符串版本。
+ */
+function toStringOrNull(
+  code: string,
+  apply: (ms: MagicString) => boolean,
+): string | null {
+  const ms = new MagicString(code)
+  return apply(ms) ? ms.toString() : null
+}
+
+/**
  * plain `<script>` 形态（render 在模块层经 _export_sfc 挂载）的渲染钩子包装：
  * `_export_sfc(main, [["render", _sfc_render]])` → 包装 _sfc_render 引用。
  * 已带钩子导入标记的模块跳过（setup 形态已注入过 import）。
  */
-export function injectPlainRenderHook(code: string): string | null {
+export function applyPlainRenderHook(ms: MagicString, code: string): boolean {
   if (!code.includes('_export_sfc') || code.includes(RENDER_HOOK_FN))
-    return null
-  const re = /\[\s*["']render["']\s*,\s*([A-Za-z_$][\w$]*)\s*\]/
-  const match = code.match(re)
-  if (!match) return null
-  const wrapped = code.replace(re, `["render", ${RENDER_HOOK_FN}(${match[1]})]`)
-  return `${RENDER_HOOK_IMPORT_LINE}\n${wrapped}`
+    return false
+  const match = /\[\s*["']render["']\s*,\s*([A-Za-z_$][\w$]*)\s*\]/.exec(code)
+  if (!match) return false
+  ms.overwrite(
+    match.index,
+    match.index + match[0].length,
+    `["render", ${RENDER_HOOK_FN}(${match[1]})]`,
+  )
+  ms.prepend(`${RENDER_HOOK_IMPORT_LINE}\n`)
+  return true
+}
+
+export function injectPlainRenderHook(code: string): string | null {
+  return toStringOrNull(code, (ms) => applyPlainRenderHook(ms, code))
 }
 
 /** 虚拟入口 id → 相对 UNI_INPUT_DIR 的源文件路径（解码失败/无 inputDir 时退回绝对路径） */
@@ -79,18 +101,29 @@ export function resolveVirtualEntryFile(id: string): string | undefined {
  * 虚拟入口注入 `__file` 守卫（createComponent/createPage 之前）。
  * 入口代码形态固定，直接锚定末尾的全局对象调用；守卫带 marker 防重复注入。
  */
+export function applyEntryFileGuard(
+  ms: MagicString,
+  code: string,
+  file: string,
+): boolean {
+  if (code.includes(FILE_MARKER)) return false
+  const call = code.match(
+    /([A-Za-z_$][\w$]*)\.create(?:Component|Page)\(\s*([A-Za-z_$][\w$]*)\s*\)[\s;]*$/,
+  )
+  if (!call || call.index === undefined) return false
+  const target = call[2]!
+  ms.appendLeft(
+    call.index,
+    `/* ${FILE_MARKER} */ if (${target} && !${target}.__file) { ${target}.__file = ${JSON.stringify(file)}; }\n`,
+  )
+  return true
+}
+
 export function injectEntryFileGuard(
   code: string,
   file: string,
 ): string | null {
-  if (code.includes(FILE_MARKER)) return null
-  const call = code.match(
-    /([A-Za-z_$][\w$]*)\.create(?:Component|Page)\(\s*([A-Za-z_$][\w$]*)\s*\)[\s;]*$/,
-  )
-  if (!call || call.index === undefined) return null
-  const target = call[2]!
-  const guard = `/* ${FILE_MARKER} */ if (${target} && !${target}.__file) { ${target}.__file = ${JSON.stringify(file)}; }\n`
-  return code.slice(0, call.index) + guard + code.slice(call.index)
+  return toStringOrNull(code, (ms) => applyEntryFileGuard(ms, code, file))
 }
 
 /** 收集声明模式里的绑定名（Identifier / 解构 / rest / 带默认值） */
@@ -152,19 +185,24 @@ interface SetupCapture {
  * 声明（var/let/const/function/class，含解构）。编译器内部量（`__props`、
  * `__emit` 等 `__`/`$` 前缀）与被编译器提升到模块层的纯常量不在此列——
  * 前者非用户状态，后者是静态常量，取舍记录于模块头注释。
- * 解析或形状不符一律返回 null（原样放行，绝不因插桩炸构建）。
+ * 解析或形状不符一律返回 false（原样放行，绝不因插桩炸构建）。
+ *
+ * 改写只动 return 语句的「头」（`return ` → 包装调用开头）和「尾」（render
+ * 表达式之后），render 表达式本身原位保留——所以嵌套 setup（render 函数体内
+ * 再出现带 setup 的对象字面量）的内外两层编辑区间互不重叠，可以同时插桩。
  */
-export function injectSetupBindings(
+export function applySetupBindings(
+  ms: MagicString,
   code: string,
   parse: (source: string) => any,
-): string | null {
-  if (!code.includes('setup') || code.includes(BINDINGS_PROP)) return null
+): boolean {
+  if (!code.includes('setup') || code.includes(BINDINGS_PROP)) return false
 
   let ast: any
   try {
     ast = parse(code)
   } catch {
-    return null
+    return false
   }
 
   const captures: SetupCapture[] = []
@@ -206,7 +244,7 @@ export function injectSetupBindings(
           renderReturn = stmt
       }
     }
-    if (!renderReturn || names.size === 0) return
+    if (!renderReturn) return
 
     const bindingNames = [...names].filter(
       (name) => !name.startsWith('__') && !name.startsWith('$'),
@@ -221,30 +259,29 @@ export function injectSetupBindings(
     })
   })
 
-  if (captures.length === 0) return null
+  if (captures.length === 0) return false
 
-  // 从后往前替换，保持前序替换点偏移有效；嵌套 setup（setup 体内再定义
-  // 带 setup 的对象字面量）会产生重叠替换区间，只保留最外层，内层静默放弃
-  let cursor = Number.POSITIVE_INFINITY
-  const ordered = captures
-    .sort((a, b) => b.returnStart - a.returnStart)
-    .filter((capture) => {
-      if (capture.returnEnd > cursor) return false
-      cursor = capture.returnStart
-      return true
-    })
-  if (ordered.length === 0) return null
-
-  let out = code
-  for (const capture of ordered) {
-    const arg = out.slice(capture.argStart, capture.argEnd)
+  for (const capture of captures) {
     // 渲染钩子包装：渲染即调度树推送（钩子保 length 2，绑定量挂回包装层，
     // 探针读 internal.render[BINDINGS_PROP] 不受影响）
-    const replacement = `return Object.assign(${RENDER_HOOK_FN}(${arg}), { ${BINDINGS_PROP}: { ${capture.names.join(', ')} } });`
-    out =
-      out.slice(0, capture.returnStart) +
-      replacement +
-      out.slice(capture.returnEnd)
+    ms.overwrite(
+      capture.returnStart,
+      capture.argStart,
+      `return Object.assign(${RENDER_HOOK_FN}(`,
+    )
+    const tail = `), { ${BINDINGS_PROP}: { ${capture.names.join(', ')} } });`
+    // 无分号的 return 语句头尾相接（argEnd === returnEnd），只能追加不能覆写
+    if (capture.returnEnd > capture.argEnd)
+      ms.overwrite(capture.argEnd, capture.returnEnd, tail)
+    else ms.appendLeft(capture.argEnd, tail)
   }
-  return `${RENDER_HOOK_IMPORT_LINE}\n${out}`
+  ms.prepend(`${RENDER_HOOK_IMPORT_LINE}\n`)
+  return true
+}
+
+export function injectSetupBindings(
+  code: string,
+  parse: (source: string) => any,
+): string | null {
+  return toStringOrNull(code, (ms) => applySetupBindings(ms, code, parse))
 }

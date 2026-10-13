@@ -25,7 +25,8 @@
     "@uni-helper/devtools-core": "workspace:*",
     "@uni-helper/devtools-probes": "workspace:*",
     "@uni-helper/devtools-shared": "workspace:*",
-    "devframe": "1.1.0"
+    "devframe": "1.1.0",
+    "magic-string": "^0.30.21"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",

@@ -94,6 +94,29 @@ describe('injectSetupBindings', () => {
     expect(injectSetupBindings(plain, parseWithAcorn)).toBeNull()
   })
 
+  it('无分号的 return 语句也能改写成合法代码', () => {
+    const code = `const c = { setup() {\n  const n = ref(0)\n  return () => n.value\n} }`
+    const out = injectSetupBindings(code, parseWithAcorn)
+
+    expect(out).toContain(`${BINDINGS_PROP}: { n }`)
+    expect(() => parseWithAcorn(out!)).not.toThrow()
+  })
+
+  it('嵌套 setup（render 函数体内再定义组件）内外两层都插桩', () => {
+    const code = `const Outer = { setup() {
+  const outer = ref(1);
+  return () => {
+    const Inner = { setup() { const inner = ref(2); return () => inner.value; } };
+    return outer.value;
+  };
+} };`
+    const out = injectSetupBindings(code, parseWithAcorn)
+
+    expect(out).toContain(`${BINDINGS_PROP}: { outer }`)
+    expect(out).toContain(`${BINDINGS_PROP}: { inner }`)
+    expect(() => parseWithAcorn(out!)).not.toThrow()
+  })
+
   it('无 setup / 解析失败时安全放行', () => {
     expect(injectSetupBindings('const a = 1', parseWithAcorn)).toBeNull()
     expect(injectSetupBindings('setup(}}invalid', parseWithAcorn)).toBeNull()
