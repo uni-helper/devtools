@@ -696,6 +696,10 @@ export function connectUniRpcClient(
       case 'components:stateSnapshot': {
         await ensureReady()
         const { componentId } = request.payload as { componentId: string }
+        // 版本号必须在发请求**之前**取：请求在途时若收到失效事件（版本 +1），
+        // 这份旧数据只能带旧版本号返回，面板才会按失效事件里的新版本重拉；
+        // 若在 await 之后取，旧数据会冒充新版本被面板采信。
+        const version = stateVersionByComponent.get(componentId) ?? 0
         const state = await callUni<ComponentStateResult>(
           DEVFRAME_RPC.getComponentState,
           { id: componentId },
@@ -704,10 +708,7 @@ export function connectUniRpcClient(
         // （MCP/Coding Agent 也调 node 的 get-component-state，但那不经过本层）。
         // 只有面板在看的组件重渲染才值得发失效事件（见 applyRenderedComponents）。
         inspectedComponentId = componentId
-        return toStateSnapshot(
-          state,
-          stateVersionByComponent.get(componentId) ?? 0,
-        )
+        return toStateSnapshot(state, version)
       }
 
       case 'router:snapshot': {

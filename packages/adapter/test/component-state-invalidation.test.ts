@@ -166,4 +166,42 @@ describe('端上重渲染 → 面板刷新', () => {
     expect(invalidations(events)).toHaveLength(0)
     client.dispose()
   })
+
+  it('请求在途时到达的失效事件：在途的旧快照带旧版本号返回，不冒充新版本', async () => {
+    const h = createHarness()
+    let releaseState: (() => void) | undefined
+    vi.mocked(h.backend.call).mockImplementation(
+      async (method: ProbeMethod) => {
+        if (method === 'get-component-tree') return { fetchedAt: 1, pages: [] }
+        if (method === 'get-component-state') {
+          await new Promise<void>((resolve) => {
+            releaseState = resolve
+          })
+          return { id: 'pages/index/index#4', name: 'CounterCard' }
+        }
+        return {}
+      },
+    )
+    const client = connectUniRpcClient({ backend: h.backend })
+    await flush()
+    // 先建立选中态（第一次查询直接放行）
+    const first = client.query({
+      type: 'components:stateSnapshot',
+      payload: { componentId: 'pages/index/index#4' },
+    })
+    await flush()
+    releaseState?.()
+    await first
+
+    const inFlight = client.query({
+      type: 'components:stateSnapshot',
+      payload: { componentId: 'pages/index/index#4' },
+    }) as Promise<{ version: number }>
+    await flush()
+    h.pushRendered({ ids: ['pages/index/index#4'], seq: 1, updatedAt: 1000 })
+    releaseState?.()
+
+    expect((await inFlight).version).toBe(0)
+    client.dispose()
+  })
 })
