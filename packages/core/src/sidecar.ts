@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module'
 import os from 'node:os'
 import process from 'node:process'
 import { createDevServer } from 'devframe/adapters/dev'
@@ -29,19 +30,61 @@ export function resolveAdvertisedHost(): string {
   return 'localhost'
 }
 
+function isLoopbackAddress(ip: string): boolean {
+  return ip === '::1' || /^(?:::ffff:)?127\./.test(ip)
+}
+
+function isLoopbackOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin)
+    return (
+      hostname === 'localhost' ||
+      hostname === '[::1]' ||
+      hostname.startsWith('127.')
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * MCP 路由的准入：只认本机进程。
+ *
+ * agentic 默认的 origin 门禁拒绝一切不带 Origin 的请求，而 MCP 官方 SDK 的 HTTP
+ * 客户端（Claude Code、Cursor 等）跑在 node 里、默认不发 Origin——按默认配置全被
+ * 403。这里关掉默认门禁自己判：对端必须是 loopback（srvx 的 `ip` 取自 socket，
+ * 客户端伪造不了）；带 Origin 的是浏览器，Origin 还必须是本机源，挡住 DNS rebinding。
+ */
+export function isLocalMcpRequest(request: Request): boolean {
+  const origin = request.headers.get('origin')
+  if (origin !== null && !isLoopbackOrigin(origin)) return false
+  const ip = (request as { ip?: string }).ip
+  return ip !== undefined && isLoopbackAddress(ip)
+}
+
+/**
+ * 装了 @devframes/agentic 才挂 MCP 路由并换上本机准入；没装时退回 'auto'
+ * （devframe 打一次 DF0078 提示后不挂），不把可选能力变成启动失败。
+ */
+function resolveMcpSetting() {
+  try {
+    createRequire(import.meta.url).resolve('@devframes/agentic')
+  } catch {
+    return 'auto' as const
+  }
+  return { allowedOrigins: false as const, authorization: isLocalMcpRequest }
+}
+
 /**
  * standalone dev server 的公共选项（sidecar 与 harness 共用，保证冒烟路径与
  * 真实插件一致）。
  */
 export function createDevServerOptions(registry: AgentRegistry, token: string) {
   return {
-    // Vite Inspect 静态托管：挂到 sidecar 的 inspect 路径下供面板 iframe。经预配置
-    // app 挂载的中间件先于 devframe 自身 handler（含 auth）执行——静态报告无 token
-    // 门禁，dev 工具可接受；目录不可枚举（仅能按文件名取）
-    app: createInspectApp(),
-    // 'auto'：agent surface 非空（公开 RPC 都带 agent 元数据），装上可选 peer
-    // @devframes/agentic 后 MCP 路由自动挂到 `<base>__mcp`
-    mcp: 'auto' as const,
+    // Vite Inspect 静态托管：挂到 sidecar 的 inspect 路径下供面板 iframe，
+    // 凭面板 token 访问（门禁见 createInspectApp）
+    app: createInspectApp({ token }),
+    mcp: resolveMcpSetting(),
     openBrowser: false,
     // 小程序 connectSocket 不发 Origin 头，默认 loopback-only 检查会拒绝升级；
     // token 鉴权仍守门

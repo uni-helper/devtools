@@ -100,6 +100,8 @@ Uni DevTools 内置对 Model Context Protocol (MCP) 的原生支持。AI Coding 
 http://localhost:<端口>/__uni-devtools/__mcp
 ```
 
+地址要用 `localhost`，不要照抄控制台打印的局域网 IP：路由只接受本机进程的请求，经局域网 IP 访问会被拒绝（401）。
+
 该路由与面板共用同一个中继，Agent 拿到的是实时运行数据：组件树、组件状态（可编辑）、Pinia / Vuex、网络记录、路由栈、Storage。每个工具都带参数 schema 与读写安全标注（`clear-network-records` 标为 destructive）。
 
 只能启动子进程的客户端可用 stdio 模式：

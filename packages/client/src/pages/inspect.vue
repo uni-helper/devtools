@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { readAuthTokenFromUrl } from '@uni-helper/devtools-adapter'
 
 const showBanner = ref(true)
 
@@ -11,7 +12,11 @@ const iframeSrc = computed(() => {
     : pathname.split('/').pop()?.includes('.')
       ? pathname.slice(0, pathname.lastIndexOf('/') + 1)
       : `${pathname}/`
-  return `${normalized}inspect/`
+  // inspect 报告凭面板 token 访问（服务端换成 cookie 给 iframe 内后续请求用）
+  const token = readAuthTokenFromUrl()
+  return token
+    ? `${normalized}inspect/?devframe_auth_token=${encodeURIComponent(token)}`
+    : `${normalized}inspect/`
 })
 
 const iframeRef = ref<HTMLIFrameElement>()

@@ -1,5 +1,6 @@
 export * from './uni-devtools-rpc.ts'
 export * from './mapping/index.ts'
+export { readAuthTokenFromUrl } from './devframe-backend.ts'
 export type {
   ProbeBackend,
   ProbeConnectionStatus,
