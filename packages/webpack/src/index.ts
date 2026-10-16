@@ -5,6 +5,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { AGENT_CLIENT_MARKER } from '@uni-helper/devtools-core/relay'
+import { warnIfStaleAgentDist } from './stale-agent.ts'
 
 // Node 16 兼容性补丁：webpack 4 / vue-cli 4 工程常运行于 Node 16，
 // 而 devframe / srvx / h3 运行时依赖 Web Crypto 与 Web Standards API。
@@ -126,43 +127,6 @@ function resolveEntryLoader(): string {
     if (fs.existsSync(candidate)) return candidate
   }
   return candidates[0]
-}
-
-/**
- * 开发期陈旧产物检测：resolveAgentVue2 优先消费 gitignored 的 dist/agent-vue2.js
- * 预构建产物，探针源码更新后若未重新 build，webpack 会静默打包旧 bundle——
- * 「改了源码但行为没变」的经典排查陷阱。这里比对 dist 与 probes src 的最新
- * mtime，过期则在控制台高亮告警（生产构建零开销，检查失败静默跳过）。
- */
-function warnIfStaleAgentDist(distPath: string): void {
-  if (process.env.NODE_ENV === 'production') return
-  try {
-    const distDir = path.dirname(distPath)
-    if (path.basename(distDir) !== 'dist') return // 源码直发（兜底路径）无陈旧问题
-    const pkgDir = path.dirname(distDir)
-    const srcDir = path.join(pkgDir, 'src')
-    if (!fs.existsSync(srcDir)) return
-
-    const distMtime = fs.statSync(distPath).mtimeMs
-    const entries = fs.readdirSync(srcDir, { recursive: true }) as string[]
-    let newestSrcMtime = 0
-    for (const entry of entries) {
-      const rel = String(entry)
-      if (!/\.(ts|mts|js|mjs)$/.test(rel)) continue
-      const mtime = fs.statSync(path.join(srcDir, rel)).mtimeMs
-      if (mtime > newestSrcMtime) newestSrcMtime = mtime
-    }
-
-    if (newestSrcMtime > distMtime) {
-      console.warn(
-        `[uni-devtools] Stale agent bundle detected: ${distPath} is older than packages/probes/src. ` +
-          `Run "pnpm --filter @uni-helper/devtools-probes build" and rebuild, ` +
-          `or the probe behavior may not match the source.`,
-      )
-    }
-  } catch {
-    // 检测自身的任何异常都不影响构建
-  }
 }
 
 function resolveAgentVue2(): string {
