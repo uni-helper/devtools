@@ -1,10 +1,21 @@
 {
   "name": "@uni-helper/devtools",
-  "version": "0.0.1",
+  "version": "0.0.1-beta.8",
   "description": "Uni DevTools 门面包：聚合探针 / node 中继 / Vite·Webpack 插件 / MCP / 面板，并自带 CLI",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
+  "bugs": "https://github.com/uni-helper/devtools/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/devtools.git",
+    "directory": "packages/devtools"
+  },
   "bin": {
     "uni-devtools": "./dist/cli.mjs"
   },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -12,10 +23,18 @@
       "default": "./dist/index.mjs"
     }
   },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
   "scripts": {
-    "build": "pnpm run build:index && pnpm run build:cli",
-    "build:index": "esbuild src/index.ts --bundle --platform=node --format=esm --external:devframe --external:\"devframe/*\" --external:@uni-helper/devtools-vite --external:@uni-helper/devtools-webpack --outfile=dist/index.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\"",
-    "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --external:devframe --external:\"devframe/*\" --outfile=dist/cli.mjs --banner:js=\"#!/usr/bin/env node\""
+    "build": "pnpm run build:index && pnpm run build:cli && node ../../scripts/build-dts.mjs",
+    "build:index": "esbuild src/index.ts --bundle --platform=node --format=esm --external:devframe --external:\"devframe/*\" --external:@uni-helper/devtools-vite --external:@uni-helper/devtools-webpack --external:@uni-helper/devtools-mcp --outfile=dist/index.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\"",
+    "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --external:devframe --external:\"devframe/*\" --external:@uni-helper/devtools-vite --external:@uni-helper/devtools-webpack --external:@uni-helper/devtools-mcp --outfile=dist/cli.mjs --banner:js=\"#!/usr/bin/env node\""
   },
   "dependencies": {
     "@devframes/agentic": "1.1.0",
@@ -23,6 +42,7 @@
     "@uni-helper/devtools-mcp": "workspace:*",
     "@uni-helper/devtools-vite": "workspace:*",
     "@uni-helper/devtools-webpack": "workspace:*",
+    "cac": "^7.0.0",
     "devframe": "1.1.0"
   },
   "devDependencies": {

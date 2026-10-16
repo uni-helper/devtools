@@ -1,30 +1,43 @@
 {
   "name": "@uni-helper/devtools-vite",
-  "version": "0.0.1",
+  "version": "0.0.1-beta.8",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
+  "bugs": "https://github.com/uni-helper/devtools/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/devtools.git",
+    "directory": "packages/vite"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./dist/index.mjs"
-    },
-    "./instrument": {
-      "types": "./src/instrument.ts",
-      "default": "./src/instrument.ts"
-    },
-    "./entry-inject": {
-      "types": "./src/entry-inject.ts",
-      "default": "./src/entry-inject.ts"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      }
     }
   },
   "scripts": {
-    "build": "pnpm run build:esm",
+    "build": "pnpm run build:esm && node ../../scripts/build-dts.mjs",
     "build:esm": "esbuild src/index.ts --bundle --platform=node --format=esm --external:vite --outfile=dist/index.mjs --banner:js=\"import{createRequire as __uniCr}from'node:module';import{fileURLToPath as __uniFu}from'node:url';import{dirname as __uniDn}from'node:path';const require=__uniCr(import.meta.url);const __filename=__uniFu(import.meta.url);const __dirname=__uniDn(__filename);\" && rm -rf dist/client && cp -R node_modules/vite-plugin-inspect/dist/client dist/client",
     "test": "vitest run"
   },
   "dependencies": {
+    "@devframes/agentic": "1.1.0",
     "@uni-helper/devtools-core": "workspace:*",
     "@uni-helper/devtools-probes": "workspace:*",
     "@uni-helper/devtools-shared": "workspace:*",
+    "cac": "^7.0.0",
     "devframe": "1.1.0",
     "magic-string": "^0.30.21"
   },

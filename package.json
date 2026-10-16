@@ -34,7 +34,8 @@
     "test": "turbo test",
     "release": "bumpp -r",
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "npx simple-git-hooks"
+    "postinstall": "npx simple-git-hooks",
+    "check:publish": "node scripts/check-publish.mjs"
   },
   "devDependencies": {
     "@antfu/ni": "^0.21.12",

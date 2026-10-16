@@ -1,6 +1,7 @@
 import process from 'node:process'
 import { existsSync, readFileSync } from 'node:fs'
-import { isAbsolute, relative, resolve } from 'node:path'
+import { createRequire } from 'node:module'
+import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineDevframe, defineRpcFunction } from 'devframe'
 import { launchEditor } from 'devframe/utils/launch-editor'
@@ -55,6 +56,25 @@ export interface CreateUniDevtoolsDevframeOptions {
   dock?: DevframeDockDefaults
 }
 
+/**
+ * core 包的安装目录。
+ *
+ * 本模块会被 esbuild 内联进 vite / webpack / mcp / 门面包的 dist，`import.meta.url`
+ * 落在哪个包里不确定，按相对路径找 core 在 npm 安装后必然落空；改走包解析——
+ * 这些宿主包都把 core 列为依赖，从任意落点都解析得到。
+ */
+function resolveCorePackageDir(): string | undefined {
+  try {
+    return dirname(
+      createRequire(import.meta.url).resolve(
+        '@uni-helper/devtools-core/package.json',
+      ),
+    )
+  } catch {
+    return undefined
+  }
+}
+
 export function resolveClientAssets(explicitAssets?: string): string {
   if (explicitAssets) return explicitAssets
 
@@ -64,27 +84,30 @@ export function resolveClientAssets(explicitAssets?: string): string {
   )
     return process.env.UNI_DEVTOOLS_PANEL_DIR
 
-  const here = fileURLToPath(new URL('.', import.meta.url))
-  // 本模块会被 esbuild 内联进 vite/dist 与 webpack/dist，`import.meta.url` 的落点
-  // 因此可能是 core/src、core/dist、vite/dist 或 webpack/dist —— 四者都在
-  // packages/ 下两层，所以这两条相对路径对任意落点都指向同一个包。
-  const realPanelDist = resolve(here, '../../client/dist')
-  if (existsSync(realPanelDist)) return realPanelDist
-
-  const fallbackAssets = resolve(here, '../../core/assets/panel')
-  if (existsSync(fallbackAssets)) return fallbackAssets
-
-  return realPanelDist
+  const coreDir =
+    resolveCorePackageDir() ??
+    resolve(fileURLToPath(new URL('.', import.meta.url)), '../../core')
+  const candidates = [
+    // monorepo 开发：client 的 watch 构建产物最新，优先于 core 里上次构建拷进去的副本
+    resolve(coreDir, '../client/dist'),
+    // npm 安装：core 构建时拷入的面板
+    resolve(coreDir, 'dist/panel'),
+    // 都没有（未构建 client）：占位面板
+    resolve(coreDir, 'assets/panel'),
+  ]
+  return (
+    candidates.find((dir) => existsSync(resolve(dir, 'index.html'))) ??
+    candidates[1]!
+  )
 }
 
 function getPackageMeta(): { name: string; version: string } {
   try {
-    // 同 resolveClientAssets：锚定 core 自己的 package.json，避免内联到
-    // vite/webpack 的 dist 后把宿主包的 name/version 报进 DevframeDefinition。
-    const pkgPath = fileURLToPath(
-      new URL('../../core/package.json', import.meta.url),
-    )
-    const raw = readFileSync(pkgPath, 'utf-8')
+    // 锚定 core 自己的 package.json，避免内联到宿主包的 dist 后把宿主包的
+    // name/version 报进 DevframeDefinition
+    const coreDir = resolveCorePackageDir()
+    if (!coreDir) throw new Error('@uni-helper/devtools-core not resolvable')
+    const raw = readFileSync(resolve(coreDir, 'package.json'), 'utf-8')
     const parsed = JSON.parse(raw)
     return {
       name: parsed.name || '@uni-helper/devtools-core',

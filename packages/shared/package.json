@@ -1,7 +1,19 @@
 {
   "name": "@uni-helper/devtools-shared",
-  "version": "0.0.1",
+  "version": "0.0.1-beta.8",
   "description": "Uni DevTools 跨端共享：协议类型、冻结契约常量、纯函数工具",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
+  "bugs": "https://github.com/uni-helper/devtools/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/devtools.git",
+    "directory": "packages/shared"
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
   "type": "module",
   "sideEffects": false,
   "types": "./src/index.ts",
@@ -10,8 +22,26 @@
     "./utils/network-merge": "./src/utils/network-merge.ts",
     "./utils/mock-flag": "./src/utils/mock-flag.ts"
   },
+  "publishConfig": {
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./src/index.ts"
+      },
+      "./utils/network-merge": {
+        "types": "./dist/utils/network-merge.d.ts",
+        "default": "./src/utils/network-merge.ts"
+      },
+      "./utils/mock-flag": {
+        "types": "./dist/utils/mock-flag.d.ts",
+        "default": "./src/utils/mock-flag.ts"
+      }
+    }
+  },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "node ../../scripts/build-dts.mjs index=src/index.ts utils/network-merge=src/utils/network-merge.ts utils/mock-flag=src/utils/mock-flag.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

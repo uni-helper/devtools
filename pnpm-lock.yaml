@@ -193,7 +193,13 @@ importers:
       devframe:
         specifier: 1.1.0
         version: 1.1.0(@devframes/agentic@1.1.0)(cac@7.0.0)(srvx@1.0.5)
+      h3:
+        specifier: ^2.0.1-rc.32
+        version: 2.0.1-rc.32(crossws@0.4.12(srvx@1.0.5))
     devDependencies:
+      '@devframes/agentic':
+        specifier: 1.1.0
+        version: 1.1.0(crossws@0.4.12(srvx@1.0.5))(devframe@1.1.0)
       '@devframes/hub':
         specifier: ^1.1.0
         version: 1.1.0(@devframes/agentic@1.1.0(crossws@0.4.12(srvx@1.0.5))(devframe@1.1.0))(crossws@0.4.12(srvx@1.0.5))(devframe@1.1.0(@devframes/agentic@1.1.0)(cac@7.0.0)(srvx@1.0.5))
@@ -203,9 +209,9 @@ importers:
       '@types/node':
         specifier: ^20.14.2
         version: 20.17.8
-      h3:
-        specifier: ^2.0.1-rc.32
-        version: 2.0.1-rc.32(crossws@0.4.12(srvx@1.0.5))
+      '@uni-helper/devtools-client':
+        specifier: workspace:*
+        version: link:../client
       typescript:
         specifier: ^5.4.5
         version: 5.7.2
@@ -230,6 +236,9 @@ importers:
       '@uni-helper/devtools-webpack':
         specifier: workspace:*
         version: link:../webpack
+      cac:
+        specifier: ^7.0.0
+        version: 7.0.0
       devframe:
         specifier: 1.1.0
         version: 1.1.0(@devframes/agentic@1.1.0)(cac@7.0.0)(srvx@1.0.5)
@@ -252,6 +261,9 @@ importers:
       '@uni-helper/devtools-core':
         specifier: workspace:*
         version: link:../core
+      cac:
+        specifier: ^7.0.0
+        version: 7.0.0
       devframe:
         specifier: 1.1.0
         version: 1.1.0(@devframes/agentic@1.1.0)(cac@7.0.0)(srvx@1.0.5)
@@ -305,6 +317,9 @@ importers:
 
   packages/vite:
     dependencies:
+      '@devframes/agentic':
+        specifier: 1.1.0
+        version: 1.1.0(crossws@0.4.12(srvx@1.0.5))(devframe@1.1.0)
       '@uni-helper/devtools-core':
         specifier: workspace:*
         version: link:../core
@@ -314,6 +329,9 @@ importers:
       '@uni-helper/devtools-shared':
         specifier: workspace:*
         version: link:../shared
+      cac:
+        specifier: ^7.0.0
+        version: 7.0.0
       devframe:
         specifier: 1.1.0
         version: 1.1.0(@devframes/agentic@1.1.0)(cac@7.0.0)(srvx@1.0.5)
@@ -345,12 +363,18 @@ importers:
 
   packages/webpack:
     dependencies:
+      '@devframes/agentic':
+        specifier: 1.1.0
+        version: 1.1.0(crossws@0.4.12(srvx@1.0.5))(devframe@1.1.0)
       '@uni-helper/devtools-core':
         specifier: workspace:*
         version: link:../core
       '@uni-helper/devtools-probes':
         specifier: workspace:*
         version: link:../probes
+      cac:
+        specifier: ^7.0.0
+        version: 7.0.0
       devframe:
         specifier: 1.1.0
         version: 1.1.0(@devframes/agentic@1.1.0)(cac@7.0.0)(srvx@1.0.5)

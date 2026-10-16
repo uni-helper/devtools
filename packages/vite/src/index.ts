@@ -10,9 +10,6 @@ import { INSPECT_OUTPUT_DIR } from '@uni-helper/devtools-core/inspect-serve'
 import { startUniDevtoolsServer } from '@uni-helper/devtools-core/sidecar'
 import { transformAgentEntry, transformInstrument } from './entry-inject.ts'
 
-export * from './entry-inject.ts'
-export * from './instrument.ts'
-
 const VIRTUAL_AGENT_MODULE = 'virtual:uni-devtools-agent'
 const PROBES_PACKAGE = '@uni-helper/devtools-probes'
 /** 本插件自己的位置：探针是插件的依赖，从这里解析一定找得到 */
