@@ -202,9 +202,6 @@ export function initAgentPipeline(
       resetNetworkPushState()
       scheduleNetworkPush(100)
     },
-    onError: (err) => {
-      console.error('[uni-devtools-agent] Socket error:', err)
-    },
     /* eslint-enable no-console */
   })
 

@@ -1,3 +1,4 @@
+import { AGENT_UNAUTHORIZED_CLOSE_CODE } from '@uni-helper/devtools-shared'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeAdapter } from '../src/adapter/types.ts'
 import { NullAdapter } from '../src/adapter/types.ts'
@@ -128,6 +129,101 @@ describe('探针 socket 通道', () => {
 
     expect(handle.isConnected()).toBe(true)
     expect(host.sockets).toHaveLength(2)
+    handle.dispose()
+  })
+
+  it('node 服务一直连不上时，重连到上限就停止，不再新建连接', () => {
+    const host = createHost()
+    const handle = createUniSocketChannel({
+      adapter: host.adapter,
+      wsUrl: 'ws://test/agent',
+      initialBackoffMs: 100,
+      maxBackoffMs: 100,
+      maxReconnectAttempts: 3,
+    })
+
+    for (let i = 0; i < 10; i++) {
+      host.sockets.at(-1)!.handlers.error?.({ errMsg: 'connectSocket:fail' })
+      vi.advanceTimersByTime(100)
+    }
+    vi.advanceTimersByTime(60_000)
+
+    // 首连 1 次 + 重连 3 次
+    expect(host.sockets).toHaveLength(4)
+    expect(handle.isConnected()).toBe(false)
+    handle.dispose()
+  })
+
+  it('重连途中连上过一次，重连次数重新计算', () => {
+    const host = createHost()
+    const handle = createUniSocketChannel({
+      adapter: host.adapter,
+      wsUrl: 'ws://test/agent',
+      initialBackoffMs: 100,
+      maxBackoffMs: 100,
+      maxReconnectAttempts: 2,
+    })
+    const failLatest = () => {
+      host.sockets.at(-1)!.handlers.error?.({ errMsg: 'connectSocket:fail' })
+      vi.advanceTimersByTime(100)
+    }
+
+    failLatest()
+    failLatest()
+    host.sockets.at(-1)!.handlers.open?.()
+    failLatest()
+    failLatest()
+    failLatest()
+
+    // 首连 + 2 次重连（第 2 次连上）+ 断开后再 2 次重连
+    expect(host.sockets).toHaveLength(5)
+    handle.dispose()
+  })
+
+  it('断线与放弃重连各提示一次，不随重连次数刷屏', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const host = createHost()
+    const handle = createUniSocketChannel({
+      adapter: host.adapter,
+      wsUrl: 'ws://test/agent',
+      initialBackoffMs: 100,
+      maxBackoffMs: 100,
+      maxReconnectAttempts: 5,
+    })
+    host.sockets[0]!.handlers.open?.()
+
+    for (let i = 0; i < 10; i++) {
+      host.sockets.at(-1)!.handlers.error?.({ errMsg: 'connectSocket:fail' })
+      vi.advanceTimersByTime(100)
+    }
+
+    expect(error).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledTimes(2)
+    expect(String(warn.mock.calls[1]![0])).toContain('停止重连')
+    handle.dispose()
+  })
+
+  it('node 服务以「token 已失效」关闭连接时立即停止重连，并提示重新编译', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const host = createHost()
+    const handle = createUniSocketChannel({
+      adapter: host.adapter,
+      wsUrl: 'ws://test/agent',
+      initialBackoffMs: 100,
+    })
+    host.sockets[0]!.handlers.open?.()
+
+    host.sockets[0]!.handlers.close?.(
+      AGENT_UNAUTHORIZED_CLOSE_CODE,
+      'stale devtools token',
+    )
+    vi.advanceTimersByTime(60_000)
+
+    expect(host.sockets).toHaveLength(1)
+    expect(handle.isConnected()).toBe(false)
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0]![0])).toContain('重新编译')
     handle.dispose()
   })
 

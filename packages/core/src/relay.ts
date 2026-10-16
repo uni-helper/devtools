@@ -4,6 +4,7 @@ import type {
   DevframeNodeRpcSessionMeta,
   DevframeRpcConnection,
 } from 'devframe/types'
+import { AGENT_UNAUTHORIZED_CLOSE_CODE } from '@uni-helper/devtools-shared'
 import { AGENT_RPC } from './rpc-names.ts'
 
 /** URL marker attached by the mini-program agent probe */
@@ -106,6 +107,12 @@ export class AgentRegistry {
     const url = connection.request?.url ?? ''
     if (!url.includes(AGENT_CLIENT_MARKER)) return
     const client = session?.rpc as AgentClient | undefined
+    // token 不是本次服务签发的（node 重启前编译的旧小程序）：登记了会按「最新连上」
+    // 抢走活跃位，推送却全被鉴权拒绝。断开它，并用关闭码让它别再重连
+    if (!session?.meta?.isTrusted) {
+      connection.close?.(AGENT_UNAUTHORIZED_CLOSE_CODE, 'stale devtools token')
+      return
+    }
     if (client) this.register(client)
   }
 

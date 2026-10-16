@@ -42,7 +42,8 @@ export async function setupFakeDevframe() {
 
   function connectAgent(impl: (method: string, ...args: any[]) => any) {
     const agent = {
-      $meta: {},
+      // 带本次服务 token 连上的探针，devframe 鉴权已把会话标为可信
+      $meta: { isTrusted: true },
       $call: vi.fn(async (...a: [string, ...any[]]) => impl(...a)),
     }
     clients.push(agent)

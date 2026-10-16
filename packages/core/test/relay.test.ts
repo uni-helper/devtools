@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { AGENT_UNAUTHORIZED_CLOSE_CODE } from '@uni-helper/devtools-shared'
 import { AGENT_CLIENT_MARKER, AgentRegistry } from '../src/relay.ts'
 
 /**
@@ -9,8 +10,10 @@ import { AGENT_CLIENT_MARKER, AgentRegistry } from '../src/relay.ts'
  */
 function createAgent(
   impl: (method: string, ...args: any[]) => Promise<any> = async () => 'ok',
+  { trusted = true } = {},
 ) {
-  const meta = {}
+  // isTrusted 由 devframe 的 token 鉴权在连接钩子之前写入
+  const meta = { isTrusted: trusted }
   return { $meta: meta, $call: vi.fn(impl) }
 }
 
@@ -21,13 +24,19 @@ function createHarness() {
 
   const connect = (agent: ReturnType<typeof createAgent>) => {
     clients.push(agent)
+    const connection = {
+      id: clients.length,
+      request: { url: `/__ws?${AGENT_CLIENT_MARKER}` },
+      close: vi.fn(),
+    }
     registry.connect(
+      connection as any,
       {
-        id: clients.length,
-        request: { url: `/__ws?${AGENT_CLIENT_MARKER}` },
+        rpc: agent,
+        meta: agent.$meta,
       } as any,
-      { rpc: agent, meta: agent.$meta } as any,
     )
+    return connection
   }
   const disconnect = (agent: ReturnType<typeof createAgent>) => {
     clients.splice(clients.indexOf(agent), 1)
@@ -73,6 +82,23 @@ describe('AgentRegistry：最新连上的探针生效', () => {
     )
 
     expect(h.registry.connected).toBe(false)
+  })
+
+  it('带旧 token 的探针（node 重启前编译的小程序）不抢占活跃位，并被告知别再重连', async () => {
+    const h = createHarness()
+    const device = createAgent()
+    const stale = createAgent(undefined, { trusted: false })
+    h.connect(device)
+    const staleConnection = h.connect(stale)
+
+    await h.registry.callAgent('uni-devtools:agent:getComponentTree')
+
+    expect(device.$call).toHaveBeenCalledTimes(1)
+    expect(stale.$call).not.toHaveBeenCalled()
+    expect(staleConnection.close).toHaveBeenCalledWith(
+      AGENT_UNAUTHORIZED_CLOSE_CODE,
+      expect.any(String),
+    )
   })
 
   it('活跃探针切换时通知订阅方，全部离线时通知 undefined', () => {

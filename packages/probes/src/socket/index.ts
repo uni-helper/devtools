@@ -3,6 +3,7 @@
  * （浏览器全局禁用由 eslint no-restricted-globals 执法）
  */
 
+import { AGENT_UNAUTHORIZED_CLOSE_CODE } from '@uni-helper/devtools-shared'
 import { structuredCloneParse } from 'devframe/utils/structured-clone'
 import type { RuntimeAdapter } from '../adapter/types.ts'
 
@@ -44,6 +45,13 @@ function decodeWireFrame(raw: unknown): any {
  */
 export const MAX_PENDING_FRAMES = 100
 
+/**
+ * 连续重连失败的上限（按默认退避约 40s）。足够跨过网络抖动、真机切后台等短暂断线；
+ * node 服务关掉后不再无休止地重连——服务重启会换新 token 并重新编译小程序，
+ * 旧探针即使连回去也过不了鉴权。
+ */
+export const MAX_RECONNECT_ATTEMPTS = 10
+
 export interface BirpcChannel {
   post: (data: any, ...extra: any[]) => void | Promise<void>
   on: (fn: (data: any) => void) => void
@@ -56,6 +64,8 @@ export interface UniSocketChannelOptions {
   protocols?: string[]
   maxBackoffMs?: number
   initialBackoffMs?: number
+  /** 连续重连失败多少次后放弃；期间连上过一次即重新计数 */
+  maxReconnectAttempts?: number
   onOpen?: () => void
   onClose?: (res: any) => void
   onError?: (err: any) => void
@@ -84,6 +94,7 @@ export function createUniSocketChannel(
     protocols,
     maxBackoffMs = 5000,
     initialBackoffMs = 1000,
+    maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS,
     onOpen,
     onClose,
     onError,
@@ -123,7 +134,6 @@ export function createUniSocketChannel(
 
     socket.onError((err: any) => {
       if (!isCurrent()) return
-      console.error('[uni-devtools-agent] socket error:', err)
       if (onError) onError(err)
       handleDisconnect(err)
     })
@@ -131,6 +141,15 @@ export function createUniSocketChannel(
     socket.onClose((code?: number, reason?: string) => {
       if (!isCurrent()) return
       if (onClose) onClose({ code, reason })
+      if (code === AGENT_UNAUTHORIZED_CLOSE_CODE) {
+        // 连接能建立，所以重连计数每次都会清零；不在这里停下就会无限「连上即被踢」
+        console.warn(
+          '[uni-devtools-agent] DevTools 服务已重启，本探针的 token 已失效，停止重连；重新编译小程序即可恢复',
+        )
+        isOpen = false
+        releaseSocket()
+        return
+      }
       handleDisconnect({ code, reason })
     })
   }
@@ -192,22 +211,33 @@ export function createUniSocketChannel(
   function handleDisconnect(_reason?: any) {
     isOpen = false
     releaseSocket()
-    if (isDisposed) return
+    if (isDisposed || reconnectTimer) return
 
-    if (!reconnectTimer) {
-      reconnectAttempt++
-      if (onReconnect) {
-        onReconnect(reconnectAttempt)
-      }
-      const backoff = Math.min(
-        initialBackoffMs * 1.5 ** (reconnectAttempt - 1),
-        maxBackoffMs,
+    // 日志只在断线与放弃时各打一次：按次打印会在服务关掉后持续刷屏
+    const endpoint = wsUrl.split('?')[0]
+    if (reconnectAttempt >= maxReconnectAttempts) {
+      console.warn(
+        `[uni-devtools-agent] 连续 ${reconnectAttempt} 次连不上 DevTools 服务（${endpoint}），已停止重连`,
       )
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null
-        connect()
-      }, backoff)
+      return
     }
+    if (reconnectAttempt === 0)
+      console.warn(
+        `[uni-devtools-agent] 连不上 DevTools 服务（${endpoint}），正在重连`,
+      )
+
+    reconnectAttempt++
+    if (onReconnect) {
+      onReconnect(reconnectAttempt)
+    }
+    const backoff = Math.min(
+      initialBackoffMs * 1.5 ** (reconnectAttempt - 1),
+      maxBackoffMs,
+    )
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null
+      connect()
+    }, backoff)
   }
 
   // 初始连接

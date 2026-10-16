@@ -127,3 +127,10 @@ export const DEVFRAME_INTERNAL_RPC = {
   /** 探针 Storage 写操作通知的 node 侧 handler（作废 Storage 元数据缓存） */
   notifyStorageChanged: 'notify-storage-changed',
 } as const
+
+/**
+ * node 侧拒绝探针时使用的 WebSocket 关闭码：探针带的 token 不是本次服务签发的
+ * （node 服务重启过，旧编译产物里的 token 已失效）。探针收到后不再重连——重连
+ * 也过不了鉴权，只会反复被拒。4000–4999 是 WebSocket 留给应用自定义的区间。
+ */
+export const AGENT_UNAUTHORIZED_CLOSE_CODE = 4401
