@@ -105,6 +105,34 @@ describe('entry-inject: transformAgentEntry 纯函数', () => {
     expect(result!.code).toBe(`${AGENT_IMPORT_LINE}${source}`)
   })
 
+  it('注入的 initAgent 调用拿到虚拟模块提供的探针配置（wsUrl / token）', () => {
+    const result = transformAgentEntry('', '/project/src/main.ts')!
+    const body = parseWithAcorn(result.code).body
+    const localNameOf = (source: string, imported: string) =>
+      body
+        .find(
+          (n: any) =>
+            n.type === 'ImportDeclaration' && n.source.value === source,
+        )
+        ?.specifiers.find((s: any) => s.imported?.name === imported)?.local.name
+    const initAgentName = localNameOf(
+      '@uni-helper/devtools-probes/vue3',
+      'initAgent',
+    )
+    const configName = localNameOf('virtual:uni-devtools-agent', 'config')
+
+    const initCall = body.find(
+      (n: any) =>
+        n.type === 'ExpressionStatement' &&
+        n.expression.type === 'CallExpression' &&
+        n.expression.callee.name === initAgentName,
+    )
+    expect(configName).toBeDefined()
+    expect(initCall.expression.arguments.map((a: any) => a.name)).toEqual([
+      configName,
+    ])
+  })
+
   it('产出 source map：注入的行不映射，原第 1 行映射回源码第 1 行', () => {
     const source = 'const app = createApp(App);'
     const result = transformAgentEntry(source, '/project/src/main.ts')!

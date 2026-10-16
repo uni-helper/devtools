@@ -16,7 +16,15 @@ import {
 } from './instrument.ts'
 
 export const AGENT_IMPORT_MARKER = '__UNI_DEVTOOLS_AGENT_INJECTED__'
-export const AGENT_IMPORT_LINE = `/* ${AGENT_IMPORT_MARKER} */\nimport { initAgent } from '@uni-helper/devtools-probes/vue3';\ninitAgent();\n`
+// 探针自身不导入虚拟模块（它只在构建期可解析），配置必须由注入代码显式传入，
+// 与 webpack 侧 entry-loader 的 initAgent(config) 对齐
+export const AGENT_IMPORT_LINE = [
+  `/* ${AGENT_IMPORT_MARKER} */`,
+  `import { initAgent } from '@uni-helper/devtools-probes/vue3';`,
+  `import { config as __uniDevtoolsConfig } from 'virtual:uni-devtools-agent';`,
+  `initAgent(__uniDevtoolsConfig);`,
+  '',
+].join('\n')
 
 export interface ShouldInjectAgentEntryOptions {
   query?: string

@@ -3,7 +3,7 @@
  * 运行在小程序 / App 等受检沙箱环境
  * 契约：
  * - 探针 RPC 客户端：createRpcClient(functions, { channel })
- * - 虚拟模块：import { config } from 'virtual:uni-devtools-agent'
+ * - 配置：由 Vite 插件注入的入口代码从 virtual:uni-devtools-agent 读出后传给 initAgent(config)
  * - 导出函数名：'uni-devtools:agent:getComponentTree', 'uni-devtools:agent:ping'
  * - 变更推送：主动采集树快照并调用 'uni-helper-devtools:push-component-tree'
  * （浏览器全局禁用由 eslint no-restricted-globals 执法）
