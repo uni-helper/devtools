@@ -1,8 +1,7 @@
 /**
  * 小程序导航执行模块（探针内部模块）。
  *
- * 独立成模块的原因与 push.ts 相同：探针入口 index.ts 依赖
- * virtual:uni-devtools-agent（仅构建期可解析），无法被 vitest 直接导入；
+ * 独立成模块的原因与 push.ts 相同：不把整条 socket/rpc 链拖进依赖闭包；
  * 「同页导航改 redirect 防叠栈」是行为语义，必须有单测覆盖——语法检查与
  * e2e（stub 掉整个 navigate handler）都测不出这里写错。
  */

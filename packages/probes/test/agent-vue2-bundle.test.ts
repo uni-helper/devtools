@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
  * `dist/agent-vue2.js` 运行时冒烟——直接跑**构建产物**，而不是源码。
  *
  * 其余单测全部 import 源码，覆盖不到打包这一层：esbuild 的 external 处理、
- * `virtual:uni-devtools-agent` 的解析、以及产物里 Vue 3 方法是否真的被剔干净，
+ * 以及产物里 Vue 3 方法是否真的被剔干净，
  * 只有加载真实 bundle 才能验证。这正是 Vue 2 线的交付物（webpack 消费的是它）。
  *
  * `pnpm test` 会先跑 `build:agent-vue2` 产出文件；直接跑 vitest 且产物缺失时整组跳过（不伪装通过）。

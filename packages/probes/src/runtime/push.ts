@@ -2,9 +2,8 @@
  * 组件树推送调度（探针内部模块）。
  *
  * 独立成模块的原因：编译期插桩注入的 render-hook 只依赖「调度推送」这一个
- * 能力——若直接依赖探针入口 index.ts，会把 virtual:uni-devtools-agent（仅构建
- * 期可解析）与整个 socket/rpc 链拖进依赖闭包，也使 render-hook 无法脱离完整
- * 探针被单测。
+ * 能力——若直接依赖探针入口 index.ts，会把整个 socket/rpc 链拖进依赖闭包，
+ * 也使 render-hook 无法脱离完整探针被单测。
  */
 import { NODE_RPC } from '@uni-helper/devtools-shared'
 import type { ComponentTreeResult } from '@uni-helper/devtools-shared'
