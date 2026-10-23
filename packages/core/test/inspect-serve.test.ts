@@ -4,20 +4,30 @@ import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
   INSPECT_MOUNT_PATH,
-  INSPECT_OUTPUT_DIR,
   createInspectApp,
   isInspectAvailable,
+  resolveInspectOutputDir,
 } from '../src/inspect-serve.ts'
 
 describe('inspect-serve: vite inspect 静态托管（devframe mountStaticHandler 接线）', () => {
-  it('挂载前缀与落盘目录约定符合冻结契约', () => {
+  it('挂载前缀符合冻结契约', () => {
     expect(INSPECT_MOUNT_PATH).toBe('/__uni-devtools/inspect')
-    expect(INSPECT_OUTPUT_DIR).toContain('.uni-devtools')
-    expect(INSPECT_OUTPUT_DIR.endsWith('.inspect')).toBe(true)
   })
 
-  it('isInspectAvailable 返回布尔（真 tmpdir 状态由 sidecar 冒烟覆盖）', () => {
-    expect(typeof isInspectAvailable()).toBe('boolean')
+  it('报告落在各自工程目录下：两个工程不会读到对方的报告', () => {
+    const a = resolveInspectOutputDir('/work/app-a')
+    const b = resolveInspectOutputDir('/work/app-b')
+    expect(a).toBe(
+      join('/work/app-a', 'node_modules', '.uni-devtools', 'inspect'),
+    )
+    expect(a).not.toBe(b)
+  })
+
+  it('报告目录里有 index.html 才算可用', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'uni-devtools-inspect-avail-'))
+    expect(isInspectAvailable(dir)).toBe(false)
+    writeFileSync(join(dir, 'index.html'), '')
+    expect(isInspectAvailable(dir)).toBe(true)
   })
 })
 

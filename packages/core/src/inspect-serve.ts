@@ -13,22 +13,30 @@
 import { Buffer } from 'node:buffer'
 import { timingSafeEqual } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { H3, getCookie, setCookie } from 'h3'
 import { mountStaticHandler } from 'devframe/utils/serve-static'
+import { getProjectRoot } from './project-root.ts'
 
 /** 面板 iframe 与 sidecar 静态路由的挂载前缀（plugin.ts 的 BASE 之下） */
 export const INSPECT_MOUNT_PATH = '/__uni-devtools/inspect'
 
-/** vite-plugin-inspect 的落盘目录（沿用旧插件 DIR_TMP_INSPECT 约定） */
-export const INSPECT_OUTPUT_DIR = join(tmpdir(), '.uni-devtools', '.inspect')
+/**
+ * vite-plugin-inspect 的落盘目录：放在当前工程的 node_modules 下。
+ *
+ * 不能放系统临时目录：那是全机共享的——同时开两个工程会互相覆盖报告，面板
+ * 显示的是另一个工程转换后的源码；上一个工程留下的报告也会让 inspect tab
+ * 误判为可用。Vite 插件写、sidecar 读，两边在同一进程里按同一套环境变量解析。
+ */
+export function resolveInspectOutputDir(root = getProjectRoot()): string {
+  return join(root, 'node_modules', '.uni-devtools', 'inspect')
+}
 
 /**
  * inspect 报告是否已产出（首次 buildEnd 之前为 false，面板据此隐藏 tab）。
  */
-export function isInspectAvailable(): boolean {
-  return existsSync(join(INSPECT_OUTPUT_DIR, 'index.html'))
+export function isInspectAvailable(dir = resolveInspectOutputDir()): boolean {
+  return existsSync(join(dir, 'index.html'))
 }
 
 /** 面板带 token 打开 inspect 后换发的 cookie，供 iframe 内后续的报告请求使用 */
@@ -44,7 +52,7 @@ function tokenMatches(candidate: string | undefined, token: string): boolean {
 export interface InspectAppOptions {
   /** 面板 token（devframe_auth_token）：读 inspect 报告必须持有它 */
   token: string
-  /** 报告目录，默认 {@link INSPECT_OUTPUT_DIR} */
+  /** 报告目录，默认 {@link resolveInspectOutputDir} */
   dir?: string
 }
 
@@ -58,7 +66,7 @@ export interface InspectAppOptions {
  */
 export function createInspectApp({
   token,
-  dir = INSPECT_OUTPUT_DIR,
+  dir = resolveInspectOutputDir(),
 }: InspectAppOptions): H3 {
   const app = new H3()
   app.use((event) => {

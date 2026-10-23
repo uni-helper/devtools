@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import type { Alias, Plugin, ResolvedConfig } from 'vite'
 import Inspect from 'vite-plugin-inspect'
 import { AGENT_CLIENT_MARKER } from '@uni-helper/devtools-core/relay'
-import { INSPECT_OUTPUT_DIR } from '@uni-helper/devtools-core/inspect-serve'
+import { resolveInspectOutputDir } from '@uni-helper/devtools-core/inspect-serve'
 import { startUniDevtoolsServer } from '@uni-helper/devtools-core/sidecar'
 import { transformAgentEntry, transformInstrument } from './entry-inject.ts'
 
@@ -189,9 +189,14 @@ export function UniDevtoolsPlugin(
     instrumentPlugin,
     // Vite Inspect：build 模式（mp dev = vite build --watch 没有 dev server，
     // 中间件模式不可用）——每个 watch rebuild 在 buildEnd 全量重写报告 +
-    // 自带 client UI 到 INSPECT_OUTPUT_DIR，sidecar 静态托管给面板 iframe
+    // 自带 client UI 到工程内的 inspect 目录，sidecar 静态托管给面板 iframe
     ...(isDev
-      ? [Inspect({ build: true, outputDir: INSPECT_OUTPUT_DIR }) as Plugin]
+      ? [
+          Inspect({
+            build: true,
+            outputDir: resolveInspectOutputDir(),
+          }) as Plugin,
+        ]
       : []),
   ]
 }

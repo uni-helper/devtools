@@ -1,7 +1,7 @@
 import process from 'node:process'
 import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, isAbsolute, relative, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineDevframe, defineRpcFunction } from 'devframe'
 import { launchEditor } from 'devframe/utils/launch-editor'
@@ -32,6 +32,7 @@ import type {
 } from '@uni-helper/devtools-shared'
 import type { AgentRegistry, AgentSessionLike } from './relay.ts'
 import { isInspectAvailable } from './inspect-serve.ts'
+import { getProjectRoot, isInsideProjectRoot } from './project-root.ts'
 import { AGENT_RPC } from './rpc-names.ts'
 import { type Schema, s } from './schema.ts'
 import {
@@ -43,6 +44,8 @@ import {
 
 /** 与探针 MAX_NETWORK_RING、adapter 的合并上限保持一致 */
 const MAX_NETWORK_RECORDS = 500
+
+export { getProjectRoot, isInsideProjectRoot }
 
 export interface CreateUniDevtoolsDevframeOptions {
   /**
@@ -119,32 +122,6 @@ function getPackageMeta(): { name: string; version: string } {
       version: '0.0.1',
     }
   }
-}
-
-export function getProjectRoot(): string {
-  if (process.env.UNI_CLI_CONTEXT) {
-    return resolve(process.env.UNI_CLI_CONTEXT)
-  }
-  if (process.env.UNI_INPUT_DIR) {
-    const inputDir = resolve(process.env.UNI_INPUT_DIR)
-    const parent = resolve(inputDir, '..')
-    if (
-      existsSync(resolve(parent, 'package.json')) ||
-      resolve(parent, 'src') === inputDir
-    ) {
-      return parent
-    }
-    return inputDir
-  }
-  return process.cwd()
-}
-
-export function isInsideProjectRoot(
-  targetPath: string,
-  root = getProjectRoot(),
-): boolean {
-  const rel = relative(root, targetPath)
-  return !rel.startsWith('..') && !isAbsolute(rel)
 }
 
 export function parsePagesJsonRoutes(

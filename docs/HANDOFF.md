@@ -151,8 +151,8 @@ sectionId），适配器翻译回 `update-pinia-state`；pinia inspector 隐藏 
 （官方 CustomInspectorPanel 改点 8）。
 
 **Vite Inspect（W11）**：devframe 插件管线挂 `vite-plugin-inspect@^0.8.8`
-（`build: true`，`outputDir` = `os.tmpdir()/.uni-devtools/.inspect`，**沿用旧插件
-DIR_TMP_INSPECT 约定**；mp dev 无 dev server，中间件模式不可用，build 模式每个
+（`build: true`，`outputDir` = `<工程根>/node_modules/.uni-devtools/inspect`——原先
+沿用旧插件 DIR_TMP_INSPECT 约定放在 `os.tmpdir()`，全机共享导致多工程互相覆盖，已改为按工程隔离；mp dev 无 dev server，中间件模式不可用，build 模式每个
 watch rebuild 在 buildEnd 全量重写报告 + 自带 client UI）。**打包方式**：esbuild
 `--alias` 指到 `packages/plugin/node_modules/vite-plugin-inspect/dist/index.mjs`
 （ESM 构建文件；避免给 devframe 加运行时依赖触发 §8-24 漂移）+ banner 垫片
