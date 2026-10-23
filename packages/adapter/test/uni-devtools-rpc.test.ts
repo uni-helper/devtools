@@ -244,6 +244,32 @@ describe('协议语义（注入脚本化数据源，无需 mock devframe/client�
     client.dispose()
   })
 
+  it('inspectors:editState 成功后发出的失效事件不带 appId（面板按 appId 过滤，store 不属于任何页面）', async () => {
+    const be = createScriptedBackend()
+    const client = connectUniRpcClient({ backend: be })
+    const events: Array<{ type: string; appId?: string }> = []
+    client.onEvent((event) => events.push(event))
+
+    const res = (await client.command({
+      type: 'inspectors:editState',
+      appId: 'pages/index/index',
+      payload: {
+        inspectorId: 'pinia',
+        nodeId: 'store:counter',
+        path: ['count'],
+        value: 2,
+      },
+    })) as { status: number }
+
+    expect(res.status).toBe(1)
+    const invalidated = events.find(
+      (e) => e.type === 'inspectors:stateInvalidated',
+    )
+    expect(invalidated).toBeDefined()
+    expect(invalidated!.appId).toBeUndefined()
+    client.dispose()
+  })
+
   it('Pinia 聚合根逐 store 拉取组装（_root 语义）', async () => {
     const be = createScriptedBackend()
     const client = connectUniRpcClient({ backend: be })

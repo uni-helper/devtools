@@ -360,7 +360,10 @@ export function connectUniRpcClient(
 
       // 持续监听后续连接状态变更；断开即作废（无内建重连）：清态、内部重连、
       // 成功后由 connection 层的 runtime-changed 语义触发全量刷新
+      const source = backend
       unsubConnectionStatus = backend.onConnectionStatus((status) => {
+        // 已被替换掉的旧连接迟到的状态不能作废当前连接
+        if (backend !== source) return
         if (status === 'connected') {
           emitConnection('connected')
           return
@@ -445,6 +448,9 @@ export function connectUniRpcClient(
     if (disposed || reconnectTimer) return
     reconnectTimer = setTimeout(() => {
       reconnectTimer = undefined
+      // 断线期间面板的查询可能已经经 ensureReady 发起了重连：复用它，
+      // 再起一条会让两个 backend 并存，旧的那个泄漏订阅
+      if (ready) return
       ready = initConnection()
       ready.catch(() => {})
     }, 1500)
@@ -512,9 +518,8 @@ export function connectUniRpcClient(
           noSelectionText: string
         }> = []
 
-        // 检测 Pinia 是否可用（尝试调用 getPiniaStores）
-        // 注意：Vue 2 探针不注册 getPiniaStores，devframe 会 catch 并返回空数组
-        // 所以需要检查 stores 数组是否非空
+        // 检测 Pinia 是否可用（尝试调用 getPiniaStores）：Vue 2 探针不注册该方法，
+        // node 侧如实抛错（这里 catch 成 null）；Vue 3 没装 Pinia 时返回空数组
         const piniaResult = await callUni<{ stores: any[] }>(
           DEVFRAME_RPC.getPiniaStores,
         ).catch(() => null)
@@ -534,8 +539,8 @@ export function connectUniRpcClient(
           })
         }
 
-        // 检测 Vuex 是否可用（尝试调用 getVuexStores）
-        // 同样需要检查返回的数组是否非空
+        // 检测 Vuex 是否可用：Vue 3 探针不注册 getVuexStores（抛错 → null），
+        // Vue 2 没装 Vuex 时返回空数组
         const vuexResult = await callUni<any[]>(
           DEVFRAME_RPC.getVuexStores,
         ).catch(() => null)
@@ -947,7 +952,6 @@ export function connectUniRpcClient(
             type: 'inspectors:stateInvalidated',
             inspectorId: 'pinia',
             nodeId: targetNodeId,
-            appId: '0',
           })
           return { status: 1 }
         }
@@ -1006,7 +1010,6 @@ export function connectUniRpcClient(
             type: 'inspectors:stateInvalidated',
             inspectorId: 'vuex',
             nodeId: targetNodeId,
-            appId: '0',
           })
           return { status: 1 }
         }

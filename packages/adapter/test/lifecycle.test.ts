@@ -96,6 +96,23 @@ describe('dispose 竞态（评审 P0-1 / P1-4）', () => {
     client.dispose()
   })
 
+  it('断线后面板查询已发起重连时，重连定时器不再并发起第二条连接', async () => {
+    const be = scriptedLifecycleBackend({ connect: 'fail' })
+    const client = connectUniRpcClient({ backend: be.backend })
+    await vi.advanceTimersByTimeAsync(10) // 首连失败 → 1.5s 重连定时器
+    expect(be.connect).toHaveBeenCalledTimes(1)
+
+    // 定时器到期前面板查询触发重连，这次连接挂起（服务端还在重启）
+    be.connect.mockImplementation(() => new Promise(() => {}))
+    void client.query({ type: 'apps:snapshot' }).catch(() => {})
+    await vi.advanceTimersByTimeAsync(10)
+    expect(be.connect).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(be.connect).toHaveBeenCalledTimes(2)
+    client.dispose()
+  })
+
   it('MockBackend dispose 后心跳停止且幂等', async () => {
     const be = createMockBackend({ networkTickInterval: 10 })
     const pushes: unknown[] = []
