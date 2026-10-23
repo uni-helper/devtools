@@ -15,6 +15,7 @@
 import { AGENT_RPC_VUE3 } from '@uni-helper/devtools-shared'
 import type { AgentConfig, AgentInstance } from '../runtime/lifecycle.ts'
 import { resolveAdapter } from '../adapter/resolve.ts'
+import { ensureVueDevtoolsHook } from '../runtime/devtools-hook.ts'
 import { createBaseRpcFunctions } from '../runtime/rpc-base.ts'
 import { setVueRuntime } from '../runtime/serialize.ts'
 import {
@@ -35,6 +36,10 @@ import { recomputeComponentState } from '../runtime/state.ts'
 
 export function initAgent(customConfig?: Partial<AgentConfig>): AgentInstance {
   try {
+    // 0. 抢在用户 main 里的 createSSRApp 之前装好 DevTools 钩子：运行时只在
+    //    createApp 时读一次，晚了组件事件就全部丢失（见 devtools-hook.ts）
+    ensureVueDevtoolsHook()
+
     // 1. 解析 Adapter（自动检测平台）
     const adapter = resolveAdapter()
 

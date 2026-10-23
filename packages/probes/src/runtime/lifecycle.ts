@@ -26,8 +26,11 @@ import {
   cancelScheduledRenderNotify,
   pushComponentTreeNow,
   resetPushGate,
+  scheduleNotifyComponentRendered,
   schedulePushComponentTree,
 } from './push.ts'
+import { getVueDevtoolsHook } from './devtools-hook.ts'
+import { getComponentIdOfInstance } from './tree.ts'
 import {
   cancelScheduledNetworkPush,
   installNetworkInterceptors,
@@ -61,6 +64,26 @@ let activeAgentInstance: AgentInstance | null = null
 
 /** 进程级全局事件钩子是否已安装（只安装一次，永不重置，见文件头说明） */
 let processGlobalHooksInstalled = false
+
+/**
+ * 收到过组件事件 = 运行时的事件通道是通的，组件树的增删改都会有事件，快照轮询
+ * 就不必再跑。旧版运行时把事件裁掉、或 Vue 2 线时它恒为 false，轮询照常兜底。
+ * 进程级，与钩子订阅同生命周期。
+ */
+let componentEventsObserved = false
+
+/**
+ * 首次收到组件事件时打一行日志：事件通道是否接通只在运行时才知道（各家小程序
+ * 运行时的全局对象不同），控制台也未必看得到模块内的 globalThis，这行日志是
+ * 现场确认「已切换为事件驱动」的唯一直接证据。
+ */
+function markComponentEventsObserved(): void {
+  if (componentEventsObserved) return
+  componentEventsObserved = true
+  console.log(
+    '[uni-devtools-agent] 已接收到 Vue 组件事件：组件树改为事件驱动推送，停止快照轮询',
+  )
+}
 
 /**
  * 安装进程级全局事件钩子
@@ -107,14 +130,30 @@ function ensureProcessGlobalHooks(): void {
     }
   } catch {}
 
-  // Vue DevTools 全局钩子接入（组件 mount/update 时触发）
+  // Vue DevTools 全局钩子：Vue 3 入口在 createApp 之前已装好（devtools-hook.ts），
+  // Vue 2 线没有逐组件事件，这里拿不到钩子，继续靠快照轮询
   try {
-    const globalObj = globalThis as any
-    const existingHook = globalObj.__VUE_DEVTOOLS_GLOBAL_HOOK__
-    if (existingHook && typeof existingHook.on === 'function') {
-      existingHook.on('component:added', () => schedulePushComponentTree(300))
-      existingHook.on('component:updated', () => schedulePushComponentTree(300))
-      existingHook.on('component:removed', () => schedulePushComponentTree(300))
+    const hook = getVueDevtoolsHook()
+    if (hook) {
+      hook.on('component:added', () => {
+        markComponentEventsObserved()
+        schedulePushComponentTree(300)
+      })
+      hook.on('component:updated', (...args: any[]) => {
+        markComponentEventsObserved()
+        schedulePushComponentTree(300)
+        // 参数为 (app, uid, parentUid, instance)。值变了树推送过不了内容门，
+        // 要单独上报重渲染，面板才知道去重拉状态
+        const instance = args[3]
+        scheduleNotifyComponentRendered(
+          getComponentIdOfInstance(instance) ??
+            getComponentIdOfInstance(instance?.proxy),
+        )
+      })
+      hook.on('component:removed', () => {
+        markComponentEventsObserved()
+        schedulePushComponentTree(300)
+      })
     }
   } catch {}
 }
@@ -122,8 +161,9 @@ function ensureProcessGlobalHooks(): void {
 /**
  * 实例级快照轮询定时器（随 Agent 实例生命周期启停）
  *
- * 快照轮询是兜底机制：uni 的 mp 构建里 __VUE_DEVTOOLS_GLOBAL_HOOK__ 通常不存在，
- * 「小程序里改 data」没有任何事件可听——这恰恰是用户最高频的场景。
+ * 快照轮询只是兜底：组件事件通道不通时（Vue 2 线、裁掉了 devtools 事件的运行时），
+ * 组件增删与「小程序里改 data」就没有事件可听。事件通道一旦通了（见
+ * componentEventsObserved），每轮直接跳过，不再在逻辑层线程上全量采集组件树。
  *
  * 开销控制：未连上 node 时整轮跳过（不采集组件树，避免在没人看的时候占用逻辑层
  * 线程）；连上时直接走 pushComponentTreeNow——它只采集、序列化一次，并用同一份
@@ -137,6 +177,7 @@ function startSnapshotPolling(): void {
   }
 
   snapshotPollingTimer = setInterval(() => {
+    if (componentEventsObserved) return
     if (!activeAgentInstance?.socketHandle.isConnected()) return
     pushComponentTreeNow().catch(() => {})
   }, 2000)

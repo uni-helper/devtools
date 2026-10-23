@@ -18,21 +18,34 @@ interface PushDeps {
 
 let deps: PushDeps | null = null
 let pushTimer: any = null
+/** 本轮连续触发的起点：防抖最多顺延到这之后 PUSH_MAX_WAIT_MS */
+let pushBurstStartedAt = 0
+
+/**
+ * 防抖的最长等待。组件事件与渲染钩子每次渲染都会触发推送调度，持续重渲染的
+ * 页面（动画、高频计时器）若只做纯防抖，推送会被无限顺延、组件增删永远到不了
+ * 面板；封顶后这类页面最多每 2 秒采集一次，静止页面不采集。
+ */
+export const PUSH_MAX_WAIT_MS = 2000
 
 /** 探针入口 initAgent 注入实例访问器（避免循环导入） */
 export function bindPushDeps(next: PushDeps): void {
   deps = next
 }
 
-/** 带防抖的组件树快照推送触发器 */
+/** 带防抖（封顶 {@link PUSH_MAX_WAIT_MS}）的组件树快照推送触发器 */
 export function schedulePushComponentTree(delay = 300): void {
-  if (pushTimer) {
-    clearTimeout(pushTimer)
-  }
+  const now = Date.now()
+  if (pushTimer) clearTimeout(pushTimer)
+  else pushBurstStartedAt = now
+  const wait = Math.max(
+    0,
+    Math.min(delay, pushBurstStartedAt + PUSH_MAX_WAIT_MS - now),
+  )
   pushTimer = setTimeout(() => {
     pushTimer = null
     pushComponentTreeNow().catch(() => {})
-  }, delay)
+  }, wait)
 }
 
 /**
@@ -40,8 +53,8 @@ export function schedulePushComponentTree(delay = 300): void {
  *
  * 带内容比对门：渲染钩子（render-hook）让每次渲染都调度推送，持续重渲染的页面
  * （动画/倒计时）若不加门会变成 300ms 间隔的全量推送风暴——序列化成本与
- * sharedState 写放大都吃不消。与 setupChangeDetectionHooks 的 2s 轮询共用
- * 「内容没变就不推」的语义（同一把 lastPushedTreeJson 锁，两路互不重复推）。
+ * sharedState 写放大都吃不消。组件事件、渲染钩子、兜底轮询几路触发共用这把
+ * lastPushedTreeJson 锁，内容没变就不推，互不重复。
  */
 let lastPushedTreeJson = ''
 

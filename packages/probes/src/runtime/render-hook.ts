@@ -1,10 +1,11 @@
 /**
  * 渲染钩子（编译期插桩的运行时半边，instrument.ts 注入 `__uniDevtoolsNotifyRender`）。
  *
- * mp 构建没有 __VUE_DEVTOOLS_GLOBAL_HOOK__，「数据变了」唯一可靠信号就是
- * 组件真的重新渲染了。编译期把每个组件的 render 函数包一层：每次渲染调度一次
- * 树推送（防抖合并），组件树/状态在用户改 data 后 ~debounce 内到达面板，
- * 替代 2s 快照比对轮询的高延迟路径（轮询保留作非渲染变更的兜底）。
+ * 「数据变了」最可靠的信号是组件真的重新渲染了。编译期把每个组件的 render 函数
+ * 包一层：每次渲染调度一次树推送（防抖合并），组件树/状态在用户改 data 后
+ * ~debounce 内到达面板。Vue 3 线另有 DevTools 钩子的 component:updated 事件
+ * （devtools-hook.ts）发同样的信号，两路经防抖与 Set 去重合并；本钩子是不依赖
+ * 运行时事件的那一路。
  *
  * 约束：包装函数保持 length 2（uni mp render 约定 (_ctx, _cache)，运行时对
  * 函数式组件有 render2.length > 1 分支判定）；非函数输入原样放行，绝不炸渲染。
