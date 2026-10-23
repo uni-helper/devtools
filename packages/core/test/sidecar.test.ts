@@ -61,6 +61,23 @@ describe('sidecar: sidecar 启动收敛与参数解析', () => {
 
     if (server.close) await server.close()
   })
+
+  it('启动完成前调用 close：端口不残留监听，也不再宣告地址', async () => {
+    const port = 31000 + Math.floor(Math.random() * 1000)
+    let announced = false
+    const server = startUniDevtoolsServer({
+      port,
+      onStarted: () => {
+        announced = true
+      },
+    })
+
+    await server.close?.()
+
+    expect(await server.ready).toBeNull()
+    expect(announced).toBe(false)
+    await expect(fetch(`http://127.0.0.1:${port}${BASE}`)).rejects.toThrow()
+  })
 })
 
 describe('sidecar: MCP 路由只对本机进程开放', () => {
@@ -93,6 +110,17 @@ describe('sidecar: MCP 路由只对本机进程开放', () => {
   it('外部网页借 DNS rebinding 打到本机的请求被拒', () => {
     expect(
       isLocalMcpRequest(requestFrom('127.0.0.1', 'http://evil.example')),
+    ).toBe(false)
+  })
+
+  it('以 127. 开头的外部域名（可 rebinding 到本机）不算本机源', () => {
+    expect(
+      isLocalMcpRequest(requestFrom('127.0.0.1', 'http://127.evil.example')),
+    ).toBe(false)
+    expect(
+      isLocalMcpRequest(
+        requestFrom('127.0.0.1', 'http://127.0.0.1.evil.example:9999'),
+      ),
     ).toBe(false)
   })
 

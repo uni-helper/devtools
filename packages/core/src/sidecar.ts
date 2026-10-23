@@ -4,6 +4,7 @@ import process from 'node:process'
 import { createDevServer } from 'devframe/adapters/dev'
 import { createInteractiveAuth } from 'devframe/recipes/interactive-auth'
 import { randomToken } from 'devframe/utils/crypto-token'
+import { isAllowedOrigin, isLoopbackAddress } from 'devframe/utils/origin'
 import { AgentRegistry } from './relay.ts'
 import { createUniDevtoolsDevframe, resolveClientAssets } from './devframe.ts'
 import { createInspectApp } from './inspect-serve.ts'
@@ -30,34 +31,19 @@ export function resolveAdvertisedHost(): string {
   return 'localhost'
 }
 
-function isLoopbackAddress(ip: string): boolean {
-  return ip === '::1' || /^(?:::ffff:)?127\./.test(ip)
-}
-
-function isLoopbackOrigin(origin: string): boolean {
-  try {
-    const { hostname } = new URL(origin)
-    return (
-      hostname === 'localhost' ||
-      hostname === '[::1]' ||
-      hostname.startsWith('127.')
-    )
-  } catch {
-    return false
-  }
-}
-
 /**
  * MCP 路由的准入：只认本机进程。
  *
- * agentic 默认的 origin 门禁拒绝一切不带 Origin 的请求，而 MCP 官方 SDK 的 HTTP
- * 客户端（Claude Code、Cursor 等）跑在 node 里、默认不发 Origin——按默认配置全被
- * 403。这里关掉默认门禁自己判：对端必须是 loopback（srvx 的 `ip` 取自 socket，
+ * MCP 官方 SDK 的 HTTP 客户端（Claude Code、Cursor 等）跑在 node 里、默认不发
+ * Origin，这里关掉默认门禁自己判：对端必须是 loopback（srvx 的 `ip` 取自 socket，
  * 客户端伪造不了）；带 Origin 的是浏览器，Origin 还必须是本机源，挡住 DNS rebinding。
+ *
+ * 判定用 devframe 的 `isAllowedOrigin` / `isLoopbackAddress`，不要自写前缀匹配：
+ * `startsWith('127.')` 会放行 `127.attacker.example` 这类可 rebinding 到本机的域名。
  */
 export function isLocalMcpRequest(request: Request): boolean {
-  const origin = request.headers.get('origin')
-  if (origin !== null && !isLoopbackOrigin(origin)) return false
+  const origin = request.headers.get('origin') ?? undefined
+  if (!isAllowedOrigin(origin, [])) return false
   const ip = (request as { ip?: string }).ip
   return ip !== undefined && isLoopbackAddress(ip)
 }
@@ -86,8 +72,10 @@ export function createDevServerOptions(registry: AgentRegistry, token: string) {
     app: createInspectApp({ token }),
     mcp: resolveMcpSetting(),
     openBrowser: false,
-    // 小程序 connectSocket 不发 Origin 头，默认 loopback-only 检查会拒绝升级；
-    // token 鉴权仍守门
+    // 不按 Origin 拦 WebSocket 升级：各家小程序运行时（开发者工具模拟器、真机、
+    // 浏览器内模拟器）的 connectSocket 带什么 Origin 不统一，白名单维护不住。
+    // 守门的是 token：没带 token 的会话连得上，但调不了任何 RPC，也不会被
+    // AgentRegistry 认作探针（见 relay.ts 的 connect / discoverByPing）
     allowedOrigins: false as const,
     // auth 的函数形态（(ctx) => handler）在类型上未声明，但 dev 适配器与
     // instance-shell 的 resolveAuth 运行时均支持，用 as any 绕过类型
@@ -141,6 +129,7 @@ export function startUniDevtoolsServer(
 
   /* eslint-disable no-console */
   let serverHandle: { close: () => Promise<void> } | null = null
+  let closeRequested = false
 
   // 「绑定地址」与「对外地址」必须分开：
   // - 绑定必须覆盖全部接口（0.0.0.0）。只绑 LAN IP 时，MCP 路由的
@@ -157,6 +146,11 @@ export function startUniDevtoolsServer(
   })
     .then(async (started) => {
       serverHandle = started
+      // 启动途中已被 close：端口刚监听上就关掉，不再对外宣告地址
+      if (closeRequested) {
+        await started.close()
+        return null
+      }
       registry.bind(started.rpcGroup as any)
       const advertisedOrigin = `http://${advertisedHost}:${started.port}`
       const wsUrl = `${advertisedOrigin.replace(/^http/, 'ws')}${BASE}__ws`
@@ -186,7 +180,13 @@ export function startUniDevtoolsServer(
     devToken,
     ready,
     close: async () => {
-      if (serverHandle?.close) await serverHandle.close()
+      closeRequested = true
+      // 还在启动：等它起来后由 ready 链负责关闭，否则监听中的端口泄漏
+      if (!serverHandle) {
+        await ready
+        return
+      }
+      await serverHandle.close()
     },
   }
 }

@@ -215,8 +215,16 @@ export class AgentRegistry {
     if (changed) this.emitIfActiveChanged()
   }
 
-  /** ping 所有在线会话，应答者按 rpcGroup 顺序登记（末位即最新连上的） */
+  /**
+   * ping 所有在线会话，应答者按 rpcGroup 顺序登记（末位即最新连上的）。
+   *
+   * 只用于 hub 模式（没有连接钩子）。standalone 下探针一律经 `connect` 钩子在
+   * 校验 token 后登记，这里不能再兜底：rpcGroup 里还有没带 token 的会话（sidecar
+   * 对局域网开放，任意网页也能建 WebSocket），它们回应 ping 就会顶替探针——面板与
+   * MCP 的调用参数被截获、返回值被伪造。
+   */
   private async discoverByPing(): Promise<void> {
+    if (this.peerHooksActive) return
     const clients = (this.getGroup()?.clients ?? []) as AgentClient[]
     const results = await Promise.allSettled(
       clients.map((client) =>

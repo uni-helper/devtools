@@ -228,4 +228,27 @@ describe('AgentRegistry：调用语义', () => {
     expect(h.registry.active).toBe(newer)
     expect(newer.$call).toHaveBeenCalledWith('uni-devtools:agent:getRouterInfo')
   })
+
+  it('standalone 下探针离线时，未带 token 的会话回应 ping 也不能顶替探针', async () => {
+    const h = createHarness()
+    const device = createAgent()
+    h.connect(device)
+    h.disconnect(device)
+    // 任意网页 / 局域网主机建的 WebSocket：不带 token、不带探针标记，但会回应 ping
+    const intruder = createAgent(async () => ({ pages: [] }), {
+      trusted: false,
+    })
+    h.clients.push(intruder)
+    h.registry.connect(
+      { id: 99, request: { url: '/__ws' } } as any,
+      { rpc: intruder, meta: intruder.$meta } as any,
+    )
+
+    await expect(
+      h.registry.callAgent('uni-devtools:agent:getStorageEntries', {
+        keys: ['token'],
+      }),
+    ).rejects.toThrow(/No uni-devtools agent connected/)
+    expect(intruder.$call).not.toHaveBeenCalled()
+  })
 })
