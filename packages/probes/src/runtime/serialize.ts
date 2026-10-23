@@ -7,6 +7,8 @@
  * - 通过运行时传入的 Vue 实例获取 API（如果需要）
  */
 
+import { tagMap, tagSet } from '@uni-helper/devtools-shared/utils/tagged-value'
+
 // 延迟获取 Vue 运行时（由外部通过 setVueRuntime 注入）
 let vueRuntime: any = null
 
@@ -187,6 +189,23 @@ export function toSafeJsonValue(
 
     if (val instanceof Error) {
       return { name: val.name, message: val.message }
+    }
+
+    // Map / Set 的内容不在自有属性上，按普通对象遍历只剩 {}；编码成带标记的
+    // 对象，面板侧还原后按原生 Map / Set 展示（见 shared/utils/tagged-value）
+    if (val instanceof Map) {
+      return tagMap(
+        [...val.entries()].map(([key, item]) => [
+          toSafeJsonValue(key, depth + 1, seen),
+          toSafeJsonValue(item, depth + 1, seen),
+        ]),
+      )
+    }
+
+    if (val instanceof Set) {
+      return tagSet(
+        [...val].map((item) => toSafeJsonValue(item, depth + 1, seen)),
+      )
     }
 
     const out: Record<string, unknown> = {}

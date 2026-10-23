@@ -20,7 +20,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./utils/network-merge": "./src/utils/network-merge.ts",
-    "./utils/mock-flag": "./src/utils/mock-flag.ts"
+    "./utils/mock-flag": "./src/utils/mock-flag.ts",
+    "./utils/tagged-value": "./src/utils/tagged-value.ts"
   },
   "publishConfig": {
     "types": "./dist/index.d.ts",
@@ -36,12 +37,16 @@
       "./utils/mock-flag": {
         "types": "./dist/utils/mock-flag.d.ts",
         "default": "./dist/utils/mock-flag.mjs"
+      },
+      "./utils/tagged-value": {
+        "types": "./dist/utils/tagged-value.d.ts",
+        "default": "./dist/utils/tagged-value.mjs"
       }
     }
   },
   "scripts": {
     "test": "vitest run",
-    "build": "node ../../scripts/build-dts.mjs --js index=src/index.ts utils/network-merge=src/utils/network-merge.ts utils/mock-flag=src/utils/mock-flag.ts"
+    "build": "node ../../scripts/build-dts.mjs --js index=src/index.ts utils/network-merge=src/utils/network-merge.ts utils/mock-flag=src/utils/mock-flag.ts utils/tagged-value=src/utils/tagged-value.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

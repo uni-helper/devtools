@@ -11,6 +11,7 @@ import type {
   VuexStateResult,
   UpdateVuexStateParams,
 } from '@uni-helper/devtools-shared'
+import { readPathChild, writeCollectionEntry } from './collection-path.ts'
 
 declare const getApp: any
 declare const Vue: any
@@ -166,11 +167,17 @@ export function setValueByPath(
   // 遍历到倒数第二层
   for (let i = 0; i < path.length - 1; i++) {
     const key = path[i]
+    if (target instanceof Map) {
+      target = readPathChild(target, key)
+      continue
+    }
     if (!(key in target)) {
       target[key] = {}
     }
     target = target[key]
   }
+
+  if (writeCollectionEntry(target, lastKey, value, remove)) return
 
   // 删除或设置值
   if (remove) {

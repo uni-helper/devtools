@@ -45,7 +45,7 @@ const exposedRef = ref<InstanceType<typeof ExposedCounter>>()
     <PageIntro
       title="父子通信"
       :checks="[
-        'PropsShowcase 的 Props 区：Date / RegExp 显示为字符串，函数 / Symbol 显示为 <unserializable>；Map / Set 目前显示为 {}（探针序列化尚未支持）',
+        'PropsShowcase 的 Props 区：meta 显示为 Map(2)、flags 显示为 Set(2) 且能展开看到条目；Date / RegExp 为字符串，函数 / Symbol 为 <unserializable>',
         '点「count +1」「改名」：PropsShowcase 的 props 在面板里同步更新',
         'AttrsReceiver 的 Attrs 区有 id / tone / aria-label，label 只在 Props 区（data-* 在 mp 下是原生 dataset，不进 attrs）',
         'ModelInput：面板里看到 modelValue / count 两个 model；子组件改值父组件同步',

@@ -8,6 +8,7 @@ import type {
   StateEntry,
 } from '@vue/devtools-kit'
 import { encodeValue } from '@vue/devtools-kit'
+import { reviveTaggedValues } from '@uni-helper/devtools-shared/utils/tagged-value'
 
 // 形状由调用方显式给出：setup/setupOther/computed 段传探针 entry，
 // props/data/attrs（与 Pinia state/getters）传裸值时包一层 { value }——
@@ -25,7 +26,8 @@ export function toStateEntry(
       sourcePreview: entry.fnSource,
     }
   } else {
-    encodedVal = encodeValue(entry.value, {
+    // 探针把 Map / Set 编码成标记对象过 JSON，这里还原后 kit 才能按原生集合展示
+    encodedVal = encodeValue(reviveTaggedValues(entry.value), {
       maxDepth: 8,
       maxEntries: 100,
     }) as EncodedValue
@@ -119,6 +121,13 @@ export function toStateSnapshot(
   )
   if (attrsEntries.length > 0)
     sections.push({ id: 'attrs', label: 'Attrs', entries: attrsEntries })
+
+  // 官方 kit 同名分组（id 'inject'），只读
+  const injectEntries = Object.entries(result.injected ?? {}).map(
+    ([key, value]) => toStateEntry('inject', key, { value }),
+  )
+  if (injectEntries.length > 0)
+    sections.push({ id: 'inject', label: 'Injected', entries: injectEntries })
 
   // reactivityGraph 搭 state 快照的便车透传（官方 kit 协议同名字段，
   // Graph tab 从 components:stateSnapshot 响应里读图，无独立 RPC）

@@ -16,6 +16,7 @@ import {
   getSetupBindingInfo,
   readComputedSource,
 } from './serialize.ts'
+import { readPathChild, writeCollectionEntry } from './collection-path.ts'
 import { buildReactivityGraph } from './reactivity-graph.ts'
 import { getComponentDisplayName, getRegisteredInstance } from './tree.ts'
 import {
@@ -118,7 +119,54 @@ function resolveSetupSource(
 }
 
 /**
- * 遍历合并组件定义及 mixins/extends 链上的 options（仅提取 props 与 computed）
+ * 把 Options API 的 inject 选项规范成 [本地名, 注入名] 列表（与官方 kit 的
+ * normalizeInjectOptions 同语义）：数组形态两者同名；对象形态的值可以是注入名字符串，
+ * 或带 `from` 的配置对象。
+ */
+function normalizeInjectOptions(
+  inject: unknown,
+): Array<{ key: PropertyKey; from: PropertyKey }> {
+  if (Array.isArray(inject)) {
+    return inject
+      .filter((key): key is string => typeof key === 'string')
+      .map((key) => ({ key, from: key }))
+  }
+  if (!inject || typeof inject !== 'object') return []
+  return Reflect.ownKeys(inject).map((key) => {
+    const option = (inject as Record<PropertyKey, unknown>)[key]
+    if (typeof option === 'string' || typeof option === 'symbol')
+      return { key, from: option }
+    const from =
+      option && typeof option === 'object'
+        ? (option as { from?: unknown }).from
+        : undefined
+    return {
+      key,
+      from: typeof from === 'string' || typeof from === 'symbol' ? from : key,
+    }
+  })
+}
+
+/** 注入值挂在组件实例上（Vue 3 的 proxy / Vue 2 的 vm），按本地名读取 */
+function collectInjected(
+  injectOptions: unknown,
+  proxy: any,
+): Record<string, unknown> {
+  const injected: Record<string, unknown> = {}
+  for (const { key, from } of normalizeInjectOptions(injectOptions)) {
+    const label =
+      key === from ? String(key) : `${String(from)} -> ${String(key)}`
+    try {
+      injected[label] = ensureJsonSafe(proxy?.[key])
+    } catch {
+      injected[label] = '<unserializable>'
+    }
+  }
+  return injected
+}
+
+/**
+ * 遍历合并组件定义及 mixins/extends 链上的 options（仅提取 props / computed / inject）
  */
 function resolveMergedOptions(vm: any): Record<string, any> | undefined {
   const internal = getInternal(vm)
@@ -160,6 +208,18 @@ function mergeOptionGroup(to: Record<string, any>, from: any): void {
 
   if (from.computed && typeof from.computed === 'object') {
     to.computed = Object.assign(to.computed || {}, from.computed)
+  }
+  if (from.inject) {
+    // 数组形态先转成对象形态（key -> 同名注入）再合并，后定义的覆盖先定义的
+    const inject = Array.isArray(from.inject)
+      ? Object.fromEntries(
+          from.inject
+            .filter((key: unknown) => typeof key === 'string')
+            .map((key: string) => [key, key]),
+        )
+      : from.inject
+    if (inject && typeof inject === 'object')
+      to.inject = Object.assign(to.inject || {}, inject)
   }
   if (from.props) {
     to.props = to.props || {}
@@ -378,6 +438,11 @@ export function getComponentState(id: string): ComponentStateResult {
       }
     }
 
+    const injected = collectInjected(
+      mergedOptions?.inject || typeObj?.inject,
+      getProxy(vm),
+    )
+
     // Reactivity Graph：与 Setup 面板共用同一 setup 源（真 setupState 或 mp
     // 编译期捕获的闭包绑定），图数据搭 state 快照便车下发；无响应式绑定
     // 时省略字段（面板侧缺省即空图，与官方 kit 行为一致）
@@ -393,6 +458,7 @@ export function getComponentState(id: string): ComponentStateResult {
     if (Object.keys(setupOther).length > 0) result.setupOther = setupOther
     if (Object.keys(computed).length > 0) result.computed = computed
     if (Object.keys(attrs).length > 0) result.attrs = attrs
+    if (Object.keys(injected).length > 0) result.injected = injected
     if (reactivityGraph.nodes.length > 0)
       result.reactivityGraph = reactivityGraph
 
@@ -425,7 +491,7 @@ function navigateToParent(
 ): { parent: any; last: string } {
   let parent = root
   for (let i = 0; i < segments.length - 1; i++) {
-    let cur = parent[segments[i]!]
+    let cur = readPathChild(parent, segments[i]!)
     if (checkIsRef(cur)) cur = cur.value
     if (cur === null || typeof cur !== 'object') {
       const walked = segments.slice(0, i + 1).join('.')
@@ -514,7 +580,7 @@ function assignFinal(
   id: string,
 ): void {
   const { parent, last } = target
-  const current = parent[last]
+  const current = readPathChild(parent, last)
 
   if (checkIsRef(current)) {
     if (remove)
@@ -535,6 +601,8 @@ function assignFinal(
     current.value = value
     return
   }
+
+  if (writeCollectionEntry(parent, last, value, remove)) return
 
   if (remove) {
     deleteReactive(vm, parent, last)

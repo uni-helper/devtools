@@ -1,5 +1,6 @@
 import type { ComponentStateResult } from '@uni-helper/devtools-shared'
 import { describe, expect, it } from 'vitest'
+import { tagMap, tagSet } from '@uni-helper/devtools-shared/utils/tagged-value'
 import { toStateEntry, toStateSnapshot } from '../src/mapping/state.ts'
 
 describe('组件状态映射', () => {
@@ -117,5 +118,49 @@ describe('状态条目编码', () => {
 
     const without = toStateSnapshot({ id: 'c', name: 'C' }, 0)
     expect('reactivityGraph' in without).toBe(false)
+  })
+})
+
+describe('Map / Set 展示', () => {
+  it('探针传来的 Map / Set 标记还原后按原生集合编码，面板显示条目而不是空对象', () => {
+    const wireValue = JSON.parse(
+      JSON.stringify({
+        meta: tagMap([['env', 'dev']]),
+        flags: tagSet(['read']),
+      }),
+    )
+
+    const entry = toStateEntry('props', 'value', { value: wireValue })
+    const encoded = entry.value as unknown as {
+      preview: Array<{ key: string; value: { kind: string; size?: number } }>
+    }
+    const byKey = Object.fromEntries(
+      encoded.preview.map((item) => [item.key, item.value]),
+    )
+
+    expect(byKey.meta).toMatchObject({ kind: 'map', size: 1 })
+    expect(byKey.flags).toMatchObject({ kind: 'set', size: 1 })
+  })
+})
+
+describe('Injected 分区', () => {
+  it('探针的 injected 映射为官方 inject 分区，条目只读，排在 Attrs 之后', () => {
+    const snapshot = toStateSnapshot(
+      {
+        id: 'pages/index#2',
+        name: 'Consumer',
+        attrs: { id: 'x' },
+        injected: { 'themeName -> aliasedTheme': 'dark' },
+      },
+      0,
+    )
+
+    expect(snapshot.sections.map((s) => s.id)).toEqual(['attrs', 'inject'])
+    const inject = snapshot.sections.find((s) => s.id === 'inject')!
+    expect(inject.label).toBe('Injected')
+    expect(inject.entries[0]).toMatchObject({
+      key: 'themeName -> aliasedTheme',
+      editable: false,
+    })
   })
 })

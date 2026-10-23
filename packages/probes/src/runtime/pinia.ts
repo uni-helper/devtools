@@ -12,6 +12,7 @@
  * 序列化与 ref 判定复用 state.ts 的助手）。
  */
 
+import { readPathChild, writeCollectionEntry } from './collection-path.ts'
 import { checkIsRef, toSafeJsonValue } from './serialize.ts'
 
 declare const getApp: any
@@ -168,7 +169,7 @@ export function updatePiniaState(
 
   let parent = target
   for (let i = 0; i < path.length - 1; i++) {
-    let cur = parent[path[i]!]
+    let cur = readPathChild(parent, path[i]!)
     if (checkIsRef(cur)) cur = cur.value
     if (cur === null || typeof cur !== 'object')
       throw new Error(
@@ -178,13 +179,15 @@ export function updatePiniaState(
   }
   const last = path[path.length - 1]!
 
-  const current = parent[last]
+  const current = readPathChild(parent, last)
   if (checkIsRef(current)) {
     if (remove)
       throw new Error(
         `[updatePiniaState] Cannot remove ref key "${key}" on store "${id}"`,
       )
     current.value = value
+  } else if (writeCollectionEntry(parent, last, value, remove)) {
+    // Map / Set 条目已处理
   } else if (remove) {
     if (Array.isArray(parent) && /^\d+$/.test(last))
       parent.splice(Number(last), 1)

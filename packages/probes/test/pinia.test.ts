@@ -94,6 +94,18 @@ describe('updatePiniaState', () => {
     expect(store.$state.list).toEqual(['y'])
   })
 
+  it('store 里的 reactive Map：按条目改值与删除，不挂普通属性', () => {
+    const store = { $state: reactive({ lookup: new Map([['key', 'value']]) }) }
+    setupStores({ s: store })
+
+    updatePiniaState({ id: 's', path: ['lookup', 'key'], value: 'changed' })
+    expect(store.$state.lookup.get('key')).toBe('changed')
+    expect(Object.keys(store.$state.lookup)).toEqual([])
+
+    updatePiniaState({ id: 's', path: ['lookup', 'key'], remove: true })
+    expect(store.$state.lookup.size).toBe(0)
+  })
+
   it('键不存在 / 不可导航路径如实报错', () => {
     setupStores({ s: { $state: { n: 1 } } })
     expect(() => updatePiniaState({ id: 's', key: 'ghost', value: 1 })).toThrow(

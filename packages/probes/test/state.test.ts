@@ -508,3 +508,125 @@ describe('state: 组件状态面板全能力对齐官方', () => {
     })
   })
 })
+
+describe('state: Options API 的 inject 进 Injected 分区', () => {
+  beforeEach(() => clearInstanceRegistry())
+  afterEach(() => clearInstanceRegistry())
+
+  it('别名注入显示为「注入名 -> 本地名」，同名注入直接用本地名，值取自组件实例', () => {
+    const vm = {
+      $: {
+        uid: 'inject-alias',
+        type: {
+          name: 'InjectAlias',
+          inject: {
+            aliasedTheme: { from: 'themeName', default: 'light' },
+            message: 'message',
+            config: {},
+          },
+        },
+        proxy: { aliasedTheme: 'dark', message: 'hi', config: { level: 3 } },
+      },
+    }
+    extractComponentNode(vm, 0, 10, new Set(), '')
+
+    expect(getComponentState('inject-alias').injected).toEqual({
+      'themeName -> aliasedTheme': 'dark',
+      message: 'hi',
+      config: { level: 3 },
+    })
+  })
+
+  it('数组形态与 mixins 里声明的 inject 一并采集', () => {
+    const vm = {
+      $: {
+        uid: 'inject-mixin',
+        appContext: { mixins: [] },
+        type: {
+          name: 'InjectMixin',
+          inject: ['own'],
+          mixins: [{ inject: ['fromMixin'] }],
+        },
+        proxy: { own: 1, fromMixin: 2 },
+      },
+    }
+    extractComponentNode(vm, 0, 10, new Set(), '')
+
+    expect(getComponentState('inject-mixin').injected).toEqual({
+      fromMixin: 2,
+      own: 1,
+    })
+  })
+
+  it('没有 inject 选项的组件不产出 Injected 分区', () => {
+    const vm = {
+      $: { uid: 'no-inject', type: { name: 'NoInject' }, proxy: {} },
+    }
+    extractComponentNode(vm, 0, 10, new Set(), '')
+
+    expect(getComponentState('no-inject').injected).toBeUndefined()
+  })
+})
+
+describe('state: 面板编辑落在 Map / Set 上', () => {
+  beforeEach(() => clearInstanceRegistry())
+  afterEach(() => clearInstanceRegistry())
+
+  function mountWithCollections() {
+    const lookup = new Map<unknown, unknown>([
+      [1, 'one'],
+      ['env', 'dev'],
+    ])
+    const flags = new Set(['read'])
+    const vm = {
+      $: {
+        uid: 'collections',
+        type: { name: 'Collections' },
+        setupState: { lookup, flags },
+      },
+    }
+    extractComponentNode(vm, 0, 10, new Set(), '')
+    return { lookup, flags }
+  }
+
+  it('改 Map 条目走 set：数字键按字符串路径也能命中，不会给 Map 挂普通属性', () => {
+    const { lookup } = mountWithCollections()
+
+    updateComponentState({
+      id: 'collections',
+      section: 'setup',
+      path: ['lookup', '1'],
+      value: 'uno',
+    })
+
+    expect(lookup.get(1)).toBe('uno')
+    expect(Object.keys(lookup)).toEqual([])
+  })
+
+  it('删除 Map 条目走 delete', () => {
+    const { lookup } = mountWithCollections()
+
+    updateComponentState({
+      id: 'collections',
+      section: 'setup',
+      path: ['lookup', 'env'],
+      remove: true,
+    })
+
+    expect(lookup.has('env')).toBe(false)
+  })
+
+  it('按路径改 Set 元素明确报错，而不是静默写成普通属性', () => {
+    const { flags } = mountWithCollections()
+
+    expect(() =>
+      updateComponentState({
+        id: 'collections',
+        section: 'setup',
+        path: ['flags', '0'],
+        value: 'write',
+      }),
+    ).toThrow(/Set/)
+    expect([...flags]).toEqual(['read'])
+  })
+})

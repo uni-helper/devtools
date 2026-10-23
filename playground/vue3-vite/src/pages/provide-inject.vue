@@ -21,9 +21,9 @@ function toggleTheme() {
     <PageIntro
       title="Provide / Inject"
       :checks="[
-        '页面显示：两个消费组件都拿到 theme / 中间层消息，missing 取到默认值',
-        '点「切换主题」或在面板里改页面的 theme：两个消费组件同步变化',
-        '已知缺口：探针尚无 Injected 分区——InjectConsumer 的注入值只作为 Setup 绑定出现，OptionsInjectConsumer 的 inject 在面板里看不到',
+        'OptionsInjectConsumer 的 Injected 区：themeName -> aliasedTheme、middleMessage -> aliasedMessage',
+        'InjectConsumer 用的是 setup 里的 inject()：注入值作为 Setup 绑定出现（与官方一致，不进 Injected 区）',
+        '点「切换主题」：两个消费组件同步变化，面板重新选中后看到新值',
       ]"
     />
     <view class="card">

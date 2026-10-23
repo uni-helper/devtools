@@ -57,6 +57,11 @@ export interface ComponentStateResult {
   setupOther?: Record<string, ComponentStateEntry>
   computed?: Record<string, ComponentStateEntry> // Options API computed（经 proxy 求值）
   attrs?: Record<string, unknown>
+  /**
+   * Options API `inject` 选项注入的值（含 mixins / extends）。与官方 kit 一致：
+   * 别名注入的条目名为「注入名 -> 本地名」；setup 里 inject() 得到的值属于 setup 段
+   */
+  injected?: Record<string, unknown>
   /** 响应式依赖图（随 state 快照搭车下发，官方 kit ComponentStateSnapshotMessage.reactivityGraph 桥） */
   reactivityGraph?: ReactivityGraphSnapshot
 }
