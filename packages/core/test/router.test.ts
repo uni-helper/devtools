@@ -94,6 +94,6 @@ describe('getRegisteredRoutesFromFs', () => {
     expect(routes.length).toBeGreaterThanOrEqual(2)
     const paths = routes.map((r) => r.path)
     expect(paths).toContain('/pages/index')
-    expect(paths).toContain('/pages/hi')
+    expect(paths).toContain('/pages/detail')
   })
 })
