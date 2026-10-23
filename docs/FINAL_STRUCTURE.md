@@ -12,7 +12,7 @@
 packages/
 ├── shared/          # 跨端共享（协议类型、冻结契约常量、纯函数工具）
 │   ├── types.ts
-│   ├── constants.ts     # BINDINGS_PROP + AGENT_BASE_RPC(8) + AGENT_RPC_VUE3(5) + NODE_RPC
+│   ├── constants.ts     # BINDINGS_PROP + AGENT_BASE_RPC(10) + AGENT_RPC_VUE3(5) + AGENT_RPC_VUE2(3) + NODE_RPC
 │   └── utils/network-merge.ts
 │
 ├── probes/          # 小程序探针（复数，用户指定）
@@ -22,7 +22,7 @@ packages/
 │   └── socket/      # WebSocket 通道
 │
 ├── core/            # Node 核心（中继 + RPC + 定义）
-│   ├── devframe.ts  # DevframeDefinition（18 个 RPC，全部带 agent 元数据）
+│   ├── devframe.ts  # DevframeDefinition（20 个公开 RPC + ping 带 agent 元数据；4 个探针推送入口不带）
 │   ├── relay.ts     # AgentRegistry 定向调用
 │   ├── harness.ts / inspect-serve.ts
 │   ├── rpc-names.ts # 组装探针方法名全表（放 node 侧的理由见 constants.ts 注释）
@@ -39,7 +39,7 @@ packages/
 │   ├── src/index.ts
 │   └── entry-loader.cjs
 │
-├── adapter/         # 协议适配器（854 行资产）
+├── adapter/         # 协议适配器（核心资产）
 │   ├── uni-devtools-rpc.ts
 │   └── mapping/
 │
@@ -268,7 +268,7 @@ for (const component of tree.pages[0].components) {
 | --------- | ---------- | ------------- | ------------------- |
 | 探针包    | `core`     | `probe`       | 避免混淆            |
 | Node 核心 | 未明确     | `core`        | 包含 MCP 暴露       |
-| 适配器    | 未明确     | `adapter`     | 1108 行资产保护     |
+| 适配器    | 未明确     | `adapter`     | 核心资产独立保护    |
 | 面板      | `client`   | `client`      | ✅ 一致             |
 | agent 包  | "消费者"   | ❌ **不创建** | **外部通过 MCP**    |
 | 包数量    | 6+         | 8             | 补充 core + webpack |
