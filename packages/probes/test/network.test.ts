@@ -70,6 +70,30 @@ describe('network: 探针网络采集器', () => {
     vi.restoreAllMocks()
   })
 
+  describe('0. 记录是快照，不随业务对象变化', () => {
+    it('业务在回调里改写请求体与响应体，已采集的记录保持请求当时的值', () => {
+      const payload = { page: 1 }
+      requestHandler = (opts: any) => {
+        opts.success({ statusCode: 200, data: { list: [1, 2] } })
+        opts.complete({ statusCode: 200 })
+        return {}
+      }
+
+      fakeUni.request({
+        url: 'https://example.com/list',
+        data: payload,
+        success: (res: any) => {
+          res.data.list.push(3)
+          payload.page = 2
+        },
+      })
+
+      const [record] = getNetworkRecords().records
+      expect(record.requestBody).toEqual({ page: 1 })
+      expect(record.responseBody).toEqual({ list: [1, 2] })
+    })
+  })
+
   describe('1. 回调式调用与生命周期', () => {
     it('回调式 success：状态码、响应头、JSON.parse 响应体、响应大小与耗时结算', () => {
       const userSuccess = vi.fn()

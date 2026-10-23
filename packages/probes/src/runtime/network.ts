@@ -133,6 +133,20 @@ function normalizeHeaders(header: any): Record<string, string> | undefined {
   return { ...header }
 }
 
+/**
+ * 记录里存序列化快照而不是业务对象的引用：业务代码在回调里改写 data / res.data
+ * 很常见，存引用会让面板看到的是「后来被改过的值」，环形缓冲里还会一直攥着这些
+ * 大对象。已经为算体积 stringify 过一次，反解一次就得到与线上传输一致的快照。
+ */
+function snapshotJson(json: string | undefined, fallback: unknown): unknown {
+  if (json === undefined) return fallback
+  try {
+    return JSON.parse(json)
+  } catch {
+    return fallback
+  }
+}
+
 function processRequestBody(
   type: NetworkRecordType,
   options: any,
@@ -178,7 +192,7 @@ function processRequestBody(
           truncated: true,
         }
       }
-      return { body: rawBody }
+      return { body: snapshotJson(str, rawBody) }
     } catch {
       return { body: rawBody }
     }
@@ -254,7 +268,7 @@ function processResponseBody(
         }
       }
       return {
-        body: rawData,
+        body: snapshotJson(str, rawData),
         size,
       }
     } catch {
