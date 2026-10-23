@@ -1,18 +1,10 @@
 import type { InjectionKey, Ref } from 'vue'
 
-export interface UserProfile {
-  id: number
+// provide-inject 场景页用到的注入键
+export interface InjectedUser {
   name: string
-  role: string
-  skills: string[]
   level: number
-  settings: {
-    theme: 'light' | 'dark'
-    notifications: boolean
-  }
 }
 
-export const THEME_KEY: InjectionKey<Ref<'light' | 'dark'>> = Symbol('ThemeKey')
-export const USER_INFO_KEY: InjectionKey<UserProfile> = Symbol('UserInfoKey')
-export const SYMBOL_KEY: InjectionKey<string> = Symbol('DevtoolsSymbolKey')
-export const APP_CONFIG_KEY: InjectionKey<{ appName: string; version: string }> = Symbol('AppConfigKey')
+export const THEME_KEY: InjectionKey<Ref<'light' | 'dark'>> = Symbol('theme')
+export const USER_KEY: InjectionKey<InjectedUser> = Symbol('user')

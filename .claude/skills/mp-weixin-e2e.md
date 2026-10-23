@@ -34,7 +34,9 @@ node scripts/e2e.js --build --scenarios chaos --seed 20261008
 
 1. 中继快照（`get-component-tree`）无重复节点 id
 2. 中继快照节点数 === 模拟器内核按探针同款规则遍历的存活节点数（两者不一致 = 死实例泄漏或遍历规则漂移）
-3. 回到「全部组件」Tab 后组件总数恢复基线、TestComp 恒为 1
+3. 复位后组件总数恢复基线、TreeGroup 恒为 1
+
+所有场景都在 playground 的 `/pages/component-tree` 上跑（脚本先 reLaunch 过去）。该页的操作按钮以 `v-for` + 字符串 key 渲染，key（`hide-group` / `show-group` / `add-row` / `remove-row` / `panel-a|b|c` / `reset`）就是脚本与页面之间的契约，改 key 要同步改 `scripts/e2e.js`。
 
 注意：内核 `$children` 链上的**死实例滞留是预期行为**（uni-mp-vue 卸载从不清链，脚本输出 `kernelChain`/`deadInChain` 仅作信息），探针负责过滤——不要把 raw 链的 dead>0 当作失败。
 
@@ -90,20 +92,20 @@ console.log('Connected to:', page.path)
 Mini-program compiles `bindtap="handleName"` into `vm.$.ctx.$scope.eX_NAME.value()`（真正的处理函数挂在 invoker 的 `.value` 上；直接调 `scope.eX(evt)` 会因 bubbles 分支走 setTimeout 而不确定）。
 
 ```javascript
-// List available handlers（语义后缀对应 index 页 Tab id）
+// List available handlers（语义后缀 = 按钮 v-for 的 key）
 const handlers = await miniProgram.evaluate(() => {
   const scope = getCurrentPages()[0].$vm.$.ctx.$scope
   return Object.keys(scope).filter((k) => /^e\d+_/.test(k))
 })
 
-// Trigger: switch to LEGACY tab
+// Trigger: hide the TreeGroup subtree（序号以实际发现结果为准）
 await miniProgram.evaluate(() => {
-  getCurrentPages()[0].$vm.$.ctx.$scope.e8_LEGACY.value()
+  getCurrentPages()[0].$vm.$.ctx.$scope['e0_hide-group'].value()
 })
 await new Promise((resolve) => setTimeout(resolve, 500)) // Wait for render
 ```
 
-Handler 名以编译产物为准：`playground/vue3-vite/dist/dev/mp-weixin/pages/index.wxml`。
+Handler 名以编译产物为准：`playground/vue3-vite/dist/dev/mp-weixin/pages/component-tree.wxml`。
 
 ### Verify component tree
 
@@ -189,5 +191,5 @@ const tree = await scoped.rpc.call('get-component-tree')
 - `scripts/e2e.js` - 全流程自动化脚本（推荐入口）
 - `packages/probes/src/runtime/tree.ts` - Component tree traversal（死实例过滤在这里）
 - `packages/vite/src/index.ts` - Virtual module injection
-- `playground/vue3-vite/dist/dev/mp-weixin/pages/index.wxml` - Compiled template with handler names
+- `playground/vue3-vite/dist/dev/mp-weixin/pages/component-tree.wxml` - Compiled template with handler names
 - `playground/vue3-vite/dist/dev/mp-weixin/common/vendor.js` - Bundled output to verify fixes

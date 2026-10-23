@@ -9,13 +9,6 @@ export default defineUniPages({
     backgroundTextStyle: '@bgTxtStyle',
     navigationBarBackgroundColor: '#000000',
     navigationBarTextStyle: '@navTxtStyle',
-    navigationBarTitleText: 'Vitesse-Uni',
-    navigationStyle: 'custom',
+    navigationBarTitleText: 'Uni DevTools 验证场景',
   },
-  // tabBar: {
-  //   backgroundColor: "@tabBgColor",
-  //   borderStyle: "@tabBorderStyle",
-  //   color: "@tabFontColor",
-  //   selectedColor: "@tabSelectedColor",
-  // },
 })

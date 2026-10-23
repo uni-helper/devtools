@@ -10,6 +10,7 @@ declare global {
   const SYMBOL_KEY: typeof import('./utils/keys')['SYMBOL_KEY']
   const THEME_KEY: typeof import('./utils/keys')['THEME_KEY']
   const USER_INFO_KEY: typeof import('./utils/keys')['USER_INFO_KEY']
+  const USER_KEY: typeof import('./utils/keys')['USER_KEY']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const computed: typeof import('vue')['computed']
@@ -245,6 +246,7 @@ declare global {
   const usePreferredLanguages: typeof import('@vueuse/core')['usePreferredLanguages']
   const usePreferredReducedMotion: typeof import('@vueuse/core')['usePreferredReducedMotion']
   const usePrevious: typeof import('@vueuse/core')['usePrevious']
+  const useProfileStore: typeof import('./stores/profile')['useProfileStore']
   const useQuery: typeof import('./composables/useQuery')['useQuery']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
@@ -326,11 +328,9 @@ import { UnwrapRef } from 'vue'
 declare module 'vue' {
   interface GlobalComponents {}
   interface ComponentCustomProperties {
-    readonly APP_CONFIG_KEY: UnwrapRef<typeof import('./utils/keys')['APP_CONFIG_KEY']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
-    readonly SYMBOL_KEY: UnwrapRef<typeof import('./utils/keys')['SYMBOL_KEY']>
     readonly THEME_KEY: UnwrapRef<typeof import('./utils/keys')['THEME_KEY']>
-    readonly USER_INFO_KEY: UnwrapRef<typeof import('./utils/keys')['USER_INFO_KEY']>
+    readonly USER_KEY: UnwrapRef<typeof import('./utils/keys')['USER_KEY']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
@@ -483,9 +483,7 @@ declare module 'vue' {
     readonly useCloned: UnwrapRef<typeof import('@vueuse/core')['useCloned']>
     readonly useColorMode: UnwrapRef<typeof import('@vueuse/core')['useColorMode']>
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
-    readonly useCount: UnwrapRef<typeof import('./composables/useCount')['useCount']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
-    readonly useCounterStore1: UnwrapRef<typeof import('./stores/couter1')['useCounterStore1']>
     readonly useCounterStore: UnwrapRef<typeof import('./stores/counter')['useCounterStore']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVar: UnwrapRef<typeof import('@vueuse/core')['useCssVar']>
@@ -566,7 +564,7 @@ declare module 'vue' {
     readonly usePreferredLanguages: UnwrapRef<typeof import('@vueuse/core')['usePreferredLanguages']>
     readonly usePreferredReducedMotion: UnwrapRef<typeof import('@vueuse/core')['usePreferredReducedMotion']>
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
-    readonly useQuery: UnwrapRef<typeof import('./composables/useQuery')['useQuery']>
+    readonly useProfileStore: UnwrapRef<typeof import('./stores/profile')['useProfileStore']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>

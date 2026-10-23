@@ -5,7 +5,15 @@
 
 interface NavigateToOptions {
   url: "/pages/index" |
-       "/pages/hi";
+       "/pages/component-tree" |
+       "/pages/detail" |
+       "/pages/network" |
+       "/pages/options-state" |
+       "/pages/parent-child" |
+       "/pages/pinia" |
+       "/pages/provide-inject" |
+       "/pages/setup-state" |
+       "/pages/storage";
 }
 interface RedirectToOptions extends NavigateToOptions {}
 

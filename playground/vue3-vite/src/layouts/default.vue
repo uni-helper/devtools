@@ -1,9 +1,8 @@
 <template>
-  <view class="px-10 py-20 text-center">
+  <view>
     <slot />
-    <app-footer />
-    <view class="mx-auto mt-5 text-center text-sm opacity-25">
-      [Default Layout]
-    </view>
+    <navigator url="/pages/index" open-type="reLaunch" class="mt-4 block text-center text-xs text-teal-600">
+      ← 返回场景目录
+    </navigator>
   </view>
 </template>

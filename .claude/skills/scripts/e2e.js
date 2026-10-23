@@ -16,7 +16,10 @@
  *   1. 中继快照（get-component-tree）无重复节点 id
  *   2. 中继快照节点数 === 模拟器内核按探针同款规则遍历的存活节点数
  *      （两者不一致 = 探针序列化与内核遍历出现偏差，正是死实例泄漏这类 bug 的信号）
- *   3. 回到「全部组件」Tab 后组件总数恢复基线值、TestComp 恒为 1
+ *   3. 复位后组件总数恢复基线值、TreeGroup 恒为 1
+ *
+ * 场景页固定为 playground 的 /pages/component-tree：操作按钮以 v-for + 字符串 key
+ * 渲染，编译后处理器名形如 e3_hide-group，脚本按 key 触发（key 见该页面的 actions）。
  *   内核 $children 链上的死实例只作信息输出——uni-mp 内核卸载从不清链，
  *   死实例滞留是内核行为，探针负责过滤，所以不算失败。
  */
@@ -58,6 +61,8 @@ const ROOT = findRepoRoot(SCRIPT_DIR) || process.cwd()
 const PLAYGROUND_REL = 'playground/vue3-vite'
 const AUTOMATOR_PORT = 9420
 const NAMESPACE = 'uni-helper-devtools'
+/** 所有场景都在这个页面上跑；它的操作按钮 key 是脚本与页面之间的契约 */
+const E2E_PAGE = '/pages/component-tree'
 
 /** 微信开发者工具 CLI 候选路径（按平台），可用 --wx-cli 或 WX_DEVTOOLS_CLI 覆盖 */
 const WX_CLI_CANDIDATES = {
@@ -688,13 +693,13 @@ const SCENARIOS = {
       'baseline',
       relay,
       probe,
-      { testComp: { name: 'TestComp', count: 1 } },
+      { testComp: { name: 'TreeGroup', count: 1 } },
       ctx.baseline,
     )
   },
 
   'tab-switch': async function (ctx) {
-    await tapHandler(ctx.miniProgram, ctx.handlers, 'LEGACY')
+    await tapHandler(ctx.miniProgram, ctx.handlers, 'hide-group')
     await sleep(1200)
     const mid = await collect(ctx.miniProgram, ctx.scoped)
     const midResult = judge(
@@ -705,13 +710,13 @@ const SCENARIOS = {
       ctx.baseline,
     )
 
-    await tapHandler(ctx.miniProgram, ctx.handlers, 'ALL')
+    await tapHandler(ctx.miniProgram, ctx.handlers, 'show-group')
     const back = await collect(ctx.miniProgram, ctx.scoped)
     const backResult = judge(
       'tab-switch(切回)',
       back.relay,
       back.probe,
-      { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } },
+      { expectBaseline: true, testComp: { name: 'TreeGroup', count: 1 } },
       ctx.baseline,
     )
     return mergeResults('tab-switch', [midResult, backResult])
@@ -723,25 +728,25 @@ const SCENARIOS = {
       await tapHandler(
         ctx.miniProgram,
         ctx.handlers,
-        i % 2 === 0 ? 'LEGACY' : 'ALL',
+        i % 2 === 0 ? 'hide-group' : 'show-group',
       )
       await sleep(150)
     }
-    await tapHandler(ctx.miniProgram, ctx.handlers, 'ALL')
+    await tapHandler(ctx.miniProgram, ctx.handlers, 'reset')
     await sleep(2500)
     const { relay, probe } = await collect(ctx.miniProgram, ctx.scoped)
     return judge(
       'rapid-switch',
       relay,
       probe,
-      { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } },
+      { expectBaseline: true, testComp: { name: 'TreeGroup', count: 1 } },
       ctx.baseline,
     )
   },
 
   async navigation(ctx) {
     await ctx.miniProgram.evaluate(() =>
-      uni.navigateTo({ url: '/pages/hi?name=e2e' }),
+      uni.navigateTo({ url: '/pages/detail?id=e2e' }),
     )
     await sleep(2500)
     const pushed = await collect(ctx.miniProgram, ctx.scoped)
@@ -767,68 +772,11 @@ const SCENARIOS = {
   },
 
   async keepalive(ctx) {
-    // 尽力而为：KeepAlive 三个 Tab 按钮的处理器是子组件 scope 上的纯序号键（e0/e1/e2），
-    // 语义未知，做法是全量轮一遍——无论落在哪个 Tab，可见组件数恒定
-    const keys = await ctx.miniProgram.evaluate(() => {
-      const nameOf = (vm) => {
-        const internal = vm && (vm.$ || vm)
-        const t = internal && internal.type
-        return (t && (t.__name || t.name)) || 'Anon'
-      }
-      let target = null
-      const walk = (vm, depth, visited) => {
-        if (!vm || depth > 10 || visited.has(vm) || target) return
-        visited.add(vm)
-        if (nameOf(vm) === 'DynamicKeepAliveDemo') {
-          target = vm
-          return
-        }
-        const internal = vm.$ || vm
-        const kids = (internal.ctx && internal.ctx.$children) || []
-        for (const kid of kids) walk(kid, depth + 1, visited)
-      }
-      walk(getCurrentPages()[0].$vm, 0, new Set())
-      if (!target) return null
-      const scope = target.$.ctx.$scope || {}
-      return Object.keys(scope).filter(
-        (k) =>
-          /^e\d+$/.test(k) && scope[k] && typeof scope[k].value === 'function',
-      )
-    })
-    if (!keys || keys.length === 0)
-      return {
-        name: 'keepalive',
-        pass: true,
-        reasons: [],
-        info: { skipped: '未找到 DynamicKeepAliveDemo（页面结构变化），跳过' },
-      }
-
-    console.error(`  … KeepAlive 处理器轮换: ${keys.join(', ')}`)
+    // A/B/C 互斥切换：小程序不支持 KeepAlive，切走即卸载。轮换两圈后切回 A，
+    // 组件总数必须回到基线（被切走的 Panel 不能以死实例的形式残留）
     for (let round = 0; round < 2; round++) {
-      for (const key of keys) {
-        await ctx.miniProgram.evaluate((handlerKey) => {
-          const page = getCurrentPages()[0].$vm
-          // 子组件处理器在页面 scope 上不可见，需从组件实例出发
-          const find = (vm, depth, visited) => {
-            if (!vm || depth > 10 || visited.has(vm)) return null
-            visited.add(vm)
-            const internal = vm.$ || vm
-            if (
-              internal.ctx &&
-              internal.ctx.$scope &&
-              internal.ctx.$scope[handlerKey]
-            )
-              return internal.ctx.$scope[handlerKey]
-            const kids = (internal.ctx && internal.ctx.$children) || []
-            for (const kid of kids) {
-              const hit = find(kid, depth + 1, visited)
-              if (hit) return hit
-            }
-            return null
-          }
-          const invoker = find(page, 0, new Set())
-          if (invoker && typeof invoker.value === 'function') invoker.value()
-        }, key)
+      for (const key of ['panel-b', 'panel-c', 'panel-a']) {
+        await tapHandler(ctx.miniProgram, ctx.handlers, key)
         await sleep(600)
       }
     }
@@ -864,14 +812,14 @@ const SCENARIOS = {
       }
     }
     console.error(`  … chaos 完成（${actions} 次交互），收敛回 ALL`)
-    await tapHandler(ctx.miniProgram, ctx.handlers, 'ALL')
+    await tapHandler(ctx.miniProgram, ctx.handlers, 'reset')
     await sleep(2500)
     const { relay, probe } = await collect(ctx.miniProgram, ctx.scoped)
     return judge(
       'chaos',
       relay,
       probe,
-      { expectBaseline: true, testComp: { name: 'TestComp', count: 1 } },
+      { expectBaseline: true, testComp: { name: 'TreeGroup', count: 1 } },
       ctx.baseline,
     )
   },
@@ -930,7 +878,9 @@ async function main() {
   // 3. 中继
   const { client, scoped } = await connectRelay(baseURL, token)
 
-  // 4. 场景
+  // 4. 场景：统一从固定场景页起跑（处理器发现只看页面栈底）
+  await miniProgram.reLaunch(E2E_PAGE)
+  await sleep(2000)
   const handlers = await discoverHandlers(miniProgram)
   const ctx = { miniProgram, scoped, handlers, args, baseline: undefined }
   const requested = args.scenarios

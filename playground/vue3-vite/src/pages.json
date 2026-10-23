@@ -2,12 +2,44 @@
   "pages": [
     {
       "path": "pages/index",
-      "type": "home"
+      "type": "home",
+      "layout": false
     },
     {
-      "path": "pages/hi",
-      "type": "page",
-      "layout": "home"
+      "path": "pages/component-tree",
+      "type": "page"
+    },
+    {
+      "path": "pages/detail",
+      "type": "page"
+    },
+    {
+      "path": "pages/network",
+      "type": "page"
+    },
+    {
+      "path": "pages/options-state",
+      "type": "page"
+    },
+    {
+      "path": "pages/parent-child",
+      "type": "page"
+    },
+    {
+      "path": "pages/pinia",
+      "type": "page"
+    },
+    {
+      "path": "pages/provide-inject",
+      "type": "page"
+    },
+    {
+      "path": "pages/setup-state",
+      "type": "page"
+    },
+    {
+      "path": "pages/storage",
+      "type": "page"
     }
   ],
   "globalStyle": {
@@ -17,8 +49,7 @@
     "backgroundTextStyle": "@bgTxtStyle",
     "navigationBarBackgroundColor": "#000000",
     "navigationBarTextStyle": "@navTxtStyle",
-    "navigationBarTitleText": "Vitesse-Uni",
-    "navigationStyle": "custom"
+    "navigationBarTitleText": "Uni DevTools 验证场景"
   },
   "__esModule": true,
   "subPackages": []

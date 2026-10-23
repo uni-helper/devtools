@@ -1,39 +1,26 @@
-// stores/counter.js
-import { defineStore } from 'pinia';
+import { defineStore } from 'pinia'
 
+// Options 写法的 store。state 里放了几种难序列化的值，用来核对面板的展示
 export const useCounterStore = defineStore('counter', {
-	state: () => {
-		return {
-      count: 0,
-      name: 'counter',
-      map: new Map([['key1', 'value1']]),
-      set: new Set(['value1',123]),
-      array: [1,2,3],
-      obj: {
-        a: 1,
-        b: 2
-      },
-      fn: () => 'hello',
-      symbol: Symbol('test'),
-      bigint: 123456789012345678901234567890123456789n,
-      date: new Date(),
-      regexp: /\d+/g,
-      error: new Error('test')
-    };
-	},
+  state: () => ({
+    count: 0,
+    label: 'counter',
+    items: [1, 2, 3],
+    nested: { a: 1, b: { c: 2 } },
+    createdAt: new Date('2024-01-01T00:00:00Z'),
+    pattern: /\d+/g,
+    lookup: new Map([['key', 'value']]),
+    tags: new Set(['x', 'y']),
+    big: 12345678901234567890n,
+    token: Symbol('counter'),
+    format: (value: number) => `#${value}`,
+  }),
   getters: {
-    doubleCount: (state) => state.count * 2
+    double: state => state.count * 2,
   },
-	// 也可以这样定义
-	// state: () => ({ count: 0 })
-	actions: {
-		inc() {
-			this.count++;
-      console.log(this.count);
-		},
-    dec() {
-      this.count--;
-      console.log(this.count);
-    }
-	},
-});
+  actions: {
+    increment() {
+      this.count++
+    },
+  },
+})
