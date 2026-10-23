@@ -95,6 +95,24 @@ describe('entry-loader: webpack loader 执行', () => {
     expect(() => new Function(output)).not.toThrow()
   })
 
+  it('注入时把探针配置文件登记为依赖：重启换了 token，缓存的 main.js 产物随之失效', () => {
+    const addDependency = vi.fn()
+    const ctx = {
+      resourcePath: '/project/src/main.js',
+      resourceQuery: '',
+      callback: vi.fn(),
+      cacheable: vi.fn(),
+      addDependency,
+      query: { cliContext: '/project' },
+    }
+
+    entryLoader.call(ctx, 'const app = new Vue();', null)
+
+    expect(addDependency).toHaveBeenCalledWith(
+      '/project/node_modules/.uni-devtools/agent-config.json',
+    )
+  })
+
   it('带 query 时放行原代码', () => {
     const callback = vi.fn()
     const ctx = {

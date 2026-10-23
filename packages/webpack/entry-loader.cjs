@@ -18,14 +18,15 @@ const INJECT_MARKER = '__UNI_DEVTOOLS_AGENT_VUE2_INJECTED__'
  * @param {string} cliContext - CLI 上下文路径
  * @returns {string} 注入代码（单行，末尾不带换行）
  */
+function resolveAgentConfigPath(cliContext) {
+  const context = cliContext || process.env.UNI_CLI_CONTEXT || process.cwd()
+  return path.resolve(context, 'node_modules/.uni-devtools/agent-config.json')
+}
+
 function buildInjectCode(cliContext) {
   let configStr = 'undefined'
   try {
-    const context = cliContext || process.env.UNI_CLI_CONTEXT || process.cwd()
-    const jsonPath = path.resolve(
-      context,
-      'node_modules/.uni-devtools/agent-config.json',
-    )
+    const jsonPath = resolveAgentConfigPath(cliContext)
     if (fs.existsSync(jsonPath)) {
       const agentConfig = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'))
       if (agentConfig && agentConfig.wsUrl) {
@@ -108,6 +109,11 @@ module.exports = function (source, map) {
     (this.query && typeof this.query === 'object' && this.query.cliContext) ||
     process.env.UNI_CLI_CONTEXT ||
     process.cwd()
+
+  // 注入内容取决于配置文件（每次启动换新 token / 端口），必须登记为依赖：
+  // vue-cli 4 的 cache-loader 只按已登记依赖的 mtime 判缓存，漏登记时 main.js
+  // 不改就一直命中旧产物，探针拿着上次的 token 连回来被拒
+  if (this.addDependency) this.addDependency(resolveAgentConfigPath(cliContext))
 
   const injectCode = buildInjectCode(cliContext)
 

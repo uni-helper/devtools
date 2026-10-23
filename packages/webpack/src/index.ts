@@ -1,4 +1,3 @@
-import nodeCrypto from 'node:crypto'
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
@@ -6,89 +5,6 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { AGENT_CLIENT_MARKER } from '@uni-helper/devtools-core/relay'
 import { warnIfStaleAgentDist } from './stale-agent.ts'
-
-// Node 16 兼容性补丁：webpack 4 / vue-cli 4 工程常运行于 Node 16，
-// 而 devframe / srvx / h3 运行时依赖 Web Crypto 与 Web Standards API。
-try {
-  if (!globalThis.crypto?.getRandomValues) {
-    const g = globalThis as any
-    g.crypto = (nodeCrypto as any).webcrypto || {
-      getRandomValues: (arr: ArrayBufferView) =>
-        (nodeCrypto as any).randomFillSync(arr),
-      randomUUID: () => (nodeCrypto as any).randomUUID(),
-    }
-  }
-  if (!(globalThis as any).Headers) {
-    class Headers {
-      private _map = new Map<string, string>()
-      constructor(init?: any) {
-        if (init) {
-          if (Array.isArray(init)) {
-            for (const [k, v] of init)
-              this._map.set(String(k).toLowerCase(), String(v))
-          } else if (typeof init === 'object') {
-            for (const [k, v] of Object.entries(init))
-              this._map.set(k.toLowerCase(), String(v))
-          }
-        }
-      }
-
-      get(k: string) {
-        return this._map.get(k.toLowerCase()) ?? null
-      }
-      set(k: string, v: string) {
-        this._map.set(k.toLowerCase(), String(v))
-      }
-      has(k: string) {
-        return this._map.has(k.toLowerCase())
-      }
-      delete(k: string) {
-        this._map.delete(k.toLowerCase())
-      }
-      forEach(fn: (v: string, k: string) => void) {
-        this._map.forEach(fn)
-      }
-      entries() {
-        return this._map.entries()
-      }
-      keys() {
-        return this._map.keys()
-      }
-      values() {
-        return this._map.values()
-      }
-    }
-    ;(globalThis as any).Headers = Headers
-  }
-  if (!(globalThis as any).Request) {
-    class Request {
-      constructor() {
-        Object.defineProperty(this, Symbol.toStringTag, { value: 'Request' })
-      }
-    }
-    if (Request.prototype) {
-      Object.defineProperty(Request.prototype, Symbol.toStringTag, {
-        value: 'Request',
-      })
-    }
-    ;(globalThis as any).Request = Request
-  }
-  if (!(globalThis as any).Response) {
-    class Response {
-      constructor() {
-        Object.defineProperty(this, Symbol.toStringTag, { value: 'Response' })
-      }
-    }
-    if (Response.prototype) {
-      Object.defineProperty(Response.prototype, Symbol.toStringTag, {
-        value: 'Response',
-      })
-    }
-    ;(globalThis as any).Response = Response
-  }
-} catch (err: any) {
-  console.warn('[uni-devtools] Polyfill failed:', err?.message || err)
-}
 
 /**
  * 确保 UNI_CLI_CONTEXT 尽早使用 realpath 设好。
