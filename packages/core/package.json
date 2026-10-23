@@ -30,25 +30,25 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
-        "default": "./src/index.ts"
+        "default": "./dist/index.mjs"
       },
       "./relay": {
         "types": "./dist/relay.d.ts",
-        "default": "./src/relay.ts"
+        "default": "./dist/relay.mjs"
       },
       "./sidecar": {
         "types": "./dist/sidecar.d.ts",
-        "default": "./src/sidecar.ts"
+        "default": "./dist/sidecar.mjs"
       },
       "./inspect-serve": {
         "types": "./dist/inspect-serve.d.ts",
-        "default": "./src/inspect-serve.ts"
+        "default": "./dist/inspect-serve.mjs"
       },
       "./package.json": "./package.json"
     }
   },
   "scripts": {
-    "build": "node scripts/copy-panel.mjs && node ../../scripts/build-dts.mjs index=src/index.ts relay=src/relay.ts sidecar=src/sidecar.ts inspect-serve=src/inspect-serve.ts",
+    "build": "node scripts/copy-panel.mjs && node ../../scripts/build-dts.mjs --js index=src/index.ts relay=src/relay.ts sidecar=src/sidecar.ts inspect-serve=src/inspect-serve.ts",
     "dev": "node scripts/dev.mjs",
     "test": "vitest run",
     "test:e2e": "node scripts/e2e-node.mjs"

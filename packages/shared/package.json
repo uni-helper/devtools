@@ -27,21 +27,21 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
-        "default": "./src/index.ts"
+        "default": "./dist/index.mjs"
       },
       "./utils/network-merge": {
         "types": "./dist/utils/network-merge.d.ts",
-        "default": "./src/utils/network-merge.ts"
+        "default": "./dist/utils/network-merge.mjs"
       },
       "./utils/mock-flag": {
         "types": "./dist/utils/mock-flag.d.ts",
-        "default": "./src/utils/mock-flag.ts"
+        "default": "./dist/utils/mock-flag.mjs"
       }
     }
   },
   "scripts": {
     "test": "vitest run",
-    "build": "node ../../scripts/build-dts.mjs index=src/index.ts utils/network-merge=src/utils/network-merge.ts utils/mock-flag=src/utils/mock-flag.ts"
+    "build": "node ../../scripts/build-dts.mjs --js index=src/index.ts utils/network-merge=src/utils/network-merge.ts utils/mock-flag=src/utils/mock-flag.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
