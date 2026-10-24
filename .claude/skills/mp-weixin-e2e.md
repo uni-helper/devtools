@@ -62,7 +62,8 @@ UNI_E2E_BASE_URL=http://127.0.0.1:<port>/__uni-devtools/ UNI_E2E_TOKEN=<token> p
 - **节点数不等**：先对比 `packages/probes/src/runtime/tree.ts` 与 `instance.ts` 的过滤逻辑，再看推送防抖
 - **连接 sidecar 超时 / unauthorized**：`UNI_E2E_TOKEN` 必须来自当前那次构建的日志
 - **改了 workspace 源码不生效**：playground 消费的是 `packages/*/dist`，先 `pnpm build`；探针 vue3 入口走源码，`touch src/main.ts` 触发重构建
-- **本地与 CI 结果不一致**：CI 只有 wxa-runner 内置基础库 3.7.0，用 `WXA_BASELIB=3.7.0 pnpm test:e2e` 复现
+- **本地与 CI 结果不一致**：本机装了微信开发者工具时 wxa-runner 优先用它下载的基础库；CI 只有内置基础库 3.7.0。用 `WXA_VENDOR_DIR=/nonexistent pnpm test:e2e` 屏蔽开发者工具，复现 CI 环境
+- **CI 报「没有找到基础库」**：内置基础库 `@open-wxa/wxa-baselib` 是 extractor 从 GitHub 拉的 optionalDependency，安装时拉取失败会被 pnpm 静默跳过、锁文件里也跟着缺。确认 `pnpm-lock.yaml` 里 `@open-wxa/wxa-runner-extractor` 带 `optionalDependencies`；缺了就在 playground 里 remove 再 add `@open-wxa/wxa-runner-playwright` 重新解析（不要用 `--fix-lockfile`，它会重解析整个仓库的 peer 组合）
 
 ## 限制
 

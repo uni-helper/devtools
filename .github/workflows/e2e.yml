@@ -30,8 +30,15 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # wxa-runner 用内置基础库与 miniprogram-compiler，无需微信开发者工具；
-      # Chrome 用 runner 预装的
+      # Linux 上没有微信开发者工具：基础库用 @open-wxa/wxa-baselib（extractor 的
+      # optionalDependency，取自 GitHub，拉取失败时 pnpm 静默跳过），编译器用
+      # miniprogram-compiler，Chrome 用 runner 预装的。先确认都在，缺了直接报因
+      - name: Check base library and Chrome
+        run: |
+          ls node_modules/.pnpm | grep -q '^@open-wxa+wxa-baselib@' \
+            || { echo "::error::@open-wxa/wxa-baselib 未安装：检查 pnpm-lock.yaml 里 @open-wxa/wxa-runner-extractor 的 optionalDependencies"; exit 1; }
+          test -x /usr/bin/google-chrome
+
       - name: E2E (wxa-runner)
         run: pnpm --filter vitesse-uni-app test:e2e
 

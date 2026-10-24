@@ -2690,6 +2690,10 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
+  '@open-wxa/wxa-baselib@https://codeload.github.com/open-wxa/wxa-baselib/tar.gz/25495a9ea11724fee7e276e2db9b2c9e8cba9175':
+    resolution: {tarball: https://codeload.github.com/open-wxa/wxa-baselib/tar.gz/25495a9ea11724fee7e276e2db9b2c9e8cba9175}
+    version: 0.1.0
+
   '@open-wxa/wxa-runner-compiler@0.8.0':
     resolution: {integrity: sha512-U4WexgSU1QzHjZOlIFOFwlIMLpl/rbjaJ2yQ5qcqgUGAad4zjodEfCausGoklrMQ2EfqlY0tbWUjNmky971sSA==}
     engines: {node: '>=18'}
@@ -10942,7 +10946,7 @@ snapshots:
       core-js: 3.39.0
       exif-parser: 0.1.12
       file-type: 9.0.0
-      load-bmfont: 1.4.2(debug@4.4.3)
+      load-bmfont: 1.4.2
       mkdirp: 0.5.6
       phin: 2.9.3
       pixelmatch: 4.0.2
@@ -11094,7 +11098,7 @@ snapshots:
       '@jimp/plugin-blit': 0.10.3(@jimp/custom@0.10.3)
       '@jimp/utils': 0.10.3
       core-js: 3.39.0
-      load-bmfont: 1.4.2(debug@4.4.3)
+      load-bmfont: 1.4.2
     transitivePeerDependencies:
       - debug
 
@@ -11277,6 +11281,9 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.17.1
 
+  '@open-wxa/wxa-baselib@https://codeload.github.com/open-wxa/wxa-baselib/tar.gz/25495a9ea11724fee7e276e2db9b2c9e8cba9175':
+    optional: true
+
   '@open-wxa/wxa-runner-compiler@0.8.0':
     dependencies:
       '@open-wxa/wxa-runner-extractor': 0.8.0
@@ -11296,7 +11303,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@open-wxa/wxa-runner-extractor@0.8.0': {}
+  '@open-wxa/wxa-runner-extractor@0.8.0':
+    optionalDependencies:
+      '@open-wxa/wxa-baselib': https://codeload.github.com/open-wxa/wxa-baselib/tar.gz/25495a9ea11724fee7e276e2db9b2c9e8cba9175
 
   '@open-wxa/wxa-runner-playwright@0.8.0(@playwright/test@1.64.1)':
     dependencies:
@@ -13239,9 +13248,9 @@ snapshots:
     dependencies:
       run-applescript: 7.0.0
 
-  bundle-require@5.0.0(esbuild@0.20.2):
+  bundle-require@5.0.0(esbuild@0.23.1):
     dependencies:
-      esbuild: 0.20.2
+      esbuild: 0.23.1
       load-tsconfig: 0.2.5
 
   bytes@3.1.2: {}
@@ -13287,9 +13296,9 @@ snapshots:
 
   caniuse-lite@1.0.30001684: {}
 
-  centra@2.7.0(debug@4.4.3):
+  centra@2.7.0:
     dependencies:
-      follow-redirects: 1.15.9(debug@4.4.3)
+      follow-redirects: 1.15.9
     transitivePeerDependencies:
       - debug
 
@@ -14434,9 +14443,7 @@ snapshots:
       vue: 3.5.43(typescript@5.7.2)
       vue-resize: 2.0.0-alpha.1(vue@3.5.43(typescript@5.7.2))
 
-  follow-redirects@1.15.9(debug@4.4.3):
-    optionalDependencies:
-      debug: 4.4.3
+  follow-redirects@1.15.9: {}
 
   foreground-child@3.3.0:
     dependencies:
@@ -14692,9 +14699,9 @@ snapshots:
 
   importx@0.4.4:
     dependencies:
-      bundle-require: 5.0.0(esbuild@0.20.2)
+      bundle-require: 5.0.0(esbuild@0.23.1)
       debug: 4.4.3
-      esbuild: 0.20.2
+      esbuild: 0.23.1
       jiti: 2.0.0-beta.3
       jiti-v1: jiti@1.21.6
       pathe: 1.1.2
@@ -15396,14 +15403,14 @@ snapshots:
       rfdc: 1.4.1
       wrap-ansi: 9.0.0
 
-  load-bmfont@1.4.2(debug@4.4.3):
+  load-bmfont@1.4.2:
     dependencies:
       buffer-equal: 0.0.1
       mime: 1.6.0
       parse-bmfont-ascii: 1.0.6
       parse-bmfont-binary: 1.0.6
       parse-bmfont-xml: 1.1.6
-      phin: 3.7.1(debug@4.4.3)
+      phin: 3.7.1
       xhr: 2.6.0
       xtend: 4.0.2
     transitivePeerDependencies:
@@ -15939,9 +15946,9 @@ snapshots:
 
   phin@2.9.3: {}
 
-  phin@3.7.1(debug@4.4.3):
+  phin@3.7.1:
     dependencies:
-      centra: 2.7.0(debug@4.4.3)
+      centra: 2.7.0
     transitivePeerDependencies:
       - debug
 
