@@ -1,0 +1,51 @@
+{
+  "name": "@uni-helper/devtools",
+  "version": "0.0.1-beta.8",
+  "description": "Uni DevTools 门面包：聚合探针 / node 中继 / Vite·Webpack 插件 / MCP / 面板，并自带 CLI",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
+  "bugs": "https://github.com/uni-helper/devtools/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/devtools.git",
+    "directory": "packages/devtools"
+  },
+  "bin": {
+    "uni-devtools": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown"
+  },
+  "dependencies": {
+    "@devframes/agentic": "1.1.0",
+    "@uni-helper/devtools-core": "workspace:*",
+    "@uni-helper/devtools-mcp": "workspace:*",
+    "@uni-helper/devtools-vite": "workspace:*",
+    "@uni-helper/devtools-webpack": "workspace:*",
+    "cac": "^7.0.0",
+    "devframe": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "tsdown": "^0.23.2",
+    "typescript": "^5.4.5"
+  }
+}

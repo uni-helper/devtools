@@ -1,0 +1,46 @@
+{
+  "name": "@uni-helper/devtools-probes",
+  "version": "0.0.1-beta.8",
+  "description": "Uni DevTools 小程序探针：Vue 2/3 双线入口 + 运行时采集（组件树/状态/Pinia/网络/响应式图）",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
+  "bugs": "https://github.com/uni-helper/devtools/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/devtools.git",
+    "directory": "packages/probes"
+  },
+  "files": [
+    "src",
+    "dist",
+    "vue2.js"
+  ],
+  "type": "module",
+  "main": "./dist/agent-vue2.js",
+  "exports": {
+    "./vue3": "./src/vue3/index.ts",
+    "./vue2": {
+      "types": "./src/vue2/index.ts",
+      "require": "./dist/agent-vue2.js",
+      "default": "./dist/agent-vue2.js"
+    },
+    "./render-hook": "./src/runtime/render-hook.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "tsdown && vitest run"
+  },
+  "dependencies": {
+    "@uni-helper/devtools-shared": "workspace:*",
+    "birpc": "^4.2.0",
+    "devframe": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "tsdown": "^0.23.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "vue": "^3.5.43"
+  }
+}

@@ -1,70 +1,167 @@
 <script setup lang="ts">
-import { version } from './../../package.json'
-import UniIcon from '/icon/uni_icon.png'
+import { computed } from 'vue'
+import DevToolsLogo from '../components/common/DevToolsLogo.vue'
+import { useDevtoolsClient } from '../composables/devtools-client'
+import { version } from '../../package.json'
 
-const { versionState } = useInitState()
+const { apps, pageCount, selectedApp, totalComponents } = useDevtoolsClient()
 
-const pages = await trpc.getPages.query()
-const modules = await trpc.getModules.query()
-const vueModules = modules?.filter(module => module.id.endsWith('vue')).length
+const vueVersion = computed(
+  () => selectedApp.value?.version ?? apps.value[0]?.version ?? '-',
+)
+
+const target = globalThis as typeof globalThis & {
+  chrome?: {
+    devtools?: unknown
+  }
+}
+const isInChromePanel =
+  typeof target.chrome !== 'undefined' && !!target.chrome.devtools
+
+function isMacOS() {
+  if (typeof navigator === 'undefined') return false
+  return navigator.platform
+    ? navigator.platform.toLowerCase().includes('mac')
+    : /Macintosh/.test(navigator.userAgent)
+}
 </script>
 
 <template>
-  <PanelGrids h-screen w-full flex of-auto>
-    <div flex="~ col gap2 justify-center" ma h-full w-full px10>
-      <!-- Banner -->
-      <div flex="~ col" mt-10 items-center>
-        <DevToolsLogo mb2 h-18 />
-        <div mb6 mt--1 text-center text-sm flex="~ gap-1">
-          <span op40>
-            Uni DevTools
-          </span>
-          <code op40>v{{ version }}</code>
+  <div class="h-full w-full flex overflow-auto text-4">
+    <div class="mx-auto h-full max-w-300 w-full px-20 flex flex-col gap-2">
+      <div class="flex-auto" />
+
+      <div class="mt-20 flex flex-col items-center">
+        <div class="-mt-10 flex items-center justify-center">
+          <DevToolsLogo class="h-18 color-base" />
+        </div>
+        <div
+          v-if="!isInChromePanel"
+          class="mt-3 mb-6 flex gap-1 text-center text-sm op40"
+        >
+          <span>Uni DevTools</span>
+          <code>v{{ version }}</code>
         </div>
       </div>
 
-      <!-- Main Grid -->
-      <div flex="~ gap2 wrap">
-        <div cursor-pointer p4 theme-card-green flex="~ col auto" @click="openInBrowser('https://uniapp.dcloud.net.cn/')">
-          <img :src="UniIcon" h-7.5 w-7.5>
-          <code>v{{ versionState?.uniVersion }}</code>
+      <div class="flex flex-wrap gap-2">
+        <div
+          class="min-h-25 min-w-40 flex flex-1 flex-col items-center justify-center gap-2 rounded-1 border border-base bg-transparent p-4 color-inherit op50 shadow-[0_1px_3px_#00000012] saturate-0 transition-[opacity,filter,background,color] duration-200 hover:bg-green/10 hover:text-green-600 hover:op100 hover:saturate-100"
+        >
+          <div class="i-carbon-version text-3xl" />
+          <code>{{ vueVersion === '-' ? 'Vue -' : `Vue v${vueVersion}` }}</code>
         </div>
-        <div cursor-pointer p4 theme-card-green flex="~ col auto" @click="openInBrowser('https://cn.vuejs.org/')">
-          <div i-logos-vue text-3xl />
-          <code>v{{ versionState?.vueVersion }}</code>
-        </div>
-        <RouterLink flex="~ col auto" to="/pages" replace min-w-40 p4 theme-card-lime>
-          <div i-carbon-tree-view-alt text-3xl />
-          <div>{{ pages.length }} pages</div>
+
+        <RouterLink
+          class="min-h-25 min-w-40 flex flex-1 flex-col items-center justify-center gap-2 rounded-1 border border-base bg-transparent p-4 color-inherit no-underline op50 shadow-[0_1px_3px_#00000012] saturate-0 transition-[opacity,filter,background,color] duration-200 hover:bg-lime/10 hover:text-lime-600 hover:op100 hover:saturate-100"
+          to="/pages"
+          replace
+        >
+          <div class="i-carbon-tree-view-alt text-3xl" />
+          <div>{{ pageCount }} pages</div>
         </RouterLink>
-        <RouterLink v-if="vueModules" flex="~ col auto" to="/components" replace min-w-40 p4 theme-card-lime>
-          <div i-carbon-assembly-cluster text-3xl />
-          <div>{{ vueModules }} components</div>
+
+        <RouterLink
+          v-if="totalComponents"
+          class="min-h-25 min-w-40 flex flex-1 flex-col items-center justify-center gap-2 rounded-1 border border-base bg-transparent p-4 color-inherit no-underline op50 shadow-[0_1px_3px_#00000012] saturate-0 transition-[opacity,filter,background,color] duration-200 hover:bg-lime/10 hover:text-lime-600 hover:op100 hover:saturate-100"
+          to="/components"
+          replace
+        >
+          <div class="i-carbon-assembly-cluster text-3xl" />
+          <div>{{ totalComponents }} components</div>
         </RouterLink>
       </div>
 
-      <div flex="~ gap-6 wrap" mt-5 items-center justify-center>
-        <div flex="~ gap1" cursor-pointer items-center op50 hover="op100 text-blue" transition @click="openInBrowser('https://github.com/uni-helper/devtools')">
-          <div i-carbon-star />
-          Star on GitHub
-        </div>
-        <div flex="~ gap1" cursor-pointer items-center op50 hover="op100 text-yellow" transition @click="openInBrowser('https://github.com/uni-helper/devtools/discussions/2')">
-          <div i-carbon-data-enrichment />
-          Ideas & Suggestions
-        </div>
-        <div flex="~ gap1" cursor-pointer items-center op50 hover="op100 text-lime" transition @click="openInBrowser('https://github.com/uni-helper/devtools/discussions/3')">
-          <div i-carbon-plan />
-          Project Roadmap
-        </div>
-        <div flex="~ gap1" cursor-pointer items-center op50 hover="op100 text-rose" transition @click="openInBrowser('https://github.com/uni-helper/devtools/issues')">
-          <div i-carbon-debug />
-          Bug Reports
-        </div>
-        <!-- <RouterLink to="/settings" flex="~ gap1" replace inline-block items-center op50 hover:op80>
-          <div i-carbon-settings />
+      <div class="mt-5 flex flex-wrap items-center justify-center gap-6">
+        <RouterLink
+          to="/settings"
+          replace
+          class="color-inherit op50 transition-[opacity,color] duration-200 flex items-center gap-1 no-underline hover:op100"
+        >
+          <div class="i-carbon-settings" />
           Settings
-        </RouterLink> -->
+        </RouterLink>
       </div>
+
+      <div class="flex-auto" />
+
+      <div
+        class="cursor-default flex flex-wrap items-center justify-center gap-1 pb-2 text-3.5 op40"
+      >
+        Press
+        <template v-if="isMacOS()">
+          <kbd
+            class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+          >
+            ⌘ Command
+          </kbd>
+          <span>+</span>
+          <kbd
+            class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >K</kbd
+          >
+        </template>
+        <template v-else>
+          <kbd
+            class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+          >
+            Ctrl
+          </kbd>
+          <span>+</span>
+          <kbd
+            class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >K</kbd
+          >
+        </template>
+        to toggle Command Palette
+      </div>
+
+      <template v-if="!isInChromePanel">
+        <div
+          class="cursor-default flex flex-wrap items-center justify-center gap-1 pb-8 text-3.5 op40"
+        >
+          Press
+          <template v-if="isMacOS()">
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
+              ⇧ Shift
+            </kbd>
+            <span>+</span>
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
+              ⌥ Option
+            </kbd>
+            <span>+</span>
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
+              D
+            </kbd>
+          </template>
+          <template v-else>
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
+              Shift
+            </kbd>
+            <span>+</span>
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
+              Alt
+            </kbd>
+            <span>+</span>
+            <kbd
+              class="rounded-1 border border-base bg-active px-1.5 py-0.5 font-[inherit]"
+            >
+              D
+            </kbd>
+          </template>
+          to toggle DevTools
+        </div>
+      </template>
     </div>
-  </PanelGrids>
+  </div>
 </template>

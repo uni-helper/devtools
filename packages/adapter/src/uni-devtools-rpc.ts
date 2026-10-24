@@ -1,0 +1,1152 @@
+/**
+ * uni-devtools 适配器：把官方 Vue Devtools client 消费的 kit RPC 协议
+ * （query / command / runtime events，契约见 npm 版 `@vue/devtools-kit` 的
+ * `protocol/requests.ts`）映射到我们的 devframe RPC（scope `uni-helper-devtools`）
+ * 与探针数据上。
+ *
+ * 注入点：官方 UI 与 `useDevtoolsClient` 一行不改，`devtools-connection.ts`
+ * 把官方的 `connectDevtoolsClient()`（host 发现）换成本文件的 `connectUniRpcClient()`。
+ *
+ * 数据结构 → kit 协议形状的映射在 `./mapping`（可观测行为由 test/mapping 冻结）；
+ * 本文件只管 RPC 路由与连接生命周期。数据源由 `./backend` 的 ProbeBackend 抽象
+ * 注入：真实链路 = `devframe-backend`（devframe RPC），`?mock` 调试 = `mock-backend`
+ * （fixtures 内存分发，由调用方决定是否启用，本文件不读 URL）。kit 的反直觉约束
+ * （事件必须带 appId、失效事件名 ≠ command 名、version 按组件计数等）就地注释在各分支旁。
+ *
+ * 生命周期：全部状态收在 `connectUniRpcClient()` 工厂闭包内——官方连接层会在
+ * 健康检查失败/stop 时 dispose 旧 client 并择机新建，模块级单例会让第二个
+ * 实例永久瘫痪。
+ */
+import type {
+  DevtoolsRpcClient,
+  DevtoolsRpcEventHandler,
+} from '@vue/devtools-kit/client'
+import type {
+  DevtoolsRpcEvent,
+  RouterRouteRecordSnapshot,
+  RouterRouteSnapshot,
+} from '@vue/devtools-kit'
+import type {
+  ClearNetworkRecordsResult,
+  ComponentStateResult,
+  ComponentTreeResult,
+  GetComponentRenderCodeResult,
+  GetNetworkRecordsResult,
+  GetPiniaStoresResult,
+  GetRegisteredRoutesResult,
+  NetworkRecord,
+  NetworkSharedState,
+  PiniaStateResult,
+  RouterInfoResult,
+  VuexStateResult,
+} from '@uni-helper/devtools-shared'
+import { DEVFRAME_RPC } from '@uni-helper/devtools-shared'
+import type { ProbeBackend, ProbeMethod } from './backend.ts'
+import { probeNotSupported } from './backend.ts'
+import {
+  createDevframeBackend,
+  readAuthTokenFromUrl,
+} from './devframe-backend.ts'
+import type { FlatTree } from './mapping/index.ts'
+import {
+  appIdOf,
+  buildFlatTree,
+  computeTreeDiff,
+  mergeRecordsById,
+  PINIA_ROOT_ID,
+  PINIA_ROOT_LABEL,
+  toPiniaRootSnapshot,
+  toPiniaStateSnapshot,
+  toStateSnapshot,
+  VUEX_ROOT_ID,
+  VUEX_ROOT_LABEL,
+  toVuexRootSnapshot,
+  toVuexStateSnapshot,
+} from './mapping/index.ts'
+
+export interface UniNetworkApi {
+  /** 缓存快照（按 id 升序） */
+  getRecords(): NetworkRecord[]
+  /** 清空请求记录（调用 node / 探针 clear-network-records） */
+  clear(): Promise<void>
+  /** 订阅记录变更（包含初始立即回调一次快照，返回退订函数） */
+  subscribe(cb: (records: NetworkRecord[]) => void): () => void
+}
+
+let activeUniNetwork: UniNetworkApi | undefined
+
+export function getUniNetworkApi(): UniNetworkApi | undefined {
+  return activeUniNetwork
+}
+
+export interface ConnectUniRpcClientOptions {
+  /** fixtures 假数据调试模式；URL `?mock` 的解析由调用方负责（shared 的 isMockPanelUrl），adapter 不读 URL */
+  mock?: boolean
+  /** 直接注入数据源（测试用）；优先于 mock */
+  backend?: ProbeBackend
+  /** standalone 直连 token；默认读面板 URL 的 devframe_auth_token */
+  authToken?: string
+}
+
+type ConnectionStatus = 'connecting' | 'connected' | 'closed'
+type QueryRequest = { type: string; appId?: string; payload?: any }
+type CommandRequest = { type: string; appId?: string; payload?: any }
+// 注意：kit 的 RuntimeCommandResult 语义为 status 1=成功、0=失败
+// （vendored kit `runtime/runtime.ts` 的 `?? { status: 1 }` 与错误路径 `{ status: 0, error }`）。
+type CommandResult = { status: 0 | 1; error?: unknown }
+
+/** 哨兵引用：连接断开后重置回来，让下一次 treeSnapshot 主动重拉而不是吐陈旧树。 */
+const EMPTY_TREE: FlatTree = { apps: [], nodes: [] }
+
+/**
+ * 校验 sharedState('network-records') 快照格式。
+ *
+ * 必须满足：
+ * 1. snapshot 为非空对象且非数组
+ * 2. records 字段必须为数组
+ * 3. 包含必需字段 latestId (number) 与 updatedAt (number)
+ */
+export function validateNetworkSnapshot(
+  snapshot: unknown,
+):
+  | { valid: true; snapshot: NetworkSharedState }
+  | { valid: false; reason: string } {
+  if (
+    typeof snapshot !== 'object' ||
+    snapshot === null ||
+    Array.isArray(snapshot)
+  ) {
+    return { valid: false, reason: '快照不是有效对象' }
+  }
+  const candidate = snapshot as Record<string, unknown>
+  if (!Array.isArray(candidate.records)) {
+    return { valid: false, reason: 'records 字段不是数组' }
+  }
+  if (typeof candidate.latestId !== 'number') {
+    return { valid: false, reason: '缺少必需字段 latestId 或类型不是 number' }
+  }
+  if (typeof candidate.updatedAt !== 'number') {
+    return { valid: false, reason: '缺少必需字段 updatedAt 或类型不是 number' }
+  }
+  return { valid: true, snapshot: candidate as unknown as NetworkSharedState }
+}
+
+/**
+ * 安全处理网络快照更新回调。
+ * 对畸形数据记录日志并跳过更新；捕获所有异常确保订阅回调不崩溃。
+ */
+export function handleNetworkSnapshot(
+  snapshot: unknown,
+  applyRecords: (records: NetworkRecord[]) => void,
+): boolean {
+  try {
+    const validated = validateNetworkSnapshot(snapshot)
+    if (!validated.valid) {
+      console.warn(
+        `[uni-devtools] 收到畸形网络快照（${validated.reason}），跳过本次更新:`,
+        snapshot,
+      )
+      return false
+    }
+    applyRecords(validated.snapshot.records)
+    return true
+  } catch (error) {
+    console.error('[uni-devtools] 处理网络快照时发生未捕获异常:', error)
+    return false
+  }
+}
+
+/** 与 kit 的 `connectDevtoolsClient()` 同签名的同步工厂（连接在内部异步建立）。 */
+export function connectUniRpcClient(
+  options: ConnectUniRpcClientOptions = {},
+): DevtoolsRpcClient {
+  // ---- 实例状态（闭包内；原因见文件头生命周期说明） ----
+  const eventHandlers = new Set<DevtoolsRpcEventHandler>()
+  const connectionHandlers = new Set<(status: ConnectionStatus) => void>()
+  /** 按组件计数的 state version（官方防陈旧循环以组件为维度比较）。 */
+  const stateVersionByComponent = new Map<string, number>()
+  /** 面板当前在看的组件（由 components:stateSnapshot 更新，见该分支注释）。 */
+  let inspectedComponentId: string | undefined
+  /** Pinia inspector 按 store nodeId 计数的 state version（同上防陈旧语义）。 */
+  const inspectorVersionByNode = new Map<string, number>()
+
+  let flat: FlatTree = EMPTY_TREE
+  let treeVersion = 0
+  let backend: ProbeBackend | undefined
+  let ready: Promise<void> | undefined
+  let unsubSharedState: (() => void) | undefined
+  let unsubNetworkSharedState: (() => void) | undefined
+  let unsubRenderedComponents: (() => void) | undefined
+  let unsubConnectionStatus: (() => void) | undefined
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+  let disposed = false
+
+  let cachedNetworkRecords: NetworkRecord[] = []
+  const networkListeners = new Set<(records: NetworkRecord[]) => void>()
+
+  function notifyNetwork(): void {
+    const snapshot = [...cachedNetworkRecords]
+    for (const handler of networkListeners) {
+      try {
+        handler(snapshot)
+      } catch (error) {
+        console.error('[uni-devtools] network listener error:', error)
+      }
+    }
+  }
+
+  function applyNetworkRecords(incoming: NetworkRecord[]): void {
+    if (incoming.length === 0) {
+      cachedNetworkRecords = []
+      notifyNetwork()
+      return
+    }
+    cachedNetworkRecords = mergeRecordsById(cachedNetworkRecords, incoming, 500)
+    notifyNetwork()
+  }
+
+  function emit(
+    event: Omit<DevtoolsRpcEvent, 'time'> & { type: DevtoolsRpcEvent['type'] },
+  ): void {
+    const envelope = { time: Date.now(), ...event } as DevtoolsRpcEvent
+    for (const handler of eventHandlers) handler(envelope)
+  }
+
+  function emitConnection(status: ConnectionStatus): void {
+    for (const handler of connectionHandlers) handler(status)
+  }
+
+  /**
+   * 树快照更新 → 按 appId 分组的重建 patch 集 + 事件。
+   *
+   * 官方 client 对 `components:treePatched` 有两道硬校验：事件必须带 appId、
+   * 且等于当前选中 app（devtools-client.ts 的 attachRuntimeEvents），漏了
+   * appId 会被静默丢弃——所以必须逐 app 派发，不能一发全量。同 app 的
+   * remove-then-insert 依赖 DFS 序（父先于子），`orderComponentTree` 兜底。
+   */
+  function applyTreeSnapshot(tree: ComponentTreeResult): void {
+    const next = buildFlatTree(tree)
+    const diff = computeTreeDiff(flat, next)
+    if (diff.kind === 'apps-changed') {
+      emit({ type: 'apps:changed' })
+    } else {
+      for (const [appId, patches] of diff.patchesByApp)
+        emit({
+          type: 'components:treePatched',
+          appId,
+          version: ++treeVersion,
+          patches,
+        })
+    }
+    flat = next
+  }
+
+  /**
+   * 端上改值 → 面板重拉：node 侧转发「哪些组件重渲染了」，这里判断面板正在看的
+   * 那个是否在其中，命中才转成官方 `components:stateInvalidated`。
+   *
+   * 过滤放在本层而不是 node 侧：node 的 `get-component-state` 是面板与 MCP/Coding
+   * Agent 共用的入口，拿它推「面板选中态」会被 agent 调用污染；而
+   * `components:stateSnapshot`（见 handleQuery）是面板专有入口，只有这里知道得准。
+   *
+   * version 由本层按组件递增（与 components:editState 共用同一张表）：面板拿事件里的
+   * version 当 minimumVersion 去查询，而 `components:stateSnapshot` 返回的也是这张表的
+   * 计数——两边同源，面板才不会把刚推来的失效当成陈旧快照丢掉。
+   */
+  function applyRenderedComponents(snapshot: unknown): void {
+    const componentId = inspectedComponentId
+    if (!componentId) return
+    const ids = (snapshot as { ids?: unknown } | null)?.ids
+    if (!Array.isArray(ids) || !ids.includes(componentId)) return
+    const version = (stateVersionByComponent.get(componentId) ?? 0) + 1
+    stateVersionByComponent.set(componentId, version)
+    emit({
+      type: 'components:stateInvalidated',
+      appId: appIdOf(componentId),
+      componentId,
+      version,
+      reason: 'update',
+    })
+  }
+
+  /** 首次（尚无 sharedState 推送）主动拉一次树，之后 sharedState 是唯一数据源。若已推快照但缺版本号，主动重拉一次补齐。 */
+  async function pullTreeOnce(): Promise<void> {
+    if (flat !== EMPTY_TREE && flat.apps.some((app) => !!app.version)) return
+    const tree = await callUni<ComponentTreeResult>(
+      DEVFRAME_RPC.getComponentTree,
+    )
+    applyTreeSnapshot(tree)
+  }
+
+  async function callUni<T>(
+    method: ProbeMethod,
+    ...args: unknown[]
+  ): Promise<T> {
+    if (!backend) throw new Error('uni-devtools RPC 尚未连接')
+    return (await backend.call(method, ...args)) as T
+  }
+
+  async function pullNetworkOnce(): Promise<void> {
+    try {
+      const res = await callUni<GetNetworkRecordsResult>(
+        DEVFRAME_RPC.getNetworkRecords,
+      )
+      if (res && Array.isArray(res.records)) applyNetworkRecords(res.records)
+    } catch (error) {
+      console.warn('[uni-devtools] get-network-records 拉取失败:', error)
+    }
+  }
+
+  const uniNetwork: UniNetworkApi = {
+    getRecords(): NetworkRecord[] {
+      return [...cachedNetworkRecords]
+    },
+    async clear(): Promise<void> {
+      await callUni<ClearNetworkRecordsResult>(DEVFRAME_RPC.clearNetworkRecords)
+      cachedNetworkRecords = []
+      notifyNetwork()
+    },
+    subscribe(cb: (records: NetworkRecord[]) => void): () => void {
+      networkListeners.add(cb)
+      try {
+        cb([...cachedNetworkRecords])
+      } catch (err) {
+        console.error('[uni-devtools] network listener initial error:', err)
+      }
+      return () => {
+        networkListeners.delete(cb)
+      }
+    },
+  }
+  activeUniNetwork = uniNetwork
+
+  function resetConnectionState(): void {
+    ready = undefined
+    unsubConnectionStatus?.()
+    unsubConnectionStatus = undefined
+    unsubSharedState?.()
+    unsubSharedState = undefined
+    unsubNetworkSharedState?.()
+    unsubNetworkSharedState = undefined
+    unsubRenderedComponents?.()
+    unsubRenderedComponents = undefined
+    // 面板选中态随连接作废：重连后由面板重新查询状态时再建立，避免拿旧选中项
+    // 过滤重渲染上报。
+    inspectedComponentId = undefined
+    // 关键：重连后的首个 treeSnapshot 必须重拉，否则引用守卫失效、
+    // 面板会一直展示断开前的陈旧树。
+    flat = EMPTY_TREE
+    cachedNetworkRecords = []
+    notifyNetwork()
+  }
+
+  async function initConnection(): Promise<void> {
+    try {
+      // mock 后端按需加载：fixtures 不进主 bundle（URL 无 ?mock 则该 chunk 永不加载）
+      backend =
+        options.backend ??
+        (options.mock
+          ? (await import('./mock-backend.ts')).createMockBackend()
+          : createDevframeBackend())
+      await backend.connect(options.authToken ?? readAuthTokenFromUrl())
+      if (disposed) {
+        backend.dispose()
+        backend = undefined
+        return
+      }
+
+      // 仅在 socket 真正连接后才发出连接就绪状态通知（mock 后端 connect 即就绪）
+      emitConnection('connected')
+
+      // 持续监听后续连接状态变更；断开即作废（无内建重连）：清态、内部重连、
+      // 成功后由 connection 层的 runtime-changed 语义触发全量刷新
+      const source = backend
+      unsubConnectionStatus = backend.onConnectionStatus((status) => {
+        // 已被替换掉的旧连接迟到的状态不能作废当前连接
+        if (backend !== source) return
+        if (status === 'connected') {
+          emitConnection('connected')
+          return
+        }
+        backend?.dispose()
+        backend = undefined
+        resetConnectionState()
+        emitConnection('closed')
+        scheduleReconnect()
+      })
+      try {
+        const treeSub = backend.subscribe('component-tree', (snapshot) => {
+          if (
+            snapshot &&
+            Array.isArray((snapshot as ComponentTreeResult).pages)
+          )
+            applyTreeSnapshot(snapshot as ComponentTreeResult)
+        })
+        await treeSub.ready
+        if (disposed) {
+          treeSub.unsubscribe()
+          return
+        }
+        unsubSharedState = treeSub.unsubscribe
+      } catch (error) {
+        // 订阅失败不致命：连接仍在，树走 get-component-tree 主动拉取路径。
+        console.warn(
+          '[uni-devtools] sharedState 订阅失败，树更新退化为手动/首拉模式:',
+          error,
+        )
+      }
+      try {
+        const renderedSub = backend.subscribe(
+          'rendered-components',
+          applyRenderedComponents,
+        )
+        await renderedSub.ready
+        if (disposed) {
+          renderedSub.unsubscribe()
+          return
+        }
+        unsubRenderedComponents = renderedSub.unsubscribe
+      } catch (error) {
+        // 订阅失败不致命：面板仍能靠选中切换/编辑后重拉拿到新状态。
+        console.warn(
+          '[uni-devtools] 重渲染上报通道订阅失败，端上改值不会自动刷新面板:',
+          error,
+        )
+      }
+      try {
+        const netSub = backend.subscribe('network-records', (snapshot) => {
+          handleNetworkSnapshot(snapshot, applyNetworkRecords)
+        })
+        await netSub.ready
+        if (disposed) {
+          netSub.unsubscribe()
+          return
+        }
+        unsubNetworkSharedState = netSub.unsubscribe
+        await pullNetworkOnce().catch(() => {})
+      } catch (error) {
+        // 订阅失败不致命：连接仍在，网络记录走 get-network-records 主动拉取路径。
+        console.warn(
+          '[uni-devtools] network sharedState 订阅失败，网络记录退化为主动拉取模式:',
+          error,
+        )
+        await pullNetworkOnce().catch(() => {})
+      }
+    } catch (error) {
+      backend?.dispose()
+      backend = undefined
+      resetConnectionState()
+      emitConnection('closed')
+      scheduleReconnect()
+      throw new Error(
+        `无法连接 devframe 服务端（Uni DevTools 插件未启动？）：${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
+  }
+
+  function scheduleReconnect(): void {
+    if (disposed || reconnectTimer) return
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = undefined
+      // 断线期间面板的查询可能已经经 ensureReady 发起了重连：复用它，
+      // 再起一条会让两个 backend 并存，旧的那个泄漏订阅
+      if (ready) return
+      ready = initConnection()
+      ready.catch(() => {})
+    }, 1500)
+  }
+
+  function ensureReady(): Promise<void> {
+    if (disposed) return Promise.reject(new Error('adapter disposed'))
+    ready ??= initConnection()
+    return ready
+  }
+
+  async function handleQuery(request: QueryRequest): Promise<unknown> {
+    switch (request.type) {
+      case 'apps:snapshot': {
+        await ensureReady()
+        await pullTreeOnce().catch(() => {})
+        return { apps: flat.apps }
+      }
+
+      case 'devtools:capabilities': {
+        // openInEditor / inspect 由数据源声明（mock 后端两者皆 false，官方 UI
+        // 据此自动隐藏入口）；分页树未实现。
+        await ensureReady()
+        const source = backend
+        const inspect = !!(
+          await callUni<{ available: boolean }>(
+            DEVFRAME_RPC.getInspectStatus,
+          ).catch(() => ({ available: false }))
+        )?.available
+        return {
+          openInEditor: source?.capabilities.openInEditor ?? false,
+          pagedComponentTree: false,
+          inspect,
+        }
+      }
+
+      case 'runtime:health':
+        return {
+          status: 'ready',
+          performance: {
+            receivedEvents: 0,
+            emittedEvents: 0,
+            droppedEvents: 0,
+            coalescedEvents: 0,
+            bufferedEvents: 0,
+            bufferedBytes: 0,
+            collectionActive: false,
+            attachedClients: 1,
+          },
+        }
+
+      case 'plugins:snapshot':
+        return { plugins: [] }
+
+      case 'inspectors:list': {
+        // Pinia 和 Vuex 走官方 custom inspector 协议
+        // 动态检测：只返回运行时真正支持的 inspector
+        await ensureReady()
+
+        const inspectors: Array<{
+          id: string
+          label: string
+          stateFilterPlaceholder: string
+          treeFilterPlaceholder: string
+          noSelectionText: string
+        }> = []
+
+        // 检测 Pinia 是否可用（尝试调用 getPiniaStores）：Vue 2 探针不注册该方法，
+        // node 侧如实抛错（这里 catch 成 null）；Vue 3 没装 Pinia 时返回空数组
+        const piniaResult = await callUni<{ stores: any[] }>(
+          DEVFRAME_RPC.getPiniaStores,
+        ).catch(() => null)
+
+        const piniaAvailable =
+          piniaResult &&
+          Array.isArray(piniaResult.stores) &&
+          piniaResult.stores.length > 0
+
+        if (piniaAvailable) {
+          inspectors.push({
+            id: 'pinia',
+            label: 'Pinia',
+            stateFilterPlaceholder: 'Filter state...',
+            treeFilterPlaceholder: 'Filter stores...',
+            noSelectionText: 'Select a store in the tree to inspect it',
+          })
+        }
+
+        // 检测 Vuex 是否可用：Vue 3 探针不注册 getVuexStores（抛错 → null），
+        // Vue 2 没装 Vuex 时返回空数组
+        const vuexResult = await callUni<any[]>(
+          DEVFRAME_RPC.getVuexStores,
+        ).catch(() => null)
+
+        const vuexAvailable =
+          vuexResult && Array.isArray(vuexResult) && vuexResult.length > 0
+
+        if (vuexAvailable) {
+          inspectors.push({
+            id: 'vuex',
+            label: 'Vuex',
+            stateFilterPlaceholder: 'Filter state...',
+            treeFilterPlaceholder: 'Filter stores...',
+            noSelectionText: 'Select a store in the tree to inspect it',
+          })
+        }
+
+        return { inspectors }
+      }
+
+      case 'inspectors:treeSnapshot': {
+        await ensureReady()
+        const { inspectorId, filter } = (request.payload ?? {}) as {
+          inspectorId?: string
+          filter?: string
+        }
+
+        // Pinia inspector
+        if (inspectorId === 'pinia') {
+          const res = await callUni<GetPiniaStoresResult>(
+            DEVFRAME_RPC.getPiniaStores,
+          )
+          const matches = (text: string): boolean =>
+            !filter || text.toLowerCase().includes(filter.toLowerCase())
+          const rootNodes: Array<{ id: string; label: string }> = []
+          if (matches(PINIA_ROOT_LABEL))
+            rootNodes.push({ id: PINIA_ROOT_ID, label: PINIA_ROOT_LABEL })
+          for (const store of res?.stores ?? []) {
+            if (matches(store.id))
+              rootNodes.push({ id: `store:${store.id}`, label: store.id })
+          }
+          return { inspectorId, rootNodes }
+        }
+
+        // Vuex inspector（对齐 Pinia 的扁平化平级节点结构）
+        if (inspectorId === 'vuex') {
+          const stores = await callUni<VuexStateResult[]>(
+            DEVFRAME_RPC.getVuexStores,
+          )
+          const matches = (text: string): boolean =>
+            !filter || text.toLowerCase().includes(filter.toLowerCase())
+          const rootNodes: Array<{ id: string; label: string }> = []
+
+          // 添加聚合根节点（虚拟节点，用于概览）
+          if (matches(VUEX_ROOT_LABEL))
+            rootNodes.push({ id: VUEX_ROOT_ID, label: VUEX_ROOT_LABEL })
+
+          // 添加各 store/module 节点（修复 Critical 1: 根 store 使用独立 ID）
+          for (const store of stores ?? []) {
+            const nodeId =
+              store.id === '_root' ? 'vuex-root' : `module:${store.id}`
+            const label = store.id === '_root' ? 'Root State' : store.id
+            if (matches(label)) rootNodes.push({ id: nodeId, label })
+          }
+          return { inspectorId, rootNodes }
+        }
+
+        return { inspectorId: inspectorId ?? '', rootNodes: [] }
+      }
+
+      case 'inspectors:stateSnapshot': {
+        await ensureReady()
+        const { inspectorId, nodeId } = (request.payload ?? {}) as {
+          inspectorId?: string
+          nodeId?: string
+        }
+
+        // Pinia inspector
+        if (inspectorId === 'pinia') {
+          // 聚合根：逐 store 拉取后按官方 _root 语义组装
+          if (nodeId === PINIA_ROOT_ID) {
+            const res = await callUni<GetPiniaStoresResult>(
+              DEVFRAME_RPC.getPiniaStores,
+            )
+            const states: PiniaStateResult[] = []
+            for (const store of res?.stores ?? [])
+              states.push(
+                await callUni<PiniaStateResult>(DEVFRAME_RPC.getPiniaState, {
+                  id: store.id,
+                }),
+              )
+            return toPiniaRootSnapshot(
+              states,
+              inspectorVersionByNode.get(nodeId) ?? 0,
+            )
+          }
+          if (!nodeId?.startsWith('store:')) return undefined
+          const storeId = nodeId.slice('store:'.length)
+          const state = await callUni<PiniaStateResult>(
+            DEVFRAME_RPC.getPiniaState,
+            { id: storeId },
+          )
+          return toPiniaStateSnapshot(
+            state,
+            inspectorVersionByNode.get(nodeId) ?? 0,
+          )
+        }
+
+        // Vuex inspector
+        if (inspectorId === 'vuex') {
+          // 聚合根：拉取所有 stores 后组装（虚拟节点，只读概览）
+          if (nodeId === VUEX_ROOT_ID) {
+            const stores = await callUni<VuexStateResult[]>(
+              DEVFRAME_RPC.getVuexStores,
+            )
+            return toVuexRootSnapshot(
+              stores ?? [],
+              inspectorVersionByNode.get(nodeId) ?? 0,
+            )
+          }
+
+          // 单个 store/module（修复 Critical 1: 根 store 使用 vuex-root）
+          let storeId: string
+          if (nodeId === 'vuex-root') {
+            storeId = '_root'
+          } else if (nodeId?.startsWith('module:')) {
+            storeId = nodeId.slice('module:'.length)
+          } else {
+            return undefined
+          }
+
+          const state = await callUni<VuexStateResult>(
+            DEVFRAME_RPC.getVuexState,
+            { id: storeId },
+          )
+          if (!state) return undefined
+
+          return toVuexStateSnapshot(
+            state,
+            inspectorVersionByNode.get(nodeId) ?? 0,
+          )
+        }
+
+        return undefined
+      }
+
+      case 'components:treeSnapshot': {
+        await ensureReady()
+        await pullTreeOnce()
+        // 官方 client 按选中 app 存整棵树：必须按 appId 过滤，否则多页面
+        // 串页合并、切换 app 无感。
+        const nodes = request.appId
+          ? flat.nodes.filter((node) => node.appId === request.appId)
+          : flat.nodes
+        return { version: treeVersion, nodes }
+      }
+
+      case 'components:stateSnapshot': {
+        await ensureReady()
+        const { componentId } = request.payload as { componentId: string }
+        // 版本号必须在发请求**之前**取：请求在途时若收到失效事件（版本 +1），
+        // 这份旧数据只能带旧版本号返回，面板才会按失效事件里的新版本重拉；
+        // 若在 await 之后取，旧数据会冒充新版本被面板采信。
+        const version = stateVersionByComponent.get(componentId) ?? 0
+        const state = await callUni<ComponentStateResult>(
+          DEVFRAME_RPC.getComponentState,
+          { id: componentId },
+        )
+        // 面板选中即查询一次状态——这是「面板当前在看哪个组件」的唯一可靠来源
+        // （MCP/Coding Agent 也调 node 的 get-component-state，但那不经过本层）。
+        // 只有面板在看的组件重渲染才值得发失效事件（见 applyRenderedComponents）。
+        inspectedComponentId = componentId
+        return toStateSnapshot(state, version)
+      }
+
+      case 'router:snapshot': {
+        await ensureReady()
+        let registeredRoutes: RouterRouteRecordSnapshot[] = []
+        try {
+          const res = await callUni<GetRegisteredRoutesResult>(
+            DEVFRAME_RPC.getRegisteredRoutes,
+          )
+          if (Array.isArray(res?.routes) && res.routes.length > 0) {
+            registeredRoutes = res.routes.map((r) => ({
+              path: r.path,
+              name: r.name,
+              meta: r.meta,
+            }))
+          }
+        } catch {}
+
+        if (registeredRoutes.length === 0) {
+          registeredRoutes = flat.apps.map((app) => ({
+            path: `/${app.id}`,
+            name: app.id,
+          }))
+        }
+
+        let routerInfo: RouterInfoResult | undefined
+        try {
+          routerInfo = await callUni<RouterInfoResult>(
+            DEVFRAME_RPC.getRouterInfo,
+          )
+        } catch {}
+
+        let currentRoute: RouterRouteSnapshot | undefined
+        if (routerInfo?.currentRoute) {
+          currentRoute = {
+            path: routerInfo.currentRoute.path,
+            fullPath:
+              routerInfo.currentRoute.fullPath || routerInfo.currentRoute.path,
+            query: routerInfo.currentRoute.query,
+            name: routerInfo.currentRoute.path.replace(/^\//, ''),
+          }
+        } else if (request.appId) {
+          currentRoute = {
+            path: `/${request.appId}`,
+            fullPath: `/${request.appId}`,
+            name: request.appId,
+          }
+        } else if (registeredRoutes[0]) {
+          currentRoute = {
+            path: registeredRoutes[0].path,
+            fullPath: registeredRoutes[0].path,
+            name: registeredRoutes[0].name,
+          }
+        }
+
+        return {
+          appId: request.appId,
+          currentRoute,
+          routes: registeredRoutes,
+        }
+      }
+
+      case 'router:matchedRoutes': {
+        await ensureReady()
+        const payload = request.payload as { path?: string }
+        const inputPath = payload?.path || ''
+        let allRoutes: RouterRouteRecordSnapshot[] = []
+        try {
+          const res = await callUni<GetRegisteredRoutesResult>(
+            DEVFRAME_RPC.getRegisteredRoutes,
+          )
+          if (Array.isArray(res?.routes) && res.routes.length > 0)
+            allRoutes = res.routes
+        } catch {}
+        if (allRoutes.length === 0)
+          allRoutes = flat.apps.map((app) => ({
+            path: `/${app.id}`,
+            name: app.id,
+          }))
+
+        const matched = allRoutes.filter((r) => {
+          if (!inputPath || inputPath === '/') return true
+          const normInput = inputPath.startsWith('/')
+            ? inputPath
+            : `/${inputPath}`
+          const normPath = r.path.startsWith('/') ? r.path : `/${r.path}`
+          return (
+            normPath === normInput ||
+            normPath.startsWith(normInput) ||
+            (r.name && r.name.toLowerCase().includes(inputPath.toLowerCase()))
+          )
+        })
+
+        return {
+          appId: request.appId,
+          path: inputPath,
+          routes: matched,
+        }
+      }
+
+      case 'components:getRenderCode': {
+        await ensureReady()
+        const { componentId } = (request.payload ?? {}) as {
+          componentId?: string
+        }
+        if (!componentId) return undefined
+        // 探针侧失败如实回落 undefined（官方语义：无 render 可展示）；mock 未知 id 同样返回 undefined
+        const res = await callUni<GetComponentRenderCodeResult>(
+          DEVFRAME_RPC.getComponentRenderCode,
+          { id: componentId },
+        ).catch(() => undefined)
+        return res?.code
+      }
+
+      case 'components:inspect':
+      case 'components:getBounds':
+      case 'components:getName':
+      case 'values:expand':
+      case 'values:storeAsGlobal':
+      case 'inspectors:info':
+        return undefined
+
+      default:
+        return undefined
+    }
+  }
+
+  async function handleCommand(
+    request: CommandRequest,
+  ): Promise<CommandResult> {
+    switch (request.type) {
+      case 'components:editState': {
+        await ensureReady()
+        const payload = request.payload as {
+          componentId: string
+          sectionId?: string
+          path?: string[]
+          value?: unknown
+          remove?: boolean
+        }
+        const path = payload.path ?? []
+        if (path.length === 0) return { status: 0, error: '缺少编辑路径' }
+        // 深路径全量透传探针（section/path/remove 官方语义，探针侧逐段解 ref 下钻）；
+        // mock 数据是平铺顶层键，深路径在 mock 后端内如实报不支持。
+        // 错误统一转 { status: 0 }（kit runtime 不捕获 handler 抛错，面板
+        // mutateComponentState 只对 resolve 的 status:0 亮错误横幅，见方案 §5.1）。
+        try {
+          await callUni(DEVFRAME_RPC.updateComponentState, {
+            id: payload.componentId,
+            section: payload.sectionId,
+            path,
+            value: payload.value,
+            remove: payload.remove,
+          })
+        } catch (error) {
+          return {
+            status: 0,
+            error: error instanceof Error ? error.message : String(error),
+          }
+        }
+        // 官方刷新语义：带递增 version 的失效事件 → 检查器重拉（防陈旧覆盖）。
+        // version 按组件计数；appId 必填（事件入口按 appId+componentId 双重校验）。
+        const componentId = payload.componentId
+        const version = (stateVersionByComponent.get(componentId) ?? 0) + 1
+        stateVersionByComponent.set(componentId, version)
+        emit({
+          type: 'components:stateInvalidated',
+          appId: appIdOf(componentId),
+          componentId,
+          version,
+          reason: payload.remove ? 'remove' : 'edit',
+        })
+        return { status: 1 }
+      }
+
+      case 'components:addState':
+        return { status: 0, error: probeNotSupported('新增状态键') }
+
+      case 'inspectors:editState': {
+        await ensureReady()
+        const payload = request.payload as {
+          inspectorId?: string
+          nodeId?: string
+          sectionId?: string
+          path?: string[]
+          value?: unknown
+          remove?: boolean
+        }
+
+        // Pinia inspector
+        if (payload.inspectorId === 'pinia') {
+          // 聚合根编辑（官方插件 `path.unshift('state')` 的逆向）：面板 path 已去
+          // sectionId，形如 [storeId, key, ...嵌套]，翻译回目标 store 的键路径
+          let storeId: string
+          let path = payload.path ?? []
+          if (payload.nodeId === PINIA_ROOT_ID) {
+            if (path.length < 2 || !path[0])
+              return {
+                status: 0,
+                error: '聚合根编辑需要 [storeId, key, ...] 形式的路径',
+              }
+            storeId = path[0]!
+            path = path.slice(1)
+          } else if (payload.nodeId?.startsWith('store:')) {
+            storeId = payload.nodeId.slice('store:'.length)
+          } else {
+            return {
+              status: 0,
+              error: probeNotSupported('该 inspector 的状态编辑'),
+            }
+          }
+          if (path.length === 0) return { status: 0, error: '缺少编辑路径' }
+
+          try {
+            await callUni(DEVFRAME_RPC.updatePiniaState, {
+              id: storeId,
+              key: path[0]!,
+              path,
+              value: payload.value,
+              remove: payload.remove,
+            })
+          } catch (error) {
+            return {
+              status: 0,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          }
+
+          // 成功后递增版本触发失效通知
+          const targetNodeId = payload.nodeId ?? `store:${storeId}`
+          inspectorVersionByNode.set(
+            targetNodeId,
+            (inspectorVersionByNode.get(targetNodeId) ?? 0) + 1,
+          )
+          emit({
+            type: 'inspectors:stateInvalidated',
+            inspectorId: 'pinia',
+            nodeId: targetNodeId,
+          })
+          return { status: 1 }
+        }
+
+        // Vuex inspector
+        if (payload.inspectorId === 'vuex') {
+          let storeId: string
+          let path = payload.path ?? []
+
+          // 聚合根编辑：path 形如 [storeId, key, ...]（只读概览，理论上不可编辑）
+          if (payload.nodeId === VUEX_ROOT_ID) {
+            if (path.length < 2 || !path[0])
+              return {
+                status: 0,
+                error: '聚合根编辑需要 [storeId, key, ...] 形式的路径',
+              }
+            storeId = path[0]!
+            path = path.slice(1)
+          } else if (payload.nodeId === 'vuex-root') {
+            // 修复 Critical 1: 根 store 使用 vuex-root
+            storeId = '_root'
+          } else if (payload.nodeId?.startsWith('module:')) {
+            storeId = payload.nodeId.slice('module:'.length)
+          } else {
+            return {
+              status: 0,
+              error: probeNotSupported('该 inspector 的状态编辑'),
+            }
+          }
+
+          if (path.length === 0) return { status: 0, error: '缺少编辑路径' }
+
+          try {
+            await callUni(DEVFRAME_RPC.updateVuexState, {
+              id: storeId,
+              path,
+              value: payload.value,
+              remove: payload.remove,
+            })
+          } catch (error) {
+            return {
+              status: 0,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          }
+
+          // 成功后递增版本触发失效通知（修复 Critical 1: 使用正确的 nodeId）
+          const targetNodeId =
+            payload.nodeId ??
+            (storeId === '_root' ? 'vuex-root' : `module:${storeId}`)
+          inspectorVersionByNode.set(
+            targetNodeId,
+            (inspectorVersionByNode.get(targetNodeId) ?? 0) + 1,
+          )
+          emit({
+            type: 'inspectors:stateInvalidated',
+            inspectorId: 'vuex',
+            nodeId: targetNodeId,
+          })
+          return { status: 1 }
+        }
+
+        return {
+          status: 0,
+          error: probeNotSupported('该 inspector 的状态编辑'),
+        }
+      }
+
+      case 'inspectors:selectNode':
+      case 'inspectors:callAction':
+      case 'inspectors:callNodeAction':
+        // 拉取式实现：选中/动作无需探针侧状态
+        return { status: 1 }
+
+      case 'components:openInEditor': {
+        await ensureReady()
+        const payload = request.payload as { file?: string }
+        if (!payload?.file) return { status: 0, error: '缺少文件路径' }
+        try {
+          await callUni(DEVFRAME_RPC.openInEditor, { file: payload.file })
+          return { status: 1 }
+        } catch (error) {
+          return {
+            status: 0,
+            error: error instanceof Error ? error.message : String(error),
+          }
+        }
+      }
+
+      case 'router:navigate': {
+        await ensureReady()
+        const payload = request.payload as { path?: string }
+        if (!payload?.path) return { status: 0, error: '缺少跳转路径' }
+        try {
+          const res = await callUni<{ ok: boolean; error?: string }>(
+            DEVFRAME_RPC.navigateTo,
+            { path: payload.path },
+          )
+          if (res?.ok === false)
+            return { status: 0, error: res.error || '页面跳转失败' }
+          return { status: 1 }
+        } catch (error) {
+          return {
+            status: 0,
+            error: error instanceof Error ? error.message : String(error),
+          }
+        }
+      }
+
+      case 'values:recompute': {
+        await ensureReady()
+        const payload = request.payload as {
+          componentId: string
+          sectionId: string
+          path: string[]
+        }
+        if (!payload?.componentId)
+          return { status: 0, error: '缺少 componentId' }
+        try {
+          await callUni(DEVFRAME_RPC.recomputeComponentState, {
+            id: payload.componentId,
+            section: payload.sectionId,
+            path: payload.path,
+          })
+          const componentId = payload.componentId
+          const version = (stateVersionByComponent.get(componentId) ?? 0) + 1
+          stateVersionByComponent.set(componentId, version)
+          emit({
+            type: 'components:stateInvalidated',
+            appId: appIdOf(componentId),
+            componentId,
+            version,
+            reason: 'edit',
+          })
+          return { status: 1 }
+        } catch (error) {
+          return {
+            status: 0,
+            error: error instanceof Error ? error.message : String(error),
+          }
+        }
+      }
+
+      case 'values:customAction':
+        return { status: 0, error: probeNotSupported('自定义值动作') }
+
+      default:
+        // highlight / scrollTo / inspectDom / expandTreeNode / timeline:* / inspectors:* 等
+        // 探针没有对应能力的命令一律静默成功，保持 UI 交互不炸。
+        return { status: 1 }
+    }
+  }
+
+  void ensureReady().catch(() => {})
+
+  const query = async (request: QueryRequest) => handleQuery(request)
+  const command = async (request: CommandRequest) => handleCommand(request)
+
+  return {
+    query,
+    command,
+    queryCustom: query,
+    commandCustom: command,
+    onEvent(handler) {
+      eventHandlers.add(handler)
+      return () => {
+        eventHandlers.delete(handler)
+      }
+    },
+    onConnectionChanged(handler) {
+      connectionHandlers.add(handler)
+      return () => {
+        connectionHandlers.delete(handler)
+      }
+    },
+    uniNetwork,
+    dispose() {
+      disposed = true
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = undefined
+      }
+      unsubSharedState?.()
+      unsubSharedState = undefined
+      unsubNetworkSharedState?.()
+      unsubNetworkSharedState = undefined
+      unsubRenderedComponents?.()
+      unsubRenderedComponents = undefined
+      networkListeners.clear()
+      if (activeUniNetwork === uniNetwork) activeUniNetwork = undefined
+      resetConnectionState()
+      backend?.dispose()
+      backend = undefined
+      eventHandlers.clear()
+      connectionHandlers.clear()
+    },
+  } as DevtoolsRpcClient & { uniNetwork: UniNetworkApi }
+}

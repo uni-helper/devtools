@@ -1,0 +1,144 @@
+import { createRequire } from 'node:module'
+import { describe, expect, it, vi } from 'vitest'
+
+const require = createRequire(import.meta.url)
+const entryLoader = require('../entry-loader.cjs')
+
+const { shouldInjectAgentEntry, INJECT_MARKER, buildInjectCode } = entryLoader
+
+describe('entry-loader: shouldInjectAgentEntry 命名谓词 (LESSONS #2)', () => {
+  it('带 query 的模块不注入 (防 uni 页面入口重写导致重复/错误注入)', () => {
+    expect(
+      shouldInjectAgentEntry(
+        '/src/main.js',
+        '?{"page":"pages%2Findex%2Findex"}',
+        'console.log("hello")',
+      ),
+    ).toBe(false)
+    expect(
+      shouldInjectAgentEntry(undefined, '?page=index', 'console.log("hello")'),
+    ).toBe(false)
+    // 两个参数形式
+    expect(
+      shouldInjectAgentEntry(
+        '?{"page":"pages%2Findex%2Findex"}',
+        'console.log("hello")',
+      ),
+    ).toBe(false)
+  })
+
+  it('裸 ? 不注入 (resourceQuery 为 ? 时同样拒绝)', () => {
+    expect(
+      shouldInjectAgentEntry('/src/main.js', '?', 'console.log("hello")'),
+    ).toBe(false)
+    expect(shouldInjectAgentEntry('?', 'console.log("hello")')).toBe(false)
+  })
+
+  it('空 query 正常注入', () => {
+    expect(
+      shouldInjectAgentEntry('/src/main.js', '', 'console.log("hello")'),
+    ).toBe(true)
+    expect(
+      shouldInjectAgentEntry('/src/main.js', undefined, 'console.log("hello")'),
+    ).toBe(true)
+    expect(shouldInjectAgentEntry('', 'console.log("hello")')).toBe(true)
+  })
+
+  it('已含 INJECT_MARKER 不重复注入', () => {
+    const already = `/* ${INJECT_MARKER} */\nconsole.log("already injected")`
+    expect(shouldInjectAgentEntry('/src/main.js', '', already)).toBe(false)
+    expect(shouldInjectAgentEntry('', already)).toBe(false)
+  })
+
+  it('已含 probe 引用不重复注入', () => {
+    const withProbe = `import { initAgent } from '@uni-helper/devtools-probes/vue2';\ninitAgent();`
+    expect(shouldInjectAgentEntry('/src/main.js', '', withProbe)).toBe(false)
+  })
+})
+
+describe('entry-loader: webpack loader 执行', () => {
+  it('满足注入条件时前置注入代码', () => {
+    const callback = vi.fn()
+    const ctx = {
+      resourcePath: '/project/src/main.js',
+      resourceQuery: '',
+      callback,
+      cacheable: vi.fn(),
+      query: {},
+    }
+
+    entryLoader.call(ctx, 'const app = new Vue();', null)
+
+    const calls = callback.mock.calls[0]
+    expect(calls[0]).toBe(null) // error
+    expect(calls[1]).toContain(INJECT_MARKER) // injected code
+    expect(calls[1]).toContain('const app = new Vue();') // original source
+    expect(calls[2]).toBe(null) // map
+  })
+
+  it('注入代码是单行前缀：原文件每一行的行号不变（上游 source map 仍然对得上）', () => {
+    const callback = vi.fn()
+    const source =
+      'const Vue = function () {}\nconst app = new Vue()\napp.$mount = () => {}'
+    const ctx = {
+      resourcePath: '/project/src/main.js',
+      resourceQuery: '',
+      callback,
+      cacheable: vi.fn(),
+      query: {},
+    }
+
+    entryLoader.call(ctx, source, null)
+
+    const output: string = callback.mock.calls[0][1]
+    expect(output.split('\n').slice(1)).toEqual(source.split('\n').slice(1))
+    expect(() => new Function(output)).not.toThrow()
+  })
+
+  it('注入时把探针配置文件登记为依赖：重启换了 token，缓存的 main.js 产物随之失效', () => {
+    const addDependency = vi.fn()
+    const ctx = {
+      resourcePath: '/project/src/main.js',
+      resourceQuery: '',
+      callback: vi.fn(),
+      cacheable: vi.fn(),
+      addDependency,
+      query: { cliContext: '/project' },
+    }
+
+    entryLoader.call(ctx, 'const app = new Vue();', null)
+
+    expect(addDependency).toHaveBeenCalledWith(
+      '/project/node_modules/.uni-devtools/agent-config.json',
+    )
+  })
+
+  it('带 query 时放行原代码', () => {
+    const callback = vi.fn()
+    const ctx = {
+      resourcePath: '/project/src/main.js',
+      resourceQuery: '?{"page":"pages%2Findex%2Findex"}',
+      callback,
+      cacheable: vi.fn(),
+    }
+
+    entryLoader.call(ctx, 'const app = new Vue();', null)
+
+    expect(callback).toHaveBeenCalledWith(null, 'const app = new Vue();', null)
+  })
+
+  it('已含 marker 时放行原代码', () => {
+    const callback = vi.fn()
+    const code = `/* ${INJECT_MARKER} */\nconst app = new Vue();`
+    const ctx = {
+      resourcePath: '/project/src/main.js',
+      resourceQuery: '',
+      callback,
+      cacheable: vi.fn(),
+    }
+
+    entryLoader.call(ctx, code, null)
+
+    expect(callback).toHaveBeenCalledWith(null, code, null)
+  })
+})

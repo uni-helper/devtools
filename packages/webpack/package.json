@@ -1,0 +1,48 @@
+{
+  "name": "@uni-helper/devtools-webpack",
+  "version": "0.0.1-beta.8",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
+  "bugs": "https://github.com/uni-helper/devtools/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/devtools.git",
+    "directory": "packages/webpack"
+  },
+  "files": [
+    "dist",
+    "entry-loader.cjs"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@devframes/agentic": "1.1.0",
+    "@uni-helper/devtools-core": "workspace:*",
+    "@uni-helper/devtools-probes": "workspace:*",
+    "cac": "^7.0.0",
+    "devframe": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "tsdown": "^0.23.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
