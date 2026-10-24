@@ -193,11 +193,11 @@ pnpm install
 
 1. **依赖外部化**：旧 esbuild 命令把 dependencies 全部打进 dist（仅 devframe 等显式 `--external`）；tsdown 默认外部化 dependencies / peerDependencies / optionalDependencies。被外部化的包都在各自 dependencies 里声明，npm 安装后可解析，同时消除了 devtools 与 mcp 各自打包一份 core 的模块状态重复。例外见 3。
 2. **dts 扩展名**：`outExtensions` 必须显式给 `dts: '.d.ts'`——`type: "module"` 下 ESM 产物配 `.mjs` 时声明文件默认配对 `.d.mts`，而 publishConfig 全部指向 `.d.ts`。
-3. **probes 必须自包含**：小程序环境没有 node_modules，其运行时依赖（shared / devframe / birpc）用 `alwaysBundle` 打进 `agent-vue2.js`；`alwaysBundle` 的匹配不覆盖子路径导入（`@uni-helper/devtools-shared/utils/tagged-value` 曾漏出），要用正则 `/^@uni-helper\//` 这类模式。同理 vite 包里 probes 发布物仍是 src 源码导出，也必须 `alwaysBundle`。
+3. **probes 必须自包含**：小程序环境没有 node_modules，其运行时依赖（shared / devframe / birpc）用 `alwaysBundle` 打进 `agent-vue2.js`；`alwaysBundle` 的匹配不覆盖子路径导入（`@uni-helper/devtools-shared/utils/tagged-value` 曾漏出），要用正则 `/^@uni-helper\//` 这类模式。vite 包不需要 `alwaysBundle` 探针：它的 node 代码不 import probes，只把 `@uni-helper/devtools-probes/*` 作为字符串注入用户代码，由宿主 vite 解析。
 4. **banner 垫片 → `shims: true`**；cli 的 shebang 用 rolldown `outputOptions.banner`（函数形式只给 entry chunk 加）。
 5. **vite 的 inspect client 拷贝**改用 tsdown `copy` 选项。
 6. **core/src/sidecar.ts 补了返回类型标注**（`CreateDevServerOptions`）：推断返回类型经 `createInspectApp` 牵出 h3 的深层类型路径，rolldown-plugin-dts 发射报 TS2742（tsup 的 dts 管线不做此检查所以未暴露）。
-7. **「零 Vue 3 污染」判据改用键名**：`grep -c 'pinia-state' dist/agent-vue2.js` 应为 0。rolldown 产物保留注释，旧判据 `grep -ci pinia` 会被注释字样假阳性（实测注释 5 处、真实键名 0 处）。
+7. **「零 Vue 3 污染」判据改用键名**：`grep -c 'agent:getPinia' dist/agent-vue2.js` 应为 0。rolldown 产物保留注释，旧判据 `grep -ci pinia` 会被注释字样假阳性（实测注释 5 处、真实键名 0 处）。键名要按 `AGENT_RPC_VUE3` 的实际值（驼峰）写：`agent:get-pinia` 什么都匹配不到、恒为 0；`pinia-state` 匹配的是面板侧 kebab 名（`get-pinia-state`），不是探针键。对照：`grep -c 'agent:getPinia' packages/shared/dist/index.mjs` 为 2。
 
 ## 验证
 

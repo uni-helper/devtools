@@ -318,5 +318,5 @@ for (const component of tree.pages[0].components) {
 
 实施中修正/发现的两点，已写进对应源码注释：
 
-- **常量表必须拆成两张扁平表**。`shared/constants.ts` 不能导出 `{ ...AGENT_BASE_RPC, ...AGENT_RPC_VUE3 }` 这样的合并表：对象展开会让打包器无法证明初始化无副作用，把整块（含 Pinia 键名）保留进 Vue 2 预构建产物。「零 Vue 3 污染」判据用 `grep -c 'agent:get-pinia' dist/agent-vue2.js`（应为 0；对冻结 RPC 值前缀 grep，tsdown 产物保留注释，`grep -ci pinia` 会被注释字样假阳性，源码注释里也不要写键名字面量）。需要全表的 node 侧由 `core/src/rpc-names.ts` 自行组装。
+- **常量表必须拆成两张扁平表**。`shared/constants.ts` 不能导出 `{ ...AGENT_BASE_RPC, ...AGENT_RPC_VUE3 }` 这样的合并表：对象展开会让打包器无法证明初始化无副作用，把整块（含 Pinia 键名）保留进 Vue 2 预构建产物。「零 Vue 3 污染」判据用 `grep -c 'agent:getPinia' dist/agent-vue2.js`（应为 0；对冻结 RPC 值前缀 grep，tsdown 产物保留注释，`grep -ci pinia` 会被注释字样假阳性，源码注释里也不要写键名字面量）。需要全表的 node 侧由 `core/src/rpc-names.ts` 自行组装。
 - **MCP 与「绑 LAN IP」互相冲突**。插件为让真机探针能连，原先只绑 LAN IP；而 MCP 路由的 loopback peer 检查要求对端来自 loopback，两者不可能同时成立（实测三种请求全 403）。修法是把「绑定地址」与「对外地址」拆开：server 绑 `0.0.0.0`，探针/面板 URL 仍用 LAN IP 自己拼（devframe 会把 `0.0.0.0` 规范成 `localhost`，不能直接取 `started.origin`）。
