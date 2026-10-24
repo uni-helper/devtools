@@ -1,0 +1,46 @@
+name: E2E
+
+on:
+  push:
+    branches: [main, devframe]
+  pull_request:
+
+jobs:
+  mp-weixin:
+    # wxa-runner 只支持 x86-64
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # playground 消费插件/探针/core 的 dist
+      - name: Build
+        run: pnpm build
+
+      # wxa-runner 用内置基础库与 miniprogram-compiler，无需微信开发者工具；
+      # Chrome 用 runner 预装的
+      - name: E2E (wxa-runner)
+        run: pnpm --filter vitesse-uni-app test:e2e
+
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playground/vue3-vite/playwright-report
+            playground/vue3-vite/test-results
+          retention-days: 7
