@@ -2,6 +2,7 @@
 import type { DevtoolsTab, DevtoolsTabId } from '../../types/tab'
 import { Dropdown } from 'floating-vue'
 import { computed } from 'vue'
+import iconUrl from '../../assets/icon.png'
 import DockingPanel from './DockingPanel.vue'
 import SideNavItem from './SideNavItem.vue'
 import { useDevtoolsSettings } from '../../composables/settings'
@@ -38,7 +39,12 @@ const sidebarScrollable = computed(() => settings.scrollableSidebar)
           type="button"
           aria-label="DevTools menu"
         >
-          <span class="i-logos-vue h-6 w-6 shrink-0" aria-hidden="true" />
+          <img
+            :src="iconUrl"
+            alt=""
+            class="h-6 w-6 shrink-0 [image-rendering:pixelated]"
+            aria-hidden="true"
+          />
           <span
             v-if="sidebarExpanded"
             class="min-w-0 truncate text-lg font-650"

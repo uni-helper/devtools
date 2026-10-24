@@ -46,5 +46,5 @@ function documentationIcon(slug: string): string {
   if (slug === 'ssr' || slug === 'custom-renderer')
     return 'i-carbon-server-proxy'
   if (slug.includes('css')) return 'i-carbon-color-palette'
-  return 'i-logos-vue'
+  return 'i-carbon-document'
 }
