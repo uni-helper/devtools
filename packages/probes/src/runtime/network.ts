@@ -811,10 +811,6 @@ export function __resetNetworkForTest(): void {
   pushAgainRequested = false
 }
 
-export function __initRecordIdForReloadTest(): void {
-  nextRecordId = initRecordId()
-}
-
 export function __getLastPushedIdForTest(): number {
   return lastPushedId
 }

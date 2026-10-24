@@ -61,7 +61,6 @@ export interface UniSocketChannelOptions {
   /** 运行时适配器（必需） */
   adapter: RuntimeAdapter
   wsUrl: string
-  protocols?: string[]
   maxBackoffMs?: number
   initialBackoffMs?: number
   /** 连续重连失败多少次后放弃；期间连上过一次即重新计数 */
@@ -91,7 +90,6 @@ export function createUniSocketChannel(
   const {
     adapter,
     wsUrl,
-    protocols,
     maxBackoffMs = 5000,
     initialBackoffMs = 1000,
     maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS,
