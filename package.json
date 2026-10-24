@@ -17,6 +17,9 @@
   },
   "license": "MIT",
   "author": "FliPPeDround <flippedround@qq.com>",
+  "contributors": [
+    "DBAAZzz <41032629+DBAAZzz@users.noreply.github.com> (https://github.com/DBAAZzz)"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/uni-helper/devtools.git"
