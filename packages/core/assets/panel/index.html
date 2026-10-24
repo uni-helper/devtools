@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uni DevTools - Component Inspector (Devframe PoC)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --badge-page: #6366f1;
+      --badge-comp: #0ea5e9;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      color: white;
+      font-weight: bold;
+      font-size: 13px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(148, 163, 184, 0.1);
+      border: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .status-pill.connected .status-dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .status-pill.connected { color: var(--success); border-color: rgba(34, 197, 94, 0.3); }
+
+    .status-pill.connecting .status-dot { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+    .status-pill.connecting { color: var(--warning); border-color: rgba(245, 158, 11, 0.3); }
+
+    .status-pill.disconnected .status-dot { background: var(--danger); }
+    .status-pill.disconnected { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+
+    .toolbar {
+      background: rgba(30, 41, 59, 0.5);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    button {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: var(--surface-hover);
+      border-color: var(--primary);
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: #0f172a;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+
+    button.primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .search-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 240px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .tree-pane {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+
+    .details-pane {
+      width: 440px;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.6);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      gap: 12px;
+      font-size: 14px;
+    }
+
+    .tree-node {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      margin: 4px 0;
+      user-select: none;
+    }
+
+    .tree-node-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+
+    .tree-node-row:hover {
+      background: var(--surface-hover);
+    }
+
+    .tree-node-row.selected {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .tag-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-badge.page { background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); }
+    .tag-badge.component { background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.4); }
+    .tag-badge.ref { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+    .tag-badge.object { background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.4); }
+    .tag-badge.value { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .tag-badge.data { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+
+    .state-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .state-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .state-key {
+      font-weight: 600;
+      color: #e2e8f0;
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+
+    .state-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 6px 8px;
+      outline: none;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .state-input:focus {
+      border-color: var(--primary);
+    }
+
+    .state-action-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .btn-sm {
+      padding: 3px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+
+    .state-msg {
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .state-msg.success { color: var(--success); }
+    .state-msg.error { color: var(--danger); }
+
+    .node-name {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .node-id {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .tree-children {
+      margin-left: 20px;
+      border-left: 1px dashed var(--border);
+      padding-left: 6px;
+    }
+
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      overflow-x: auto;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 20px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-group">
+      <span class="logo-badge">DEVFRAME POC</span>
+      <h1>Uni-Helper DevTools · Component Inspector</h1>
+    </div>
+    <div class="header-meta">
+      <div id="statusPill" class="status-pill connecting">
+        <span class="status-dot"></span>
+        <span id="statusText">Connecting...</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button id="refreshBtn" class="primary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      Refresh Tree
+    </button>
+    <button id="pingBtn">Ping Agent</button>
+    <input type="text" id="searchInput" class="search-input" placeholder="Filter components...">
+    <div style="flex: 1;"></div>
+    <button id="toggleJsonBtn">Toggle JSON</button>
+  </div>
+
+  <div class="main-container">
+    <div class="tree-pane" id="treeContainer">
+      <div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg>
+        <span>No component tree received yet. Click "Refresh Tree" or connect an inspected app.</span>
+      </div>
+    </div>
+
+    <div class="details-pane" id="detailsPane">
+      <h3 style="font-size: 14px; color: var(--text-muted);">Node Inspector</h3>
+      <div id="nodeDetails" style="color: var(--text-muted); font-size: 13px;">
+        Select a component on the left to inspect its details.
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span id="wsEndpointLabel">Endpoint: Initializing...</span>
+    <span id="latencyLabel">Latency: -- ms</span>
+  </footer>
+
+  <script type="module" src="./panel.js"></script>
+</body>
+</html>

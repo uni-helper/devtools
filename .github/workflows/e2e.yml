@@ -1,0 +1,53 @@
+name: E2E
+
+on:
+  push:
+    branches: [main, devframe]
+  pull_request:
+
+jobs:
+  mp-weixin:
+    # wxa-runner 只支持 x86-64
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # playground 消费插件/探针/core 的 dist
+      - name: Build
+        run: pnpm build
+
+      # Linux 上没有微信开发者工具：基础库用 @open-wxa/wxa-baselib（extractor 的
+      # optionalDependency，取自 GitHub，拉取失败时 pnpm 静默跳过），编译器用
+      # miniprogram-compiler，Chrome 用 runner 预装的。先确认都在，缺了直接报因
+      - name: Check base library and Chrome
+        run: |
+          ls node_modules/.pnpm | grep -q '^@open-wxa+wxa-baselib@' \
+            || { echo "::error::@open-wxa/wxa-baselib 未安装：检查 pnpm-lock.yaml 里 @open-wxa/wxa-runner-extractor 的 optionalDependencies"; exit 1; }
+          test -x /usr/bin/google-chrome
+
+      - name: E2E (wxa-runner)
+        run: pnpm --filter vitesse-uni-app test:e2e
+
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playground/vue3-vite/playwright-report
+            playground/vue3-vite/test-results
+          retention-days: 7

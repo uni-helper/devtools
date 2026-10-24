@@ -1,0 +1,52 @@
+{
+  "name": "@uni-helper/devtools-vite",
+  "version": "0.0.1-beta.8",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
+  "bugs": "https://github.com/uni-helper/devtools/issues",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/devtools.git",
+    "directory": "packages/vite"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@devframes/agentic": "1.1.0",
+    "@uni-helper/devtools-core": "workspace:*",
+    "@uni-helper/devtools-probes": "workspace:*",
+    "@uni-helper/devtools-shared": "workspace:*",
+    "cac": "^7.0.0",
+    "devframe": "1.1.0",
+    "magic-string": "^0.30.21"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "acorn": "^8.11.3",
+    "tsdown": "^0.23.2",
+    "typescript": "^5.4.5",
+    "vite": "^5",
+    "vite-plugin-inspect": "^0.8.8",
+    "vitest": "^1.6.0"
+  }
+}

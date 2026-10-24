@@ -1,9 +1,0 @@
-{
-  "name": "@uni-helper/devtools-types",
-  "version": "0.0.1-beta.8",
-  "description": "",
-  "author": "",
-  "license": "ISC",
-  "keywords": [],
-  "main": "index.d.ts"
-}

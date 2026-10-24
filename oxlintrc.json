@@ -1,0 +1,7 @@
+{
+  "$schema": "https://oxc.rs/schema/oxlintrc.json",
+  "ignores": ["packages/core/assets/**", "**/node_modules/**", "playground/**"],
+  "rules": {
+    "no-console": "warn"
+  }
+}

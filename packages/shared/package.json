@@ -1,51 +1,56 @@
 {
   "name": "@uni-helper/devtools-shared",
-  "type": "module",
   "version": "0.0.1-beta.8",
-  "packageManager": "pnpm@9.0.2",
-  "description": "devtools for uni",
-  "author": "FliPPeDround <flippedround@qq.com>",
+  "description": "Uni DevTools 跨端共享：协议类型、冻结契约常量、纯函数工具",
+  "homepage": "https://github.com/uni-helper/devtools#readme",
+  "bugs": "https://github.com/uni-helper/devtools/issues",
   "license": "MIT",
-  "funding": "https://afdian.com/a/flippedround",
-  "homepage": "https://github.com/flippedround/uni-devtools#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/flippedround/uni-devtools.git"
-  },
-  "bugs": {
-    "url": "https://github.com/flippedround/uni-devtools/issues"
-  },
-  "keywords": [
-    "vite"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./*": "./*"
-  },
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "./dist/*",
-        "./*"
-      ]
-    }
+    "url": "git+https://github.com/uni-helper/devtools.git",
+    "directory": "packages/shared"
   },
   "files": [
+    "src",
     "dist"
   ],
-  "scripts": {
-    "build": "tsup",
-    "stub": "tsup --watch",
-    "test": "vitest"
+  "type": "module",
+  "sideEffects": false,
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./utils/network-merge": "./src/utils/network-merge.ts",
+    "./utils/mock-flag": "./src/utils/mock-flag.ts",
+    "./utils/tagged-value": "./src/utils/tagged-value.ts"
   },
-  "dependencies": {
-    "rfdc": "^1.4.1"
+  "publishConfig": {
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "./utils/network-merge": {
+        "types": "./dist/utils/network-merge.d.ts",
+        "default": "./dist/utils/network-merge.mjs"
+      },
+      "./utils/mock-flag": {
+        "types": "./dist/utils/mock-flag.d.ts",
+        "default": "./dist/utils/mock-flag.mjs"
+      },
+      "./utils/tagged-value": {
+        "types": "./dist/utils/tagged-value.d.ts",
+        "default": "./dist/utils/tagged-value.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsdown"
+  },
+  "devDependencies": {
+    "tsdown": "^0.23.2",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
   }
 }

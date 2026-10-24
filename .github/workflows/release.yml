@@ -35,7 +35,16 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
+      # dist 不入库，必须现场构建；面板会在这一步拷进 core
+      - name: Build
+        run: pnpm build
+
+      - name: Check packages
+        run: node scripts/check-publish.mjs
+
+      # 根包是 private，必须 -r 才会发布 packages/*；预发布版本（tag 含 -）走 beta，
+      # 不占 latest
       - name: Publish to NPM
-        run: pnpm publish --access public --no-git-checks
+        run: pnpm -r publish --access public --no-git-checks --tag ${{ contains(github.ref_name, '-') && 'beta' || 'latest' }}

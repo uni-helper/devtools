@@ -1,0 +1,205 @@
+import path from 'node:path'
+import process from 'node:process'
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
+
+import type { Alias, Plugin, ResolvedConfig } from 'vite'
+import Inspect from 'vite-plugin-inspect'
+import { AGENT_CLIENT_MARKER } from '@uni-helper/devtools-core/relay'
+import { resolveInspectOutputDir } from '@uni-helper/devtools-core/inspect-serve'
+import { startUniDevtoolsServer } from '@uni-helper/devtools-core/sidecar'
+import { transformAgentEntry, transformInstrument } from './entry-inject.ts'
+
+const VIRTUAL_AGENT_MODULE = 'virtual:uni-devtools-agent'
+const PROBES_PACKAGE = '@uni-helper/devtools-probes'
+/** 本插件自己的位置：探针是插件的依赖，从这里解析一定找得到 */
+const PLUGIN_FILE = fileURLToPath(import.meta.url)
+
+/**
+ * 解析 uni-app H5 运行时链（uni-h5 → vue-router → @vue/devtools-api）实际需要的
+ * @vue/devtools-kit 版本目录。
+ *
+ * 背景：宿主工程若与本 monorepo 同源（workspace/shamefully-hoist），根部可能被
+ * hoist 出一个更高版本的 kit（如 9.x beta）；而 vue-router 的 devtools-api@8 声明
+ * ^8.x 且按具名导入新版 API。被依赖预构建收编时 kit 从 .vite/deps 目录向上解析会
+ * 命中根部错误版本，页面直接黑屏（"does not provide an export named
+ * 'addCustomCommand'"）。这里沿 node 自身解析链（vue-router → devtools-api → kit，
+ * node 解析会 realpath 穿透 pnpm 符号链接）找到 api 真正想要的 kit 落点并 alias，
+ * 任何一步解析失败（如 mp 工程没有 vue-router）都不加 alias。
+ */
+function resolveHostKitAlias(root: string): Alias | undefined {
+  try {
+    const req = createRequire(path.join(root, 'package.json'))
+    const routerPkg = req.resolve('vue-router/package.json')
+    // 注意不能 resolve('<pkg>/package.json')：部分包（@vue/devtools-api）的
+    // exports 不暴露 ./package.json 子路径。解析主入口再取包根目录，
+    // node 的解析自带 realpath，能穿透 pnpm 的符号链接落到位。
+    const apiEntry = createRequire(routerPkg).resolve('@vue/devtools-api')
+    const kitEntry = createRequire(apiEntry).resolve('@vue/devtools-kit')
+    const kitRoot = path.dirname(path.dirname(kitEntry))
+    return { find: /^@vue\/devtools-kit$/, replacement: kitRoot }
+  } catch {
+    return undefined
+  }
+}
+
+export interface UniDevtoolsPluginOptions {
+  host?: string
+  port?: number
+  clientAssets?: string
+}
+
+interface PluginState {
+  ready: Promise<{ panelUrl: string; wsUrl: string } | null>
+  devToken: string
+  started: boolean
+}
+
+/**
+ * uni-app 小程序 dev 的真实运行模型是 `vite build --watch`（没有 vite dev
+ * server，configureServer 不会执行），因此 devframe 采用 sidecar 模式自建
+ * HTTP+WS 端口，与旧插件在 configResolved 自建 Polka 服务器的做法同构。
+ */
+export function UniDevtoolsPlugin(
+  options: UniDevtoolsPluginOptions = {},
+): Plugin[] {
+  // 生产构建（build --watch 之外的正式打包）零注入、零挂载
+  const isDev = process.env.NODE_ENV === 'development'
+
+  const state: PluginState = {
+    ready: Promise.resolve(null),
+    devToken: '',
+    started: false,
+  }
+
+  function start(_config: ResolvedConfig) {
+    if (state.started) return
+    state.started = true
+
+    const server = startUniDevtoolsServer(options)
+    state.devToken = server.devToken
+    state.ready = server.ready
+  }
+
+  const corePlugin: Plugin = {
+    name: 'uni-devtools-vite',
+
+    config(config) {
+      if (!isDev) return
+      // 探针包以源码形式被宿主工程引用，且内部 import 了本插件的虚拟模块
+      // virtual:uni-devtools-agent——一旦被 esbuild 依赖预构建收进 bundle，
+      // 虚拟模块无法解析直接编译失败，必须排除走插件管线。
+      // vite 的 exclude 按完整导入说明符精确匹配（pkgId 含子路径），包名与
+      // 子路径都要列。
+      // vue-router/@vue/devtools-api 也必须排除：预构建产物从 .vite/deps 目录
+      // 向上解析裸导入，会命中 monorepo 根部被 shamefully-hoist 的高版本
+      // @vue/devtools-kit，与 vue-router 的 devtools-api@8 声明的 ^8.x 不匹配
+      // （缺 addCustomCommand 等导出）——排除后走正常解析，命中它自己的嵌套版本。
+      return {
+        optimizeDeps: {
+          exclude: [
+            '@uni-helper/devtools-probes',
+            '@uni-helper/devtools-probes/vue3',
+            '@uni-helper/devtools-probes/vue2',
+            'vue-router',
+            '@vue/devtools-api',
+          ],
+        },
+        resolve: {
+          alias: (() => {
+            const hostKitAlias = resolveHostKitAlias(
+              config.root ?? process.cwd(),
+            )
+            return hostKitAlias ? [hostKitAlias] : []
+          })(),
+        },
+      }
+    },
+
+    configResolved(config) {
+      if (!isDev) return
+      start(config)
+    },
+
+    async resolveId(id, importer) {
+      if (id === VIRTUAL_AGENT_MODULE) return `\0${VIRTUAL_AGENT_MODULE}`
+      // 注入到用户代码里的探针 import（入口 initAgent、组件渲染钩子）按用户文件
+      // 位置解析会失败：pnpm 严格模式下用户只装了门面包时，探针是传递依赖，
+      // 用户目录下看不到。改从插件自身位置解析。
+      if (
+        isDev &&
+        (id === PROBES_PACKAGE || id.startsWith(`${PROBES_PACKAGE}/`)) &&
+        importer !== PLUGIN_FILE
+      ) {
+        return this.resolve(id, PLUGIN_FILE, { skipSelf: true })
+      }
+      return null
+    },
+
+    async load(id) {
+      if (id !== `\0${VIRTUAL_AGENT_MODULE}`) return null
+      if (!isDev) {
+        return `export const config = { wsUrl: '', token: '' }`
+      }
+      // 等待 sidecar 就绪，拿到真实 wsUrl（load 支持异步，不阻塞其余模块）
+      const info = await state.ready
+      const wsUrl = info?.wsUrl ?? ''
+      return [
+        `// generated by uni-devtools vite plugin`,
+        `export const config = ${JSON.stringify(
+          {
+            wsUrl,
+            token: wsUrl ? state.devToken : '',
+            clientMarker: AGENT_CLIENT_MARKER,
+          },
+          null,
+          2,
+        )}`,
+      ].join('\n')
+    },
+
+    transform(code, id) {
+      if (!isDev) return null
+      return transformAgentEntry(code, id)
+    },
+  }
+
+  /**
+   * 编译期插桩（解决 mp 产物信息丢失，见 instrument.ts 模块头）：
+   * - `__file` 注入：uni 虚拟入口（uniComponent:// / uniPage://）锚定
+   *   createComponent/createPage 调用 → 探针树匿名节点改用文件名命名
+   * - script setup 绑定捕获：改写「setup 返回 render 函数」的编译形态，
+   *   把闭包绑定挂上 render 函数 → 探针可读可编辑 Composition API 状态
+   *
+   * enforce post：必须排在 uni:vue 把 SFC 编译成 mp 产物之后。
+   */
+  const instrumentPlugin: Plugin = {
+    name: 'uni-devtools-instrument',
+    enforce: 'post',
+    transform(code, id) {
+      if (!isDev) return null
+      return transformInstrument(code, id, {
+        parse: (source) => this.parse(source),
+      })
+    },
+  }
+
+  return [
+    corePlugin,
+    instrumentPlugin,
+    // Vite Inspect：build 模式（mp dev = vite build --watch 没有 dev server，
+    // 中间件模式不可用）——每个 watch rebuild 在 buildEnd 全量重写报告 +
+    // 自带 client UI 到工程内的 inspect 目录，sidecar 静态托管给面板 iframe
+    ...(isDev
+      ? [
+          Inspect({
+            build: true,
+            outputDir: resolveInspectOutputDir(),
+          }) as Plugin,
+        ]
+      : []),
+  ]
+}
+
+export const UniDevtoolsVite = UniDevtoolsPlugin
+export default UniDevtoolsPlugin
