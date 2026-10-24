@@ -6,13 +6,12 @@
  *   - `ping`: () => PingResult
  *   - `get-component-tree`: () => ComponentTreeResult
  *   - `get-component-state`: (args: { id: string }) => ComponentStateResult
- *   - `update-component-state`: (args: UpdateComponentStateParams) => UpdateComponentStateResult
- *   - `recompute-component-state`: (args: RecomputeComponentStateParams) => RecomputeComponentStateResult
- *   - `get-component-render-code`: (args: GetComponentRenderCodeParams) => GetComponentRenderCodeResult
+ *   - `update-component-state` / `recompute-component-state`：参数/结果形状以探针实现为准（packages/probes/src/runtime/state.ts）
+ *   - `get-component-render-code`: (args: { id: string }) => GetComponentRenderCodeResult
  *   - `open-in-editor`: (args: OpenInEditorParams) => OpenInEditorResult
  *   - `get-registered-routes`: () => GetRegisteredRoutesResult
  *   - `get-router-info`: () => RouterInfoResult
- *   - `navigate-to`: (args: NavigateParams) => NavigateResult
+ *   - `navigate-to`: (args: { path: string }) => NavigateResult
  *   - `get-pinia-stores` / `get-pinia-state` / `update-pinia-state`
  *   - `get-inspect-status`: () => GetInspectStatusResult（node 本地读盘，不经探针）
  *   - `get-network-records`: (args: GetNetworkRecordsParams) => GetNetworkRecordsResult
@@ -64,35 +63,6 @@ export interface ComponentStateResult {
   injected?: Record<string, unknown>
   /** 响应式依赖图（随 state 快照搭车下发，官方 kit ComponentStateSnapshotMessage.reactivityGraph 桥） */
   reactivityGraph?: ReactivityGraphSnapshot
-}
-
-export interface UpdateComponentStateParams {
-  id: string
-  key?: string
-  value?: unknown
-  section?: 'props' | 'setup' | 'data' | 'computed'
-  path?: string[]
-  remove?: boolean
-}
-
-export interface UpdateComponentStateResult {
-  ok: true
-  key: string
-  value: unknown
-}
-
-export interface RecomputeComponentStateParams {
-  id: string
-  section: string
-  path: string[]
-}
-
-export interface RecomputeComponentStateResult {
-  ok: boolean
-}
-
-export interface GetComponentRenderCodeParams {
-  id: string
 }
 
 /** 运行时 render 函数源码（解插桩包装层；官方 components:getRenderCode 桥） */
@@ -151,8 +121,6 @@ export interface ReactivityGraphSnapshot {
   relationships: ReactivityRelationship[]
 }
 
-export type PushComponentTreeParams = ComponentTreeResult
-
 export interface PushComponentTreeResult {
   ok: boolean
   /** true = 推送方不是当前活跃探针，载荷被丢弃 */
@@ -192,10 +160,6 @@ export interface RouterInfoResult {
     query?: Record<string, unknown>
   } | null
   stack: RouteStackItem[]
-}
-
-export interface NavigateParams {
-  path: string
 }
 
 export interface NavigateResult {
@@ -251,11 +215,6 @@ export interface UpdateVuexStateParams {
   path: string[] // 属性路径（简化版，不用 key + path 分离）
   value?: unknown
   remove?: boolean // 支持删除操作（修复 CR M2-A）
-}
-
-export interface UpdateVuexStateResult {
-  ok: true
-  id: string
 }
 
 // ---------------------------------------------------------------------------

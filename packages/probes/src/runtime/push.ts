@@ -157,8 +157,3 @@ export function cancelScheduledRenderNotify(): void {
 export function resetPushGate(): void {
   lastPushedTreeJson = ''
 }
-
-/** 测试用：读当前推送门内容 */
-export function __lastPushedTreeJsonForTest(): string {
-  return lastPushedTreeJson
-}
