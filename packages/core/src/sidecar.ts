@@ -1,7 +1,10 @@
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import process from 'node:process'
-import { createDevServer } from 'devframe/adapters/dev'
+import {
+  createDevServer,
+  type CreateDevServerOptions,
+} from 'devframe/adapters/dev'
 import { createInteractiveAuth } from 'devframe/recipes/interactive-auth'
 import { randomToken } from 'devframe/utils/crypto-token'
 import { isAllowedOrigin, isLoopbackAddress } from 'devframe/utils/origin'
@@ -65,7 +68,12 @@ function resolveMcpSetting() {
  * standalone dev server 的公共选项（sidecar 与 harness 共用，保证冒烟路径与
  * 真实插件一致）。
  */
-export function createDevServerOptions(registry: AgentRegistry, token: string) {
+// 返回类型必须显式标注：字面量推断会经 createInspectApp 牵出 h3 的深层类型
+// 路径，dts 发射报 TS2742（推断类型不可移植）
+export function createDevServerOptions(
+  registry: AgentRegistry,
+  token: string,
+): CreateDevServerOptions {
   return {
     // Vite Inspect 静态托管：挂到 sidecar 的 inspect 路径下供面板 iframe，
     // 凭面板 token 访问（门禁见 createInspectApp）

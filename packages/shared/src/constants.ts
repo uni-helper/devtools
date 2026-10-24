@@ -17,11 +17,13 @@ export const BINDINGS_PROP = '__uni_devtools_bindings__'
  * 与 `AGENT_RPC_VUE3` 分成两张**扁平**表是有意的，也不是冗余：
  *
  * 1. 语义上「通用 / Vue 3 专属」本来就是两条运行时线的真实分界。
- * 2. 打包上，Vue 2 线吃的是预构建产物 `agent-vue2.mjs`，而「零 Vue 3 污染」的
- *    验收判据是一条 `grep -ci pinia`。**不要再导出一张 `{ ...BASE, ...VUE3 }`
- *    的合并表**——对象展开会让 esbuild 无法证明初始化无副作用，从而把整块
- *    （含 Pinia 键名）保留进 Vue 2 产物，让那条判据变成恒假阳性，真问题反被
- *    淹没。需要全表的是 node 侧，由 `core/src/rpc-names.ts` 自行组装。
+ * 2. 打包上，Vue 2 线吃的是预构建产物 `agent-vue2.js`，而「零 Vue 3 污染」的
+ *    验收判据是对冻结 RPC 值前缀做 grep（具体命令见 FINAL_STRUCTURE.md），应
+ *    为 0。**不要再导出一张 `{ ...BASE, ...VUE3 }` 的合并表**——对象展开会让
+ *    打包器无法证明初始化无副作用，从而把整块（含 Pinia 键名）保留进 Vue 2
+ *    产物。不要用 `grep -ci pinia` 当判据：tsdown（rolldown）产物保留注释，
+ *    注释里的字样会假阳性（注释里也**不要**写键名字面量，同理会被带进产物）。
+ *    需要全表的是 node 侧，由 `core/src/rpc-names.ts` 自行组装。
  */
 export const AGENT_BASE_RPC = {
   ping: 'uni-devtools:agent:ping',
