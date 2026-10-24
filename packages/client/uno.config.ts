@@ -118,6 +118,7 @@ export default defineConfig({
     'i-carbon-data-view',
     'i-carbon-debug',
     'i-carbon-direction-right-01',
+    'i-carbon-document',
     'i-carbon-edit',
     'i-carbon-filter',
     'i-carbon-flow-data',
@@ -158,7 +159,6 @@ export default defineConfig({
     'i-carbon-zoom-out',
     'i-ic-baseline-delete',
     'i-logos-pinia',
-    'i-logos-vue',
     'i-ri-route-line',
   ],
   presets: [

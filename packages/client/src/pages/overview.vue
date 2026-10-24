@@ -37,9 +37,9 @@ function isMacOS() {
         </div>
         <div
           v-if="!isInChromePanel"
-          class="-mt-1 mb-6 flex gap-1 text-center text-sm op40"
+          class="mt-3 mb-6 flex gap-1 text-center text-sm op40"
         >
-          <span>Vue DevTools</span>
+          <span>Uni DevTools</span>
           <code>v{{ version }}</code>
         </div>
       </div>
@@ -48,8 +48,8 @@ function isMacOS() {
         <div
           class="min-h-25 min-w-40 flex flex-1 flex-col items-center justify-center gap-2 rounded-1 border border-base bg-transparent p-4 color-inherit op50 shadow-[0_1px_3px_#00000012] saturate-0 transition-[opacity,filter,background,color] duration-200 hover:bg-green/10 hover:text-green-600 hover:op100 hover:saturate-100"
         >
-          <div class="i-logos-vue text-3xl" />
-          <code>{{ vueVersion === '-' ? '-' : `v${vueVersion}` }}</code>
+          <div class="i-carbon-version text-3xl" />
+          <code>{{ vueVersion === '-' ? 'Vue -' : `Vue v${vueVersion}` }}</code>
         </div>
 
         <RouterLink

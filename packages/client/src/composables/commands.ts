@@ -62,7 +62,7 @@ export function useDevtoolsCommands(
       id: 'documentation:vue',
       title: 'Vue Documentation',
       group: 'Documentation',
-      icon: 'i-logos-vue',
+      icon: 'i-carbon-document',
       keywords: ['docs', 'guide', 'api'],
       action: createVueDocumentationCommands,
     },
