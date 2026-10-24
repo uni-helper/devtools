@@ -170,3 +170,46 @@ pnpm install
 - [Oxlint 官方文档](https://oxc.rs/docs/guide/usage/linter.html)
 - [Oxfmt 官方文档](https://oxc.rs/docs/guide/usage/formatter.html)
 - [支持的 ESLint 规则列表](https://oxc.rs/docs/guide/usage/linter/rules.html)
+
+---
+
+# tsup SDK + esbuild CLI to tsdown Migration Notes
+
+## 迁移时间
+
+2026-10-24
+
+## 迁移内容
+
+每个需要打包的包一份 `tsdown.config.ts`（共 7 份：shared / core / probes / mcp / vite / webpack / devtools），build 脚本统一为 `tsdown`。被替换的旧链路：
+
+- `scripts/build-dts.mjs`：tsup **SDK 编程式构建**（shared / core 的 JS+DTS，其余包的 DTS-only），已删除
+- devtools / mcp / vite / webpack / probes 的 esbuild CLI 打包命令（含 banner 垫片、`rm -rf`+`cp -R` 拷 client）
+- 根目录与各包的 `tsup` / `esbuild` devDependencies
+
+特殊安排：core 的 `copy-panel.mjs` 挪到 tsdown **之后**执行——tsdown 的 `clean` 会清空 dist，旧顺序（先拷后建）会把面板清掉。
+
+## 与旧产物有意为之的差异
+
+1. **依赖外部化**：旧 esbuild 命令把 dependencies 全部打进 dist（仅 devframe 等显式 `--external`）；tsdown 默认外部化 dependencies / peerDependencies / optionalDependencies。被外部化的包都在各自 dependencies 里声明，npm 安装后可解析，同时消除了 devtools 与 mcp 各自打包一份 core 的模块状态重复。例外见 3。
+2. **dts 扩展名**：`outExtensions` 必须显式给 `dts: '.d.ts'`——`type: "module"` 下 ESM 产物配 `.mjs` 时声明文件默认配对 `.d.mts`，而 publishConfig 全部指向 `.d.ts`。
+3. **probes 必须自包含**：小程序环境没有 node_modules，其运行时依赖（shared / devframe / birpc）用 `alwaysBundle` 打进 `agent-vue2.js`；`alwaysBundle` 的匹配不覆盖子路径导入（`@uni-helper/devtools-shared/utils/tagged-value` 曾漏出），要用正则 `/^@uni-helper\//` 这类模式。同理 vite 包里 probes 发布物仍是 src 源码导出，也必须 `alwaysBundle`。
+4. **banner 垫片 → `shims: true`**；cli 的 shebang 用 rolldown `outputOptions.banner`（函数形式只给 entry chunk 加）。
+5. **vite 的 inspect client 拷贝**改用 tsdown `copy` 选项。
+6. **core/src/sidecar.ts 补了返回类型标注**（`CreateDevServerOptions`）：推断返回类型经 `createInspectApp` 牵出 h3 的深层类型路径，rolldown-plugin-dts 发射报 TS2742（tsup 的 dts 管线不做此检查所以未暴露）。
+7. **「零 Vue 3 污染」判据改用键名**：`grep -c 'pinia-state' dist/agent-vue2.js` 应为 0。rolldown 产物保留注释，旧判据 `grep -ci pinia` 会被注释字样假阳性（实测注释 5 处、真实键名 0 处）。
+
+## 验证
+
+- `pnpm build`：8/8 任务通过
+- `pnpm test`：425 个测试全部通过（含 probes 针对打包产物的 224 个）
+- `pnpm check:publish`：通过（入口齐全、面板随 core 发布、所有 `.mjs` 入口 node 实际加载成功）
+- `node packages/devtools/dist/cli.mjs --help`：CLI 冒烟通过
+
+## 回滚方案
+
+```bash
+git checkout <迁移前 commit> -- package.json packages/*/package.json scripts/build-dts.mjs packages/core/src/sidecar.ts
+rm packages/*/tsdown.config.ts
+pnpm install
+```

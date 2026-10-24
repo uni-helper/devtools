@@ -46,9 +46,10 @@
   },
   "scripts": {
     "test": "vitest run",
-    "build": "node ../../scripts/build-dts.mjs --js index=src/index.ts utils/network-merge=src/utils/network-merge.ts utils/mock-flag=src/utils/mock-flag.ts utils/tagged-value=src/utils/tagged-value.ts"
+    "build": "tsdown"
   },
   "devDependencies": {
+    "tsdown": "^0.23.2",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   }

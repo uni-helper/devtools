@@ -48,7 +48,7 @@
     }
   },
   "scripts": {
-    "build": "node scripts/copy-panel.mjs && node ../../scripts/build-dts.mjs --js index=src/index.ts relay=src/relay.ts sidecar=src/sidecar.ts inspect-serve=src/inspect-serve.ts",
+    "build": "tsdown && node scripts/copy-panel.mjs",
     "dev": "node scripts/dev.mjs",
     "test": "vitest run",
     "test:e2e": "node scripts/e2e-node.mjs"
@@ -65,6 +65,7 @@
     "@devframes/hub-ui": "^1.1.0",
     "@types/node": "^20.14.2",
     "@uni-helper/devtools-client": "workspace:*",
+    "tsdown": "^0.23.2",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   }

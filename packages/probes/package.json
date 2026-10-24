@@ -28,9 +28,8 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "pnpm run build:agent-vue2",
-    "build:agent-vue2": "esbuild src/vue2/index.ts --bundle --platform=browser --target=es2017 --format=cjs --external:vue --outfile=dist/agent-vue2.js",
-    "test": "pnpm run build:agent-vue2 && vitest run"
+    "build": "tsdown",
+    "test": "tsdown && vitest run"
   },
   "dependencies": {
     "@uni-helper/devtools-shared": "workspace:*",
@@ -39,7 +38,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.2",
-    "esbuild": "^0.20.2",
+    "tsdown": "^0.23.2",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0",
     "vue": "^3.5.43"
