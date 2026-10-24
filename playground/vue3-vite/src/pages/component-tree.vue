@@ -28,8 +28,7 @@ const sampleTree: TreeNodeData = {
   ],
 }
 
-// 操作按钮用 v-for + 字符串 key 渲染：mp 编译后事件处理器名带上 key（如 e3_hide-group），
-// e2e 脚本（.claude/skills/scripts/e2e.js）按这个名字触发，改 key 要同步改脚本
+// e2e（playground/vue3-vite/e2e/component-tree.spec.ts）按按钮文字点击，改 label 要同步改用例
 const actions = [
   { key: 'hide-group', label: '隐藏 TreeGroup', run: () => (groupVisible.value = false) },
   { key: 'show-group', label: '显示 TreeGroup', run: () => (groupVisible.value = true) },

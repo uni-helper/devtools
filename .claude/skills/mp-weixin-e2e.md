@@ -1,195 +1,71 @@
 ---
 name: mp-weixin-e2e
-description: Use when E2E-testing the uni-devtools mp-weixin integration in this repo — driving the WeChat DevTools simulator, switching rendered components/tabs, and verifying the probe component tree for dead instances, duplicate IDs, or leaks after probe/adapter changes. Triggers: mp-weixin E2E, 小程序组件树, KeepAlive, dead instance, duplicate IDs, devtools 探针回归.
+description: Use when E2E-testing the uni-devtools mp-weixin integration in this repo — running the wxa-runner + Playwright suite in playground/vue3-vite/e2e, adding scenarios, or debugging probe component tree regressions (dead instances, duplicate IDs, leaks) and panel RPCs (state, Pinia, storage, network) after probe/adapter/build changes. Triggers: mp-weixin E2E, 小程序组件树, wxa-runner, dead instance, duplicate IDs, devtools 探针回归.
 ---
 
 # MP-Weixin E2E Testing
 
-Automate WeChat MiniProgram testing with IDE control and component tree verification.
-
-## When to use
-
-- E2E testing for mp-weixin devtools integration
-- Verify component tree correctness after interactions (tab switch, navigation, KeepAlive)
-- Detect dead instances, duplicate IDs, or component leaks
-- Regression testing for probe/devframe changes
+用 [wxa-runner](https://open-wxa.github.io/wxa-runner/) 在 Chrome 里跑 playground 的 mp-weixin 编译产物（微信官方基础库），Playwright 驱动页面。探针经真实 WebSocket 连 sidecar，用例再用面板同款 devframe RPC 核对数据。**不需要微信开发者工具**，Linux CI 可跑（`.github/workflows/e2e.yml`）。
 
 ## Quick start
 
-The recommended path is `scripts/e2e.js` (repo root) — it wraps the whole workflow below:
+```bash
+pnpm build                                   # 插件/探针/core 的 dist（playground 消费的是构建产物）
+pnpm --filter vitesse-uni-app test:e2e       # 或在 playground/vue3-vite 下 pnpm test:e2e
+
+# 只跑一部分 / 带界面调试
+pnpm --filter vitesse-uni-app test:e2e -g "chaos"
+pnpm --filter vitesse-uni-app test:e2e --headed      # 或 --ui
+```
+
+前置：本机装有 Google Chrome（没有就 `npx playwright install chrome`）。
+
+`globalSetup`（`e2e/global-setup.ts`）自己拉起 `pnpm dev:mp-weixin`，等「Build complete」和面板 URL，解析出 sidecar 地址与 token，结束时关掉。已有构建在跑时可跳过拉起：
 
 ```bash
-# 脚本自己起 pnpm dev:mp-weixin、解析 token、拉起 IDE、跑全部场景
-node scripts/e2e.js --build
-
-# 构建已在跑时手动指定 sidecar（token 来自 dev:mp-weixin 日志）
-node scripts/e2e.js --base-url http://localhost:<port>/__uni-devtools/ --token <token>
-
-# 只跑部分场景；chaos 可用 --seed 复现
-node scripts/e2e.js --build --scenarios baseline,tab-switch,rapid-switch
-node scripts/e2e.js --build --scenarios chaos --seed 20261008
+UNI_E2E_BASE_URL=http://127.0.0.1:<port>/__uni-devtools/ UNI_E2E_TOKEN=<token> pnpm test:e2e
 ```
 
-场景通过标准（脚本自动断言）：
+拉起时设了 `UNI_DEVTOOLS_HOST=127.0.0.1`：探针按这个地址连 sidecar，不依赖局域网 IP，也避开 `localhost` 解析到 `::1` 时撞上别的进程（例如 vitest 插件占着同端口的 IPv6）。
 
-1. 中继快照（`get-component-tree`）无重复节点 id
-2. 中继快照节点数 === 模拟器内核按探针同款规则遍历的存活节点数（两者不一致 = 死实例泄漏或遍历规则漂移）
-3. 复位后组件总数恢复基线、TreeGroup 恒为 1
+## 文件
 
-所有场景都在 playground 的 `/pages/component-tree` 上跑（脚本先 reLaunch 过去）。该页的操作按钮以 `v-for` + 字符串 key 渲染，key（`hide-group` / `show-group` / `add-row` / `remove-row` / `panel-a|b|c` / `reset`）就是脚本与页面之间的契约，改 key 要同步改 `scripts/e2e.js`。
+- `playground/vue3-vite/playwright.config.ts`：`workers: 1`（relay 只认最新连上的探针，并行会互相抢占）
+- `e2e/fixtures.ts`：worker 级 `rpc` fixture（devframe client）、`verifyTree`、`tap`
+- `e2e/component-tree.spec.ts`：增删/切换/复位、快速切换、chaos（固定种子）、跳转与返回
+- `e2e/panels.spec.ts`：navigate-to、组件状态读写、Pinia、Storage、Network
 
-注意：内核 `$children` 链上的**死实例滞留是预期行为**（uni-mp-vue 卸载从不清链，脚本输出 `kernelChain`/`deadInChain` 仅作信息），探针负责过滤——不要把 raw 链的 dead>0 当作失败。
+## 组件树判据（`verifyTree`）
 
-失败时脚本会把中继快照 + 内核遍历存到 `scripts/e2e-artifacts/`，先对比 `packages/probes/src/runtime/tree.ts` 的过滤逻辑。
+每一步之后，等 relay 快照与逻辑层收敛（探针推送有防抖，最多 10s），再断言：
 
-## Prerequisites
+1. relay 快照（`get-component-tree`）无重复节点 id
+2. relay 页面栈 === 逻辑层 `getCurrentPages()`
+3. relay 节点数 === 逻辑层按探针同款规则遍历的存活实例数（不等 = 死实例泄漏或遍历规则漂移）
+4. 同页存活实例 uid 不撞车
 
-- macOS + WeChat DevTools installed at `/Applications/wechatwebdevtools.app`（其他平台 CLI 路径不同，未适配）
-- `miniprogram-automator`：已是 workspace devDependency（`pnpm add -w -D miniprogram-automator` 可补装；不要 npm -g，ESM import 解析不到全局包）
-- Service port enabled in IDE (Settings → Security → Service Port)；未开启时 `cli auto` 会交互式询问，脚本自动回 `y`（这是在确认开启 IDE 服务端口，供 CLI/automator 调用）
+逻辑层在 wxa-runner 的 `/__wxa__/appservice.html` frame 里，`verifyTree` 在那里 `evaluate`。遍历规则与 `packages/probes/src/runtime/tree.ts` 对齐：mp 下 `subTree` 为空，`internal.ctx.$children` 是唯一路径；`isUnmounted` / `_isDestroyed` 的实例连同子树剪掉；`maxDepth` 10。
 
-## Manual workflow（脚本内部的原理，调试时用）
+注意：`$children` 链上的**死实例滞留是预期行为**（uni-mp-vue 卸载从不清链），探针负责过滤——遍历时剪掉，不要当失败。
 
-### Setup
+## 写用例的约定
 
-1. **Start build watcher**（在 `playground/vue3-vite/` 下）:
-
-```bash
-pnpm dev:mp-weixin
-```
-
-Outputs to `dist/dev/mp-weixin` and starts sidecar server. Note the panel URL and token (`devframe_auth_token=`).
-
-2. **Clean and launch IDE**:
-
-```bash
-pkill -f wechatdevtools   # 僵死实例（connect 成功但 currentPage 无响应）先杀
-echo "y" | /Applications/wechatwebdevtools.app/Contents/MacOS/cli auto \
-  --project $(pwd)/playground/vue3-vite/dist/dev/mp-weixin \
-  --auto-port 9420
-```
-
-Wait for "IDE server started successfully"（轮询 `lsof -i :9420` 即可）。
-
-3. **Connect automator**：
-
-```javascript
-const automator = require('miniprogram-automator')
-
-const miniProgram = await automator.connect({
-  wsEndpoint: 'ws://localhost:9420',
-})
-
-const page = await miniProgram.currentPage()
-// eslint-disable-next-line no-console
-console.log('Connected to:', page.path)
-```
-
-**端口在监听 ≠ 模拟器就绪**：首次编译完成前 connect 会抛内部错误或 currentPage 无响应，轮询重试（脚本等 90s）而不是立刻放弃。
-
-### Drive interactions
-
-Mini-program compiles `bindtap="handleName"` into `vm.$.ctx.$scope.eX_NAME.value()`（真正的处理函数挂在 invoker 的 `.value` 上；直接调 `scope.eX(evt)` 会因 bubbles 分支走 setTimeout 而不确定）。
-
-```javascript
-// List available handlers（语义后缀 = 按钮 v-for 的 key）
-const handlers = await miniProgram.evaluate(() => {
-  const scope = getCurrentPages()[0].$vm.$.ctx.$scope
-  return Object.keys(scope).filter((k) => /^e\d+_/.test(k))
-})
-
-// Trigger: hide the TreeGroup subtree（序号以实际发现结果为准）
-await miniProgram.evaluate(() => {
-  getCurrentPages()[0].$vm.$.ctx.$scope['e0_hide-group'].value()
-})
-await new Promise((resolve) => setTimeout(resolve, 500)) // Wait for render
-```
-
-Handler 名以编译产物为准：`playground/vue3-vite/dist/dev/mp-weixin/pages/component-tree.wxml`。
-
-### Verify component tree
-
-内核侧遍历（mp 下 `subTree` 为空，`ctx.$children` 是唯一路径）：
-
-```javascript
-const snapshot = await miniProgram.evaluate(() => {
-  function traverse(vm, depth = 0, visited = new Set()) {
-    if (!vm || depth >= 10 || visited.has(vm)) return []
-    visited.add(vm)
-    const internal = vm.$ || vm // Vue3 内部实例
-    const t = internal.type
-    const name = (t && (t.__name || t.name)) || vm.$options?.name || 'Anonymous'
-    const isDead = !!(internal.isUnmounted || internal._isDestroyed)
-    if (isDead) return [] // 探针同款：死实例及其子树剪掉
-    const nodes = [{ name, uid: internal.uid ?? internal._uid, depth }]
-    const kids = (internal.ctx && internal.ctx.$children) || []
-    for (const child of kids) nodes.push(...traverse(child, depth + 1, visited))
-    return nodes
-  }
-  return traverse(getCurrentPages()[0].$vm)
-})
-```
-
-**Expected**: 同页内无重复 uid；组件数与中继快照一致。
-
-中继侧快照（面板真正消费的数据）不要手写裸 WebSocket——协议是 devframe 的（`__connection.json` 握手 + birpc），直接用仓库依赖：
-
-```javascript
-import { connectDevframe } from 'devframe/client'
-// node 下需先补 globalThis.location/window（client 面向浏览器）
-const client = await connectDevframe({
-  baseURL,
-  authToken: token,
-  simpleAuth: false,
-  otpParam: false,
-})
-const scoped = client.scope('uni-helper-devtools')
-const tree = await scoped.rpc.call('get-component-tree')
-```
-
-推送有防抖 + 内容门：连续两次快照一致才算稳定（脚本已实现）。
-
-## Test scenarios
-
-`scripts/e2e.js --scenarios` 内置：baseline / tab-switch / rapid-switch（<200ms 间隔）/ navigation / keepalive（best-effort）/ chaos（固定种子可复现）。手跑时按同一顺序，每步之后验证：
-
-- 中继快照无重复 ID、节点数与内核存活遍历一致
-- 组件数恢复基线
+- 从 `./fixtures` 导入 `test` / `expect`（它扩展了 `@open-wxa/wxa-runner-playwright`），不要直接用 `@playwright/test`
+- 按按钮文字点击（`tap(miniProgram, '隐藏 TreeGroup')`），场景页按钮 label 就是契约；改 label 要同步改用例
+- 不要断言页面 data（`toHavePageData` / `pageData()`）：Vue 3 编译后字段名是短名，与源码不一致。断言可见文字、`toHavePath`、RPC 返回
+- 外网请求用 `miniProgram.route` 拦下；未拦的请求在 CI 上会真实发出
+- 用例结束时 fixture 会检查 `miniProgram.errors()` 为空（运行时错误、调用了未实现的 wx API）
 
 ## Debugging
 
-### IDE connection fails / 模拟器无响应
+- **失败现场**：`--headed` / `--ui` 看页面；CI 上下载 `playwright-report` artifact（含 trace）
+- **节点数不等**：先对比 `packages/probes/src/runtime/tree.ts` 与 `instance.ts` 的过滤逻辑，再看推送防抖
+- **连接 sidecar 超时 / unauthorized**：`UNI_E2E_TOKEN` 必须来自当前那次构建的日志
+- **改了 workspace 源码不生效**：playground 消费的是 `packages/*/dist`，先 `pnpm build`；探针 vue3 入口走源码，`touch src/main.ts` 触发重构建
+- **本地与 CI 结果不一致**：本机装了微信开发者工具时 wxa-runner 优先用它下载的基础库；CI 只有内置基础库 3.7.0。用 `WXA_VENDOR_DIR=/nonexistent pnpm test:e2e` 屏蔽开发者工具，复现 CI 环境
+- **CI 报「没有找到基础库」**：内置基础库 `@open-wxa/wxa-baselib` 是 extractor 从 GitHub 拉的 optionalDependency，安装时拉取失败会被 pnpm 静默跳过、锁文件里也跟着缺。确认 `pnpm-lock.yaml` 里 `@open-wxa/wxa-runner-extractor` 带 `optionalDependencies`；缺了就在 playground 里 remove 再 add `@open-wxa/wxa-runner-playwright` 重新解析（不要用 `--fix-lockfile`，它会重解析整个仓库的 peer 组合）
 
-- Kill all: `pkill -f wechatdevtools`，等 4s 再 `cli auto` 重拉
-- Check port: `lsof -i :9420`
-- Enable service port in IDE: Settings → Security → Service Port
-- `cli auto` 报 `wait IDE port timeout`：旧 IDE 实例残留，pkill 后重来
+## 限制
 
-### evaluate() returns undefined / 报错
-
-- Return value must be JSON-serializable
-- Check IDE Debug panel console for errors
-
-### Empty $children
-
-- `vm.$.ctx.$children` is the only traversal path in mp-weixin（`subTree` 为空）
-- If undefined, component has no children (this is correct)
-
-### Changes not taking effect
-
-- 构建 watcher 不监听 workspace 源码：`touch playground/vue3-vite/src/main.ts` 触发重构建
-- Verify fix in: `playground/vue3-vite/dist/dev/mp-weixin/common/vendor.js`
-- Wait for simulator auto-reload or click "Recompile"
-
-### pnpm 找不到 dev:mp-weixin 脚本
-
-- 确认 cwd 在 `playground/vue3-vite/`（顶层 `playground/` 只是容器，没有 scripts）
-- spawn 时显式传 cwd，不要依赖 shell 状态
-
-## Key files
-
-- `scripts/e2e.js` - 全流程自动化脚本（推荐入口）
-- `packages/probes/src/runtime/tree.ts` - Component tree traversal（死实例过滤在这里）
-- `packages/vite/src/index.ts` - Virtual module injection
-- `playground/vue3-vite/dist/dev/mp-weixin/pages/component-tree.wxml` - Compiled template with handler names
-- `playground/vue3-vite/dist/dev/mp-weixin/common/vendor.js` - Bundled output to verify fixes
+- 只覆盖 Vue 3 线（wxa-runner 只验证过 Vue 3 的 uni-app）；Vue 2 探针产物 `agent-vue2.js` 由 `packages/probes` 的单测覆盖
+- 预览、上传、真机调试仍需微信开发者工具
