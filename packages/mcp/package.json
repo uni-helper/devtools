@@ -29,7 +29,8 @@
     }
   },
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@devframes/agentic": "1.1.0",

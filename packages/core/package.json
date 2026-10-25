@@ -49,6 +49,7 @@
   },
   "scripts": {
     "build": "tsdown && node scripts/copy-panel.mjs",
+    "prepublishOnly": "pnpm build",
     "dev": "node scripts/dev.mjs",
     "test": "vitest run",
     "test:e2e": "node scripts/e2e-node.mjs"

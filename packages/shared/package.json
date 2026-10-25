@@ -46,7 +46,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "build": "tsdown"
+    "build": "tsdown",
+    "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
     "tsdown": "^0.23.2",

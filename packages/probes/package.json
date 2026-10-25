@@ -29,6 +29,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "prepublishOnly": "pnpm build",
     "test": "tsdown && vitest run"
   },
   "dependencies": {

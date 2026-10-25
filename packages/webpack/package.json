@@ -30,6 +30,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "prepublishOnly": "pnpm build",
     "test": "vitest run"
   },
   "dependencies": {
