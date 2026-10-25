@@ -1,6 +1,6 @@
 {
   "name": "@uni-helper/devtools-probes",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Uni DevTools 小程序探针：Vue 2/3 双线入口 + 运行时采集（组件树/状态/Pinia/网络/响应式图）",
   "homepage": "https://github.com/uni-helper/devtools#readme",
   "bugs": "https://github.com/uni-helper/devtools/issues",

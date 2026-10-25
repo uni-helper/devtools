@@ -1,6 +1,6 @@
 {
   "name": "uni-vue2-webpack",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "scripts": {
     "setup": "bash scripts/setup.sh",
