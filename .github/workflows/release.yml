@@ -10,6 +10,11 @@ jobs:
     uses: sxzz/workflows/.github/workflows/release.yml@v2
     with:
       publish: true
+      # dist 不入库，必须现场构建。core 的 copy-panel 依赖 client 的面板产物，
+      # 只靠各包的 prepublishOnly 在干净 checkout 上会失败
+      build: pnpm build
+      # 预发布版本（tag 含 -）走 beta，不占 latest
+      tag: ${{ contains(github.ref_name, '-') && 'beta' || 'latest' }}
     permissions:
       contents: write
       id-token: write
