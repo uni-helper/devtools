@@ -1,6 +1,6 @@
 {
   "name": "@uni-helper/devtools-client",
-  "version": "0.2.0",
+  "version": "0.0.1",
   "private": true,
   "description": "Uni DevTools 面板 SPA（官方 Vue Devtools client 移植），构建产物即 devframe clientAssets",
   "type": "module",

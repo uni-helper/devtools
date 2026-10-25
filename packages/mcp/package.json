@@ -1,6 +1,6 @@
 {
   "name": "@uni-helper/devtools-mcp",
-  "version": "0.0.1-beta.8",
+  "version": "0.0.1",
   "description": "Uni DevTools 的 MCP 暴露面：把 DevframeDefinition 的 agent surface 接成 stdio / fetch 端点（协议实现来自 devframe + @devframes/agentic）",
   "homepage": "https://github.com/uni-helper/devtools#readme",
   "bugs": "https://github.com/uni-helper/devtools/issues",

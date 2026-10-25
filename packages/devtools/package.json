@@ -1,6 +1,6 @@
 {
   "name": "@uni-helper/devtools",
-  "version": "0.0.1-beta.8",
+  "version": "0.0.1",
   "description": "Uni DevTools 门面包：聚合探针 / node 中继 / Vite·Webpack 插件 / MCP / 面板，并自带 CLI",
   "homepage": "https://github.com/uni-helper/devtools#readme",
   "bugs": "https://github.com/uni-helper/devtools/issues",
