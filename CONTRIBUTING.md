@@ -28,6 +28,7 @@ playground/
 
 docs/                 # 架构设计与历史方案演进文档
 ├── ARCHITECTURE_PLAIN.md  # 架构与核心设计（白话版）
+├── FEATURES.md            # 各面板的实现原理与限制
 ├── FINAL_STRUCTURE.md     # 最终目录架构规范
 └── HANDOFF.md             # 交接规范与协议详情
 ```
