@@ -29,8 +29,7 @@ playground/
 docs/                 # 架构设计与历史方案演进文档
 ├── ARCHITECTURE_PLAIN.md  # 架构与核心设计（白话版）
 ├── FEATURES.md            # 各面板的实现原理与限制
-├── FINAL_STRUCTURE.md     # 最终目录架构规范
-└── HANDOFF.md             # 交接规范与协议详情
+└── FINAL_STRUCTURE.md     # 最终目录架构规范
 ```
 
 ---
@@ -100,4 +99,4 @@ pnpm format:check
 1. **分支管理**：基于最新 `main` 或主开发分支创建特性分支，不要在被修改的脏工作区直接提交无关修改。
 2. **单一职责**：保持每个 PR 聚焦于单一 Bug 修复或单一功能，以便审查与回溯。
 3. **测试覆盖**：新增功能或修复 Bug 时，请同步补充相应的单测用例。若调整了文档断言类测试，请在 PR 说明中阐明修改原因。
-4. **架构遵循**：涉及跨端协议或 RPC 调整时，请先阅读 [架构与核心设计（白话版）](docs/ARCHITECTURE_PLAIN.md) 与 [交接文档](docs/HANDOFF.md)。
+4. **架构遵循**：涉及跨端协议或 RPC 调整时，请先阅读 [架构与核心设计（白话版）](docs/ARCHITECTURE_PLAIN.md)。
