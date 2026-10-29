@@ -8,12 +8,13 @@ const READY_TIMEOUT = 180_000
 
 /**
  * 拉起 `uni -p mp-weixin`：它产出 dist/dev/mp-weixin，并在同一进程里启动 sidecar。
- * 地址与 token 从日志解析后放进环境变量，worker 进程继承。
+ * 地址（开启鉴权时还有 token）从日志解析后放进环境变量，worker 进程继承。
  *
- * 已有构建在跑时设置 UNI_E2E_BASE_URL + UNI_E2E_TOKEN 跳过拉起（值见构建日志）。
+ * 已有构建在跑时设置 UNI_E2E_BASE_URL（开启鉴权时再加 UNI_E2E_TOKEN）跳过拉起
+ * （值见构建日志）。
  */
 export default async function globalSetup() {
-  if (process.env.UNI_E2E_BASE_URL && process.env.UNI_E2E_TOKEN) return
+  if (process.env.UNI_E2E_BASE_URL) return
 
   const child = spawn('pnpm', ['dev:mp-weixin'], {
     cwd: PLAYGROUND_DIR,
@@ -40,13 +41,13 @@ export default async function globalSetup() {
     const onData = (chunk: Buffer) => {
       log += chunk.toString()
       const panel =
-        /(http:\/\/[^\s]+\/__uni-devtools\/)\?devframe_auth_token=([0-9a-f]+)/.exec(
+        /Uni DevTools 面板[^\n]*\n\s*(http:\/\/[^\s?]+\/)(?:\?devframe_auth_token=([0-9a-f]+))?/.exec(
           log,
         )
       if (panel && /Build complete/.test(log)) {
         clearTimeout(timer)
         process.env.UNI_E2E_BASE_URL = panel[1]
-        process.env.UNI_E2E_TOKEN = panel[2]
+        if (panel[2]) process.env.UNI_E2E_TOKEN = panel[2]
         resolve()
       }
     }

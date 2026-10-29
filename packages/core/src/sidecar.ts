@@ -12,7 +12,11 @@ import { AgentRegistry } from './relay.ts'
 import { createUniDevtoolsDevframe, resolveClientAssets } from './devframe.ts'
 import { createInspectApp } from './inspect-serve.ts'
 
-export const BASE = '/__uni-devtools/'
+/**
+ * sidecar 独占端口，面板挂在根路径；devframe 的内置路由（`__ws`、`__mcp`、
+ * `__connection.json` 等）都带 `__` 前缀，不会与面板或 inspect 的路径冲突。
+ */
+export const BASE = '/'
 
 /**
  * 对外地址的选取依据：微信开发者工具模拟器与 node 同机（localhost 够用），
@@ -67,32 +71,47 @@ function resolveMcpSetting() {
 /**
  * standalone dev server 的公共选项（sidecar 与 harness 共用，保证冒烟路径与
  * 真实插件一致）。
+ *
+ * 传 `token` 即开启鉴权：WebSocket 会话与 inspect 报告都要凭它访问；不传则
+ * 关闭鉴权，所有连接一律可信。
  */
 // 返回类型必须显式标注：字面量推断会经 createInspectApp 牵出 h3 的深层类型
 // 路径，dts 发射报 TS2742（推断类型不可移植）
 export function createDevServerOptions(
   registry: AgentRegistry,
-  token: string,
+  token?: string,
 ): CreateDevServerOptions {
   return {
     // Vite Inspect 静态托管：挂到 sidecar 的 inspect 路径下供面板 iframe，
-    // 凭面板 token 访问（门禁见 createInspectApp）
+    // 开启鉴权时凭面板 token 访问（门禁见 createInspectApp）
     app: createInspectApp({ token }),
     mcp: resolveMcpSetting(),
     openBrowser: false,
     // 不按 Origin 拦 WebSocket 升级：各家小程序运行时（开发者工具模拟器、真机、
     // 浏览器内模拟器）的 connectSocket 带什么 Origin 不统一，白名单维护不住。
-    // 守门的是 token：没带 token 的会话连得上，但调不了任何 RPC，也不会被
-    // AgentRegistry 认作探针（见 relay.ts 的 connect / discoverByPing）
+    // 开启鉴权时守门的是 token：没带 token 的会话连得上，但调不了任何 RPC，
+    // 也不会被 AgentRegistry 认作探针（见 relay.ts 的 connect / discoverByPing）
     allowedOrigins: false as const,
-    // auth 的函数形态（(ctx) => handler）在类型上未声明，但 dev 适配器与
-    // instance-shell 的 resolveAuth 运行时均支持，用 as any 绕过类型
-    auth: ((ctx: any) =>
-      createInteractiveAuth(ctx, {
-        clientAuthTokens: [token],
-        banner: () => {},
-      })) as any,
-    onPeerConnect: registry.connect,
+    ...(token
+      ? {
+          // auth 的函数形态（(ctx) => handler）在类型上未声明，但 dev 适配器与
+          // instance-shell 的 resolveAuth 运行时均支持，用 as any 绕过类型
+          auth: ((ctx: any) =>
+            createInteractiveAuth(ctx, {
+              clientAuthTokens: [token],
+              banner: () => {},
+            })) as any,
+          onPeerConnect: registry.connect,
+        }
+      : {
+          auth: false,
+          // auth: false 时 devframe 要等客户端发起握手 RPC 才标记可信，连接
+          // 钩子早于握手；鉴权关闭本就一律可信，这里提前标上，registry 才会登记探针
+          onPeerConnect: (connection, session) => {
+            if (session) session.meta.isTrusted = true
+            registry.connect(connection, session)
+          },
+        }),
     onPeerDisconnect: registry.disconnect,
   }
 }
@@ -101,6 +120,11 @@ export interface UniDevtoolsServerOptions {
   host?: string
   port?: number
   clientAssets?: string
+  /**
+   * 开启 token 鉴权，默认关闭。开启后面板、探针与 inspect 报告都要凭本次启动
+   * 随机生成的 token 访问，可挡住同一局域网里的其他设备。
+   */
+  auth?: boolean
   onStarted?: (info: {
     port: number
     panelUrl: string
@@ -110,6 +134,7 @@ export interface UniDevtoolsServerOptions {
 }
 
 export interface UniDevtoolsServerInstance {
+  /** 本次启动的鉴权 token；未开启鉴权时为空串 */
   devToken: string
   ready: Promise<{ panelUrl: string; wsUrl: string } | null>
   close?: () => Promise<void>
@@ -123,7 +148,7 @@ export interface UniDevtoolsServerInstance {
 export function startUniDevtoolsServer(
   options: UniDevtoolsServerOptions = {},
 ): UniDevtoolsServerInstance {
-  const devToken = randomToken()
+  const devToken = options.auth ? randomToken() : ''
   const registry = new AgentRegistry()
   const panelDir = resolveClientAssets(options.clientAssets)
   const def = createUniDevtoolsDevframe(registry, { clientAssets: panelDir })
@@ -145,8 +170,13 @@ export function startUniDevtoolsServer(
   //   MCP 请求都 403。绑 0.0.0.0 后本机 agent 走 127.0.0.1 即通过。
   // - 对外必须用真机可达的 LAN IP（见 resolveAdvertisedHost）。devframe 会把
   //   0.0.0.0 规范成 localhost，所以下面的 URL 自己拼，不取 started.origin。
+  const serverOptions = createDevServerOptions(registry, devToken || undefined)
+  // 不用 started.connectionMeta() 判断：devframe 1.1.0 的返回值不含 mcp 挂载结果
+  // （只有 __connection.json 里有）。@devframes/agentic 是 core 的直接依赖，
+  // resolveMcpSetting 与 devframe 解析结果一致；退回 'auto' 即路由未挂
+  const mcpMounted = serverOptions.mcp !== 'auto'
   const ready = createDevServer(def, {
-    ...createDevServerOptions(registry, devToken),
+    ...serverOptions,
     host: '0.0.0.0',
     port,
     basePath: BASE,
@@ -162,10 +192,26 @@ export function startUniDevtoolsServer(
       registry.bind(started.rpcGroup as any)
       const advertisedOrigin = `http://${advertisedHost}:${started.port}`
       const wsUrl = `${advertisedOrigin.replace(/^http/, 'ws')}${BASE}__ws`
-      const panelUrl = `${advertisedOrigin}${BASE}?devframe_auth_token=${devToken}`
-      console.log(`\n  Uni DevTools 面板 (带鉴权 token，浏览器打开):`)
+      const panelUrl = devToken
+        ? `${advertisedOrigin}${BASE}?devframe_auth_token=${devToken}`
+        : `${advertisedOrigin}${BASE}`
+      console.log(
+        devToken
+          ? `\n  Uni DevTools 面板 (带鉴权 token，浏览器打开):`
+          : `\n  Uni DevTools 面板 (浏览器打开):`,
+      )
       console.log(`  ${panelUrl}`)
-      console.log(`  探针 WebSocket:            ${wsUrl}\n`)
+      console.log(`  探针 WebSocket:            ${wsUrl}`)
+      if (mcpMounted) {
+        // MCP 路由只接受本机请求（isLocalMcpRequest），地址固定用 localhost
+        console.log(
+          `  AI Agent 接入:             npx @uni-helper/devtools connect（推荐）`,
+        )
+        console.log(
+          `  MCP（HTTP 直连）:          http://localhost:${started.port}${BASE}__mcp`,
+        )
+      }
+      console.log()
 
       if (options.onStarted) {
         await options.onStarted({

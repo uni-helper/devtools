@@ -35,13 +35,12 @@ if (!origin || !token) {
   const testPort = 29000 + Math.floor(Math.random() * 1000)
   harness = await startDevServerHarness({
     port: testPort,
-    basePath: '/__uni-devtools/',
   })
   origin = harness.origin
   token = harness.token
   wsUrl = harness.wsUrl
 } else {
-  wsUrl = `${origin.replace(/\/$/, '')}/__uni-devtools/__ws`
+  wsUrl = `${origin.replace(/\/$/, '')}/__ws`
 }
 
 console.log(`[E2E] Testing devframe at ${origin} (token: ${token})`)
@@ -67,7 +66,7 @@ function connectClient(name, functions, extraQuery = '') {
 
 try {
   // 1. Verify __connection.json endpoint
-  const connectionUrl = `${origin.replace(/\/$/, '')}/__uni-devtools/__connection.json`
+  const connectionUrl = `${origin.replace(/\/$/, '')}/__connection.json`
   const res = await fetch(connectionUrl)
   if (!res.ok) {
     throw new Error(`__connection.json returned HTTP ${res.status}`)

@@ -18,8 +18,8 @@ import { H3, getCookie, setCookie } from 'h3'
 import { mountStaticHandler } from 'devframe/utils/serve-static'
 import { getProjectRoot } from './project-root.ts'
 
-/** 面板 iframe 与 sidecar 静态路由的挂载前缀（plugin.ts 的 BASE 之下） */
-export const INSPECT_MOUNT_PATH = '/__uni-devtools/inspect'
+/** 面板 iframe 与 sidecar 静态路由的挂载前缀（sidecar.ts 的 BASE 之下） */
+export const INSPECT_MOUNT_PATH = '/inspect'
 
 /**
  * vite-plugin-inspect 的落盘目录：放在当前工程的 node_modules 下。
@@ -50,8 +50,8 @@ function tokenMatches(candidate: string | undefined, token: string): boolean {
 }
 
 export interface InspectAppOptions {
-  /** 面板 token（devframe_auth_token）：读 inspect 报告必须持有它 */
-  token: string
+  /** 面板 token（devframe_auth_token）：传了则读 inspect 报告必须持有它，不传不设门禁 */
+  token?: string
   /** 报告目录，默认 {@link resolveInspectOutputDir} */
   dir?: string
 }
@@ -62,33 +62,34 @@ export interface InspectAppOptions {
  *
  * 这里的中间件先于 devframe 自身的鉴权执行，所以 token 门禁要自己做：报告里是
  * 项目源码经各插件转换后的全文，而 sidecar 绑在 0.0.0.0，不设门禁同一局域网的
- * 任何人都能读。
+ * 任何人都能读。未开启鉴权（不传 token）时与面板一样对局域网开放。
  */
 export function createInspectApp({
   token,
   dir = resolveInspectOutputDir(),
 }: InspectAppOptions): H3 {
   const app = new H3()
-  app.use((event) => {
-    const path = event.url.pathname
-    if (
-      path !== INSPECT_MOUNT_PATH &&
-      !path.startsWith(`${INSPECT_MOUNT_PATH}/`)
-    )
-      return
-    const fromQuery =
-      event.url.searchParams.get('devframe_auth_token') ?? undefined
-    if (tokenMatches(fromQuery, token)) {
-      setCookie(event, INSPECT_TOKEN_COOKIE, token, {
-        path: INSPECT_MOUNT_PATH,
-        httpOnly: true,
-        sameSite: 'strict',
-      })
-      return
-    }
-    if (tokenMatches(getCookie(event, INSPECT_TOKEN_COOKIE), token)) return
-    return new Response('Forbidden', { status: 403 })
-  })
+  if (token)
+    app.use((event) => {
+      const path = event.url.pathname
+      if (
+        path !== INSPECT_MOUNT_PATH &&
+        !path.startsWith(`${INSPECT_MOUNT_PATH}/`)
+      )
+        return
+      const fromQuery =
+        event.url.searchParams.get('devframe_auth_token') ?? undefined
+      if (tokenMatches(fromQuery, token)) {
+        setCookie(event, INSPECT_TOKEN_COOKIE, token, {
+          path: INSPECT_MOUNT_PATH,
+          httpOnly: true,
+          sameSite: 'strict',
+        })
+        return
+      }
+      if (tokenMatches(getCookie(event, INSPECT_TOKEN_COOKIE), token)) return
+      return new Response('Forbidden', { status: 403 })
+    })
   // single: false —— miss 不回退 index.html（inspect UI 自带 trailing-slash
   // 跳转脚本，缺失资源按 404 如实返回）
   mountStaticHandler(app, INSPECT_MOUNT_PATH, dir, {

@@ -47,6 +47,11 @@ export interface UniDevtoolsPluginOptions {
   host?: string
   port?: number
   clientAssets?: string
+  /**
+   * 开启 token 鉴权，默认关闭。开启后面板地址会带上本次启动随机生成的
+   * `devframe_auth_token`，没有它的局域网设备连不上面板、读不到数据。
+   */
+  auth?: boolean
 }
 
 interface PluginState {

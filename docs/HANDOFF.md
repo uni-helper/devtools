@@ -159,7 +159,7 @@ watch rebuild 在 buildEnd 全量重写报告 + 自带 client UI）。**打包�
 （§8-25）+ build 时拷 `dist/client`（inspect UI 资源源）。sidecar 经预配置 h3 app
 （`createDevServer({ app })`，先于 auth 执行——静态报告无 token 门禁，dev 工具可
 接受）用 devframe 官方 `mountStaticHandler` 把该目录静态托管在
-**`/__uni-devtools/inspect/`**（`INSPECT_MOUNT_PATH`，inspect-serve.ts，字面量冻结）。
+**`/inspect/`**（`INSPECT_MOUNT_PATH`，inspect-serve.ts，字面量冻结）。
 面板 Inspect tab = iframe 内嵌（官方 v7 同款方案；**仅 standalone 直连模式生效**，
 hub iframe 跨源不可用）。tab 门控：node 本地 RPC `get-inspect-status` → `{ available }`
 （outputDir/index.html 存在；不经探针——构建管线数据）→ 适配器

@@ -80,37 +80,64 @@ pnpm dev:mp-weixin
 pnpm serve:mp-weixin
 ```
 
-编译启动后，控制台将输出专属的 DevTools 访问链接（已附带临时安全鉴权 Token）：
+编译启动后，控制台将输出 DevTools 访问链接：
 
 ```text
-➜  Uni DevTools: http://localhost:9999/__uni-devtools/?devframe_auth_token=xxxxxx
+➜  Uni DevTools: http://localhost:9999/
 ```
 
 在现代浏览器中打开该链接即可开始调试。
+
+DevTools 服务默认对局域网开放、不做鉴权（真机调试需要局域网可达）。如果不希望同一局域网的其他设备访问，可以开启 token 鉴权：
+
+```ts
+UniDevtoolsPlugin({ auth: true }) // Webpack：uniDevtoolsWebpack(config, { auth: true })
+```
+
+开启后每次启动随机生成 token，控制台打印的链接会带上它（`?devframe_auth_token=xxxxxx`）。面板页面本身谁都能打开，但读取调试数据和 inspect 报告需要这个 token。
 
 ---
 
 ### 4. AI Agent / MCP 支持（可选）
 
-Uni DevTools 内置对 Model Context Protocol (MCP) 的原生支持。AI Coding Agent（Cursor、Claude Desktop、Windsurf、Antigravity 等）可直接消费运行期数据：
+Uni DevTools 内置对 Model Context Protocol (MCP) 的原生支持。AI Coding Agent（Claude Code、Cursor、Claude Desktop、Windsurf、Antigravity 等）可直接消费运行期数据：组件树、组件状态（可编辑）、Pinia / Vuex、网络记录、路由栈、Storage。每个工具都带参数 schema 与读写安全标注（`clear-network-records` 标为 destructive）。
 
-**推荐：连接 dev server 的 MCP 路由**（Streamable HTTP，仅接受本机请求）。启动开发后，把 MCP 客户端指向：
+**推荐：`connect` 网关**。在 MCP 客户端里加一份配置即可，不用写端口：
 
-```text
-http://localhost:<端口>/__uni-devtools/__mcp
+```json
+{
+  "mcpServers": {
+    "uni-devtools": {
+      "command": "npx",
+      "args": ["-y", "@uni-helper/devtools", "connect"]
+    }
+  }
+}
 ```
 
-地址要用 `localhost`，不要照抄控制台打印的局域网 IP：路由只接受本机进程的请求，经局域网 IP 访问会被拒绝（401）。
+每个运行中的 dev server 都会登记到本机的实例注册表（`~/.devframe/instances/`），`connect` 从这里找到它们，再把工具调用转发给对应的 dev server。所以端口变了、dev 重启了、同时开着多个项目，都不用改配置。它基于 devframe 的 connect 网关，与 Vue DevTools 等 devframe 工具的接入方式一致。
 
-该路由与面板共用同一个中继，Agent 拿到的是实时运行数据：组件树、组件状态（可编辑）、Pinia / Vuex、网络记录、路由栈、Storage。每个工具都带参数 schema 与读写安全标注（`clear-network-records` 标为 destructive）。
+`connect` 只暴露两个工具，Agent 按这个流程调用：
 
-只能启动子进程的客户端可用 stdio 模式：
+1. `devframe_connect_list-instances`：列出运行中的实例，每个实例带 `rootDir`、端口和工具列表；
+2. 按 `rootDir` 选出要调试的项目（monorepo 里 MCP 客户端的工作目录与 uni 项目不在同一层也没关系）；
+3. `devframe_connect_call-tool`：传 `port`、`tool`（如 `uni-helper-devtools_get-component-tree`）和 `args`。参数对象按 devframe 约定放在 `args.arg0` 里，例如 `get-component-state` 传 `{ "arg0": { "id": "<route>#<uid>" } }`。
+
+**可选：HTTP 直连**（Streamable HTTP，仅接受本机请求）。启动日志会打印地址：
+
+```text
+http://localhost:<端口>/__mcp
+```
+
+地址要用 `localhost`，不要照抄控制台打印的局域网 IP：路由只接受本机进程的请求，经局域网 IP 访问会被拒绝（401）。端口变化时需要手动改配置。
+
+**`mcp` 子命令**：
 
 ```bash
 npx @uni-helper/devtools mcp
 ```
 
-stdio 是独立进程，**连不到小程序**，只有 `get-registered-routes`（解析 pages.json）与 `get-inspect-status` 能返回真实结果；其余工具会报错并提示改连上面的 HTTP 路由。
+它是独立的 stdio 进程，**连不到小程序**，只有源码层面的 `get-registered-routes`（解析 pages.json）与 `get-inspect-status` 能返回真实结果；依赖探针的工具会报错并提示改用 `connect`（网络记录类工具不报错，但只能返回空的或过期的记录）。
 
 ---
 
