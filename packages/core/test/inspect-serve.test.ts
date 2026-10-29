@@ -11,7 +11,7 @@ import {
 
 describe('inspect-serve: vite inspect 静态托管（devframe mountStaticHandler 接线）', () => {
   it('挂载前缀符合冻结契约', () => {
-    expect(INSPECT_MOUNT_PATH).toBe('/__uni-devtools/inspect')
+    expect(INSPECT_MOUNT_PATH).toBe('/inspect')
   })
 
   it('报告落在各自工程目录下：两个工程不会读到对方的报告', () => {
@@ -75,7 +75,17 @@ describe('inspect-serve: 报告含项目源码，只对持有面板 token 的人
   })
 
   it('inspect 之外的路径不受门禁影响', async () => {
-    const res = await request('/__uni-devtools/')
+    const res = await request('/')
     expect(res.status).not.toBe(403)
+  })
+
+  it('未开启鉴权时不带 token 也能读到报告', async () => {
+    const res = await createInspectApp({ dir }).fetch(
+      new Request(
+        `http://192.168.1.10:9999${INSPECT_MOUNT_PATH}/reports/list.json`,
+      ),
+    )
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('{"modules":[]}')
   })
 })

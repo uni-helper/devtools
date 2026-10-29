@@ -20,10 +20,11 @@ pnpm --filter vitesse-uni-app test:e2e --headed      # 或 --ui
 
 前置：本机装有 Google Chrome（没有就 `npx playwright install chrome`）。
 
-`globalSetup`（`e2e/global-setup.ts`）自己拉起 `pnpm dev:mp-weixin`，等「Build complete」和面板 URL，解析出 sidecar 地址与 token，结束时关掉。已有构建在跑时可跳过拉起：
+`globalSetup`（`e2e/global-setup.ts`）自己拉起 `pnpm dev:mp-weixin`，等「Build complete」和面板 URL，解析出 sidecar 地址（开启鉴权时还有 token），结束时关掉。已有构建在跑时可跳过拉起：
 
 ```bash
-UNI_E2E_BASE_URL=http://127.0.0.1:<port>/__uni-devtools/ UNI_E2E_TOKEN=<token> pnpm test:e2e
+UNI_E2E_BASE_URL=http://127.0.0.1:<port>/ pnpm test:e2e
+# 插件开了 auth: true 时再加 UNI_E2E_TOKEN=<token>
 ```
 
 拉起时设了 `UNI_DEVTOOLS_HOST=127.0.0.1`：探针按这个地址连 sidecar，不依赖局域网 IP，也避开 `localhost` 解析到 `::1` 时撞上别的进程（例如 vitest 插件占着同端口的 IPv6）。
@@ -34,6 +35,7 @@ UNI_E2E_BASE_URL=http://127.0.0.1:<port>/__uni-devtools/ UNI_E2E_TOKEN=<token> p
 - `e2e/fixtures.ts`：worker 级 `rpc` fixture（devframe client）、`verifyTree`、`tap`
 - `e2e/component-tree.spec.ts`：增删/切换/复位、快速切换、chaos（固定种子）、跳转与返回
 - `e2e/panels.spec.ts`：navigate-to、组件状态读写、Pinia、Storage、Network
+- `e2e/connect.spec.ts`：`uni-devtools connect` 网关（跑 `packages/devtools/dist/cli.mjs`，需先 build）经实例注册表找到 sidecar，call-tool 拿到实时路由栈与组件树
 
 ## 组件树判据（`verifyTree`）
 
@@ -60,7 +62,7 @@ UNI_E2E_BASE_URL=http://127.0.0.1:<port>/__uni-devtools/ UNI_E2E_TOKEN=<token> p
 
 - **失败现场**：`--headed` / `--ui` 看页面；CI 上下载 `playwright-report` artifact（含 trace）
 - **节点数不等**：先对比 `packages/probes/src/runtime/tree.ts` 与 `instance.ts` 的过滤逻辑，再看推送防抖
-- **连接 sidecar 超时 / unauthorized**：`UNI_E2E_TOKEN` 必须来自当前那次构建的日志
+- **连接 sidecar 超时 / unauthorized**：开启鉴权时 `UNI_E2E_TOKEN` 必须来自当前那次构建的日志
 - **改了 workspace 源码不生效**：playground 消费的是 `packages/*/dist`，先 `pnpm build`；探针 vue3 入口走源码，`touch src/main.ts` 触发重构建
 - **本地与 CI 结果不一致**：本机装了微信开发者工具时 wxa-runner 优先用它下载的基础库；CI 只有内置基础库 3.7.0。用 `WXA_VENDOR_DIR=/nonexistent pnpm test:e2e` 屏蔽开发者工具，复现 CI 环境
 - **CI 报「没有找到基础库」**：内置基础库 `@open-wxa/wxa-baselib` 是 extractor 从 GitHub 拉的 optionalDependency，安装时拉取失败会被 pnpm 静默跳过、锁文件里也跟着缺。确认 `pnpm-lock.yaml` 里 `@open-wxa/wxa-runner-extractor` 带 `optionalDependencies`；缺了就在 playground 里 remove 再 add `@open-wxa/wxa-runner-playwright` 重新解析（不要用 `--fix-lockfile`，它会重解析整个仓库的 peer 组合）

@@ -23,7 +23,7 @@ export const test = base.extend<object, { rpc: Rpc }>({
       const { connectDevframe } = await import('devframe/client')
       const client = await connectDevframe({
         baseURL,
-        authToken: process.env.UNI_E2E_TOKEN!,
+        authToken: process.env.UNI_E2E_TOKEN,
         simpleAuth: false,
         otpParam: false,
       })
