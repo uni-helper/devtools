@@ -41,7 +41,7 @@ export default async function globalSetup() {
     const onData = (chunk: Buffer) => {
       log += chunk.toString()
       const panel =
-        /Uni DevTools 面板[^\n]*\n\s*(http:\/\/[^\s?]+\/)(?:\?devframe_auth_token=([0-9a-f]+))?/.exec(
+        /Uni DevTools 面板[^\n]*\n\s*(http:\/\/[^\s?]+\/)(?:\?devframe_auth_token=([0-9a-f]+))?\r?\n/.exec(
           log,
         )
       if (panel && /Build complete/.test(log)) {

@@ -28,7 +28,7 @@
 pnpm add -D @uni-helper/devtools
 ```
 
-只用其中一种构建工具时，也可以只装对应插件包：`@uni-helper/devtools-vite`（Vue 3 + Vite）或 `@uni-helper/devtools-webpack`（Vue 2 + Webpack 4）。
+只用其中一种构建工具时，也可以只装对应插件包：`@uni-helper/devtools-vite`（Vue 3 + Vite）或 `@uni-helper/devtools-webpack`（Vue 2 + Webpack 4），此时把下面示例里的 `@uni-helper/devtools` 换成所装的包名。
 
 ### 2. 注册插件
 

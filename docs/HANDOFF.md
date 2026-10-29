@@ -157,8 +157,9 @@ watch rebuild 在 buildEnd 全量重写报告 + 自带 client UI）。**打包�
 `--alias` 指到 `packages/plugin/node_modules/vite-plugin-inspect/dist/index.mjs`
 （ESM 构建文件；避免给 devframe 加运行时依赖触发 §8-24 漂移）+ banner 垫片
 （§8-25）+ build 时拷 `dist/client`（inspect UI 资源源）。sidecar 经预配置 h3 app
-（`createDevServer({ app })`，先于 auth 执行——静态报告无 token 门禁，dev 工具可
-接受）用 devframe 官方 `mountStaticHandler` 把该目录静态托管在
+（`createDevServer({ app })`，先于 devframe auth 执行，所以门禁在 inspect-serve.ts
+自己做：开启鉴权时须带 `devframe_auth_token` query 或换发的 cookie，否则 403；未开启
+鉴权时与面板一样不设门禁）用 devframe 官方 `mountStaticHandler` 把该目录静态托管在
 **`/inspect/`**（`INSPECT_MOUNT_PATH`，inspect-serve.ts，字面量冻结）。
 面板 Inspect tab = iframe 内嵌（官方 v7 同款方案；**仅 standalone 直连模式生效**，
 hub iframe 跨源不可用）。tab 门控：node 本地 RPC `get-inspect-status` → `{ available }`
