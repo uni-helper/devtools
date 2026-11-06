@@ -114,7 +114,7 @@ describe.skipIf(!bundleExists)(
       const mod = loadBundle()
 
       const instance = mod.initAgent({
-        wsUrl: 'ws://127.0.0.1:9999/__uni-devtools/__ws',
+        wsUrl: 'ws://127.0.0.1:9999/__ws',
         token: 'tok-123',
       })
 
@@ -131,7 +131,7 @@ describe.skipIf(!bundleExists)(
     it('wire 层：ping 可应答，Vue 3 专属方法不存在', async () => {
       const mod = loadBundle()
       mod.initAgent({
-        wsUrl: 'ws://127.0.0.1:9999/__uni-devtools/__ws',
+        wsUrl: 'ws://127.0.0.1:9999/__ws',
         token: 'tok-123',
       })
       host.handlers.open?.({}) // 触发 open，flush 待发队列
@@ -164,7 +164,7 @@ describe.skipIf(!bundleExists)(
     it('wire 层：getComponentTree 返回 { pages, vueVersion } 结构', async () => {
       const mod = loadBundle()
       mod.initAgent({
-        wsUrl: 'ws://127.0.0.1:9999/__uni-devtools/__ws',
+        wsUrl: 'ws://127.0.0.1:9999/__ws',
         token: 'tok-123',
       })
       host.handlers.open?.({})

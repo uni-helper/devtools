@@ -12,17 +12,17 @@
  *    surface 恒非空；探针 → node 的推送入口不带，不会出现在工具列表里。
  * 2. **stdio 入口**：给 Claude Desktop / Cursor 这类只能起子进程的客户端用。
  *
- * 两种用法的能力边界（实测口径，不要按想象宣传）：
+ * 三种用法的能力边界（实测口径，不要按想象宣传）：
  *
  * | 用法 | 实时探针数据 | 说明 |
  * | --- | --- | --- |
- * | dev server 路由（推荐） | ✅ | 探针连着同一个 sidecar，工具调用直达运行时 |
- * | stdio 子进程 | ❌ | 独立进程，没有中继；只有 node 本地 RPC 有真实结果 |
+ * | `uni-devtools connect`（推荐） | ✅ | devframe 的 stdio 网关：从本机实例注册表发现运行中的 sidecar，把调用转发到它的 `__mcp` 路由；端口变化不用改配置 |
+ * | dev server 路由 | ✅ | 探针连着同一个 sidecar，工具调用直达运行时；地址里带端口 |
+ * | `uni-devtools mcp` stdio 子进程 | ❌ | 独立进程，没有中继；只有 node 本地 RPC 有真实结果 |
  *
  * stdio 下 `get-registered-routes`（解析 pages.json）与 `get-inspect-status`
  * （读 vite-plugin-inspect 落盘）**不依赖探针**，可直接应答；组件树 / 状态 /
- * Pinia / Network 这些需要探针的会如实报「No uni-devtools agent connected」，
- * 不是静默返回空数据。
+ * Pinia / Network 这些需要探针的会报错并引导改用 connect，不是静默返回空数据。
  */
 import process from 'node:process'
 import { createMcpFetchHandler, createMcpServer } from 'devframe/adapters/mcp'
@@ -53,8 +53,8 @@ export interface McpStdioOptions {
  * 起一个 stdio MCP 服务（`npx @uni-helper/devtools mcp` 的实现）。
  *
  * 进程内自建一个 registry 与 Definition，**不起中继**——所以它拿不到实时探针
- * 数据（见模块头的能力边界表）。要实时数据请让 MCP 客户端连 dev server 的
- * `__mcp` 路由。
+ * 数据（见模块头的能力边界表）。要实时数据请让 MCP 客户端改用
+ * `uni-devtools connect`，或直连 dev server 的 `__mcp` 路由。
  *
  * stdout 是 MCP 的传输通道，因此本函数与它调用的链路**不得往 stdout 写任何
  * 非协议内容**；诊断信息一律走 stderr。
@@ -65,7 +65,7 @@ export async function serveUniDevtoolsMcpStdio(
   // 这里永远不会有探针连上：把「该去哪拿实时数据」写进错误文案，Agent 读到就能自己纠正
   const registry = new AgentRegistry({
     unavailableHint:
-      'This stdio MCP server has no relay to the mini-program. For live data, connect the MCP client to the dev server route printed at startup: http://<host>:<port>/__uni-devtools/__mcp',
+      'This standalone stdio MCP server (`uni-devtools mcp`) has no relay to the mini-program, so only source-level tools work here. For live data, configure the MCP client with `npx -y @uni-helper/devtools connect` instead, or connect it to the dev server route printed at startup: http://localhost:<port>/__mcp',
   })
   const def = createUniDevtoolsDevframe(registry, {
     clientAssets: options.clientAssets,
@@ -73,7 +73,7 @@ export async function serveUniDevtoolsMcpStdio(
 
   process.stderr.write(
     '[uni-devtools] MCP stdio 已启动（无中继：只有 node 本地 RPC 有真实结果；' +
-      '需要实时探针数据请改用 dev server 的 __mcp 路由）\n',
+      '需要实时探针数据请改用 `npx @uni-helper/devtools connect`）\n',
   )
 
   await createMcpServer(def, { transport: 'stdio' })

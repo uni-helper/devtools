@@ -27,7 +27,7 @@ export function generateToken(): string {
 export async function startDevServerHarness(options: HarnessOptions = {}) {
   const host = options.host ?? 'localhost'
   const port = options.port ?? 9999
-  const basePath = options.basePath ?? '/__uni-devtools/'
+  const basePath = options.basePath ?? '/'
   const token = options.token ?? generateToken()
   const registry = new AgentRegistry()
   const def = createUniDevtoolsDevframe(registry, {

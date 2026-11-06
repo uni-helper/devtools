@@ -55,13 +55,13 @@
     "test:e2e": "node scripts/e2e-node.mjs"
   },
   "dependencies": {
+    "@devframes/agentic": "1.1.0",
     "@uni-helper/devtools-shared": "workspace:*",
     "birpc": "^4.2.0",
     "devframe": "1.1.0",
     "h3": "^2.0.1-rc.32"
   },
   "devDependencies": {
-    "@devframes/agentic": "1.1.0",
     "@devframes/hub": "^1.1.0",
     "@devframes/hub-ui": "^1.1.0",
     "@types/node": "^20.14.2",

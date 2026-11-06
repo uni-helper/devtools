@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { AGENT_CLIENT_MARKER, AgentRegistry } from '../src/relay.ts'
 import {
   BASE,
+  createDevServerOptions,
   isLocalMcpRequest,
   resolveAdvertisedHost,
   startUniDevtoolsServer,
@@ -19,7 +21,7 @@ describe('sidecar: sidecar 启动收敛与参数解析', () => {
   })
 
   it('导出的 BASE 常量符合规范', () => {
-    expect(BASE).toBe('/__uni-devtools/')
+    expect(BASE).toBe('/')
   })
 
   it('resolveAdvertisedHost 优先读取 UNI_DEVTOOLS_HOST 环境变量', () => {
@@ -34,7 +36,7 @@ describe('sidecar: sidecar 启动收敛与参数解析', () => {
     expect(host.length).toBeGreaterThan(0)
   })
 
-  it('startUniDevtoolsServer 同步返回 devToken 并通过 ready / onStarted 暴露服务信息', async () => {
+  it('默认不开启鉴权：面板地址不带 token', async () => {
     let startedInfo: any = null
     const server = startUniDevtoolsServer({
       port: 0,
@@ -43,21 +45,40 @@ describe('sidecar: sidecar 启动收敛与参数解析', () => {
       },
     })
 
-    expect(typeof server.devToken).toBe('string')
-    expect(server.devToken.length).toBeGreaterThan(0)
+    expect(server.devToken).toBe('')
     expect(server.ready).toBeInstanceOf(Promise)
 
     const result = await server.ready
     expect(result).not.toBeNull()
-    expect(result?.panelUrl).toContain(BASE)
-    expect(result?.panelUrl).toContain(server.devToken)
+    expect(result?.panelUrl).toMatch(new RegExp(`${BASE}$`))
     expect(result?.wsUrl).toContain(BASE)
     expect(result?.wsUrl).toContain('__ws')
 
     expect(startedInfo).not.toBeNull()
-    expect(startedInfo.devToken).toBe(server.devToken)
+    expect(startedInfo.devToken).toBe('')
     expect(startedInfo.wsUrl).toBe(result?.wsUrl)
     expect(startedInfo.panelUrl).toBe(result?.panelUrl)
+
+    if (server.close) await server.close()
+  })
+
+  it('auth: true 时同步返回 devToken，面板地址带上它', async () => {
+    let startedInfo: any = null
+    const server = startUniDevtoolsServer({
+      port: 0,
+      auth: true,
+      onStarted: (info) => {
+        startedInfo = info
+      },
+    })
+
+    expect(server.devToken.length).toBeGreaterThan(0)
+
+    const result = await server.ready
+    expect(result?.panelUrl).toContain(
+      `${BASE}?devframe_auth_token=${server.devToken}`,
+    )
+    expect(startedInfo.devToken).toBe(server.devToken)
 
     if (server.close) await server.close()
   })
@@ -77,6 +98,35 @@ describe('sidecar: sidecar 启动收敛与参数解析', () => {
     expect(await server.ready).toBeNull()
     expect(announced).toBe(false)
     await expect(fetch(`http://127.0.0.1:${port}${BASE}`)).rejects.toThrow()
+  })
+})
+
+describe('sidecar: 鉴权开关', () => {
+  const connectProbe = (token?: string) => {
+    const registry = new AgentRegistry()
+    const options = createDevServerOptions(registry, token)
+    // devframe 在连接钩子之前写入 isTrusted：鉴权关闭时它不会被写成 true
+    const meta = { isTrusted: false }
+    const close = vi.fn()
+    options.onPeerConnect!(
+      { request: { url: `/__ws?${AGENT_CLIENT_MARKER}` }, close } as any,
+      { meta, rpc: { $meta: meta, $call: vi.fn() } } as any,
+    )
+    return { options, registry, close }
+  }
+
+  it('未开启鉴权时关掉 devframe 鉴权，探针直接登记', () => {
+    const { options, registry, close } = connectProbe()
+    expect(options.auth).toBe(false)
+    expect(registry.connected).toBe(true)
+    expect(close).not.toHaveBeenCalled()
+  })
+
+  it('开启鉴权时没通过 token 校验的探针不登记', () => {
+    const { options, registry, close } = connectProbe('panel-token')
+    expect(typeof options.auth).toBe('function')
+    expect(registry.connected).toBe(false)
+    expect(close).toHaveBeenCalled()
   })
 })
 

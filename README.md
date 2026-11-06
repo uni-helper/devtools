@@ -16,30 +16,23 @@
   <img src=".github/assets/demo.png" alt="Uni DevTools Preview" />
 </p>
 
----
+在浏览器里调试 uni-app 小程序：组件树与状态、Pinia / Vuex、页面栈、网络请求、Vite 构建管线，并让 AI Agent 通过 MCP 读取同一份运行时数据。支持 Vue 3 + Vite 与 Vue 2 + Webpack 4 工程。
 
 ## 快速上手
 
-### 1. 安装依赖
+### 1. 安装
 
-在你的 uni-app 项目根目录安装开发依赖：
+在 uni-app 项目里安装开发依赖：
 
 ```bash
-# 推荐：安装聚合门面包
 pnpm add -D @uni-helper/devtools
-
-# 也可按需安装专用插件包：
-# pnpm add -D @uni-helper/devtools-vite     # 仅 Vite (Vue 3)
-# pnpm add -D @uni-helper/devtools-webpack  # 仅 Webpack (Vue 2)
 ```
 
----
+只用其中一种构建工具时，也可以只装对应插件包：`@uni-helper/devtools-vite`（Vue 3 + Vite）或 `@uni-helper/devtools-webpack`（Vue 2 + Webpack 4），此时把下面示例里的 `@uni-helper/devtools` 换成所装的包名。
 
-### 2. 接入构建工具
+### 2. 注册插件
 
-#### 选项 A：Vue 3 + Vite 工程（推荐）
-
-在 `vite.config.ts` 中引入并注册 `UniDevtoolsPlugin`（建议置于 `Uni()` 之前）：
+**Vue 3 + Vite**：在 `vite.config.ts` 里注册 `UniDevtoolsPlugin`，放在 `Uni()` 之前：
 
 ```ts
 import { defineConfig } from 'vite'
@@ -51,9 +44,7 @@ export default defineConfig({
 })
 ```
 
-#### 选项 B：Vue 2 + Webpack 4 工程
-
-在 `vue.config.js` 中通过 `chainWebpack` 挂载插件：
+**Vue 2 + Webpack 4**：插件只提供 ESM 产物，`vue.config.js`（CommonJS）需要借助 [jiti](https://github.com/unjs/jiti) 加载，先 `pnpm add -D jiti`：
 
 ```js
 const jiti = require('jiti')(__filename)
@@ -66,209 +57,127 @@ module.exports = {
 }
 ```
 
----
+插件只在开发模式生效，生产构建不注入任何代码。
 
-### 3. 运行与调试
+### 3. 设置小程序开发者工具
 
-以微信小程序为例，启动开发环境：
+小程序要通过 WebSocket 连本机的 DevTools 服务。以微信开发者工具为例：
 
-```bash
-# Vite 工程
-pnpm dev:mp-weixin
+1. 菜单栏 `设置` → `安全设置` → 开启 `服务端口`；
+2. 项目详情里勾选 `不校验合法域名、web-view（业务域名）、TLS 版本以及 HTTPS 证书`。
 
-# Webpack 工程
-pnpm serve:mp-weixin
-```
-
-编译启动后，控制台将输出专属的 DevTools 访问链接（已附带临时安全鉴权 Token）：
-
-```text
-➜  Uni DevTools: http://localhost:9999/__uni-devtools/?devframe_auth_token=xxxxxx
-```
-
-在现代浏览器中打开该链接即可开始调试。
-
----
-
-### 4. AI Agent / MCP 支持（可选）
-
-Uni DevTools 内置对 Model Context Protocol (MCP) 的原生支持。AI Coding Agent（Cursor、Claude Desktop、Windsurf、Antigravity 等）可直接消费运行期数据：
-
-**推荐：连接 dev server 的 MCP 路由**（Streamable HTTP，仅接受本机请求）。启动开发后，把 MCP 客户端指向：
-
-```text
-http://localhost:<端口>/__uni-devtools/__mcp
-```
-
-地址要用 `localhost`，不要照抄控制台打印的局域网 IP：路由只接受本机进程的请求，经局域网 IP 访问会被拒绝（401）。
-
-该路由与面板共用同一个中继，Agent 拿到的是实时运行数据：组件树、组件状态（可编辑）、Pinia / Vuex、网络记录、路由栈、Storage。每个工具都带参数 schema 与读写安全标注（`clear-network-records` 标为 destructive）。
-
-只能启动子进程的客户端可用 stdio 模式：
+### 4. 启动并打开面板
 
 ```bash
-npx @uni-helper/devtools mcp
+pnpm dev:mp-weixin    # Vite 工程
+pnpm serve:mp-weixin  # Webpack 工程
 ```
 
-stdio 是独立进程，**连不到小程序**，只有 `get-registered-routes`（解析 pages.json）与 `get-inspect-status` 能返回真实结果；其余工具会报错并提示改连上面的 HTTP 路由。
+编译启动后，控制台会打印面板地址，用浏览器打开即可：
 
----
+```text
+  Uni DevTools 面板 (浏览器打开):
+  http://192.168.1.7:9999/
+  探针 WebSocket:            ws://192.168.1.7:9999/__ws
+  AI Agent 接入:             npx @uni-helper/devtools connect（推荐）
+  MCP（HTTP 直连）:          http://localhost:9999/__mcp
+```
 
-## 核心特性
+地址用的是局域网 IP，真机调试时手机要和电脑在同一网络。
 
-Uni DevTools 解决了 uni-app 小程序开发中编译后信息丢失、闭包变量不可见以及调试工具生态割裂的核心痛点：
+## 功能
 
-### 组件树与状态检视（Components & State）
-
-- **多页面映射为多 App 快照**：小程序页面栈（`getCurrentPages()`）和分包体系在运行时天然映射为独立的 App 实例快照，组件节点通过 `route#uid` 隔离，与官方 Client 顶部应用切换完全对齐。
-- **编译期 AST 插桩还原文件名**：Vite / Webpack 插件在编译期拦截 `uniComponent://` 与 `uniPage://` 虚拟入口，注入 `__file` 属性，精准还原 SFC 源文件路径，消除编译后模板中的 `<Anonymous>`。
-- **穿透闭包状态检视**：针对 Vue 3 `<script setup>` 编译器直接内联返回 render 函数导致局部变量不可见的问题，构建期通过 AST 插桩向返回函数挂载 `__uni_devtools_bindings__`，运行时安全读取闭包内的 ref / reactive 活值。
-- **官方规范状态分组与徽标**：严格对齐官方 `props` / `data` / `setup` / `computed` / `attrs` 分组，附带 `(Ref)`、`(Reactive)`、`(Computed)` 徽标，并提供 computed 原始定义与求值 tooltip。
-- **渲染钩子防抖推送**：编译期包装组件 render 钩子（`__uniDevtoolsNotifyRender`），组件更新时在约 300ms 内防抖推送到 Node 侧 `sharedState`，并内置快照哈希内容比对门控，避免动画或倒计时触发推送风暴。
-- **深路径状态编辑与删除**：支持顶层变量、深层嵌套对象路径（`path: string[]`）、数组下标的实时修改与属性删除（`deleteReactive`），修改后自动触发失效事件驱动 UI 刷新。
-- **查看渲染函数源码（Show Render Code）**：从已注册组件实例中提取 render 函数源码，自动解开插桩包装层，并按主体公共缩进归一化后展示。
-- **源码一键直达（Open in Editor）**：从组件树或状态面板一键在本地编辑器打开对应源码文件，基于 Node 端 `launch-editor` 实现，并内置项目根目录越界安全守卫。
-
-### 状态管理检视器（Pinia & Vuex Inspector）
-
-- **Pinia（Vue 3）运行时自动探测**：直接从应用根实例（`$pinia` / `_s`）枚举 Stores，无需在用户业务代码中手动挂载代理插件；完整支持 Options Store 与 Setup Store；还原官方 `Pinia (root)` 聚合看板与各 Store 平级视图，支持深层 State 双向编辑与修改回写。
-- **Vuex（Vue 2）多级降级探测**：针对 Vue 2 + Webpack 4 工程，采用三级降级策略（`getApp().$vm.$store` / `getApp().$store` / `Vue.prototype.$store`）可靠定位 Store 实例；支持 Root 及命名空间模块的 State / Getters 检视，并支持 State 深层路径编辑同步。
+| 面板         | 能做什么                                                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Components   | 按页面浏览组件树（编译后丢失的组件名会还原成源文件名）；查看和编辑 props / data / setup / computed，包括 `<script setup>` 里的局部变量；查看 render 源码；一键在编辑器里打开组件文件 |
+| Pinia / Vuex | 自动发现 Store（不用改业务代码），查看和编辑 State，Vuex 支持命名空间模块与 Getters                                                                                                  |
+| Pages        | 列出 `pages.json` 注册的路由（含分包）和当前页面栈；在面板里触发跳转                                                                                                                 |
+| Network      | 记录 `uni.request` / `uploadFile` / `downloadFile`（以及直接调用的 `wx.*` 同名 API），瀑布图展示耗时，可查看请求与响应详情                                                           |
+| Graph        | 响应式依赖图谱，需要 Vue 3.5 及以上                                                                                                                                                  |
+| Inspect      | 查看 Vite 插件管线的转换过程与中间代码（仅 Vite 工程）                                                                                                                               |
+| AI Agent     | 上面的数据都能通过 MCP 读写，另外还能读 Storage，见[下文](#ai-agent--mcp)                                                                                                            |
 
 <p align="center">
   <img src=".github/assets/pinia.png" alt="Pinia Inspector Preview" />
 </p>
 
-### 路由与页面栈（Pages & Navigation）
-
-- **注册路由自动解析**：自动解析项目 `pages.json`（支持注释、尾随逗号及 `subPackages` 分包配置）。
-- **动态页面栈监控**：动态展示当前小程序页面栈（`getCurrentPages()`）深度与路由参数。
-- **面板交互导航与防叠栈**：支持在 DevTools 中触发 `navigateTo`、`redirectTo` 与 `switchTab`；内置“同页导航自动改用 redirect”策略，避免面板反复导航耗尽小程序 10 层页面栈上限。
-
 <p align="center">
   <img src=".github/assets/pages.png" alt="Pages & Navigation Preview" />
 </p>
 
-### 响应式依赖图谱（Reactivity Graph）
+各功能的实现原理与限制见 [功能细节](docs/FEATURES.md)。
 
-- **Vue 3.5+ 链表追踪**：沿 Vue 3.5+ 响应式双向链表（`deps`/`nextDep`、`subs`/`nextSub`）递归遍历，采集 Setup 响应式源与 Render / Watcher 间的拓扑关系。
-- **力导向拓扑呈现**：基于 d3-force 力导向图直观呈现响应式依赖关系。
-- **版本门禁放宽与引导**：官方 3.6.0 门槛针对小程序生态放宽至 Vue 3.5.0；低于 3.5 时在面板中提供明确升级指引。
+## AI Agent / MCP
 
-### 网络请求看板（Network Inspector）
+AI Coding Agent（Claude Code、Cursor、Claude Desktop、Windsurf、Antigravity 等）可以通过 MCP 读写面板里的同一份运行时数据：组件树、组件状态（可编辑）、Pinia / Vuex、网络记录、页面栈、Storage。每个工具都带参数 schema 与读写安全标注（如 `clear-network-records` 标为 destructive）。
 
-- **全链路捕获**：拦截 `uni.request`、`uni.uploadFile`、`uni.downloadFile`，并降级拦截直接调用的 `wx.*` 同名 API（先装 uni 再装 wx，uni 的原始引用在装 wx 补丁之前已固化，不会重复计数）；透明透传原回调与 Promise 语义。
-- **环形缓冲与增量同步**：探针端维护最多 500 条记录的环形缓冲区，单条报文进行 64KB 截断保护，500ms 防抖增量合并推送到 Node 侧。
-- **瀑布图与报文抽屉**：按时序呈现请求流与精准瀑布耗时条形图，动态展示在途 pending 状态；抽屉支持查看 Headers、Query、Request Body、Response Body 及性能耗时指标。
-- **AI Agent 诊断接口**：通过 `get-network-records`、`clear-network-records` 等 RPC，让外部 AI 助手直接获取网络调用诊断上下文。
+**推荐：`connect` 网关**。在 MCP 客户端里加一份配置即可，不用写端口：
 
-### 构建管线检查（Vite Inspect）
-
-- **转换流程与中间代码产物检查**：Node Sidecar 托管 `vite-plugin-inspect` 的构建产物，在 DevTools 独立标签页中通过 iframe 查看 Vite 插件管道的转换流程、耗时热点与中间代码。
-
----
-
-## 使用须知与环境配置
-
-### 1. 小程序开发者工具设置
-
-在微信开发者工具等 IDE 中进行本地调试时，请确保满足以下配置：
-
-1. **开启服务端口**：微信开发者工具菜单栏 -> `设置` -> `安全设置` -> 开启 `服务端口`。
-2. **放行本地请求**：在项目详情中勾选 `不校验合法域名、web-view（业务域名）、TLS版本以及HTTPS证书`（以便小程序与本地 DevTools WebSocket 通信）。
-
-### 2. 本地编辑器直达配置（Open in Editor）
-
-从面板点击源码文件直接唤起本地编辑器时：
-
-- **VS Code 用户（推荐）**：
-  1. 在 VS Code 中按下 `Cmd+Shift+P`（Mac）或 `Ctrl+Shift+P`（Windows/Linux）。
-  2. 执行 `Shell Command: Install 'code' command in PATH`。
-- **其他编辑器（Cursor、WebStorm、Sublime 等）**：
-  在项目根目录的 `.env` 或系统环境变量中配置对应编辑器的启动命令：
-  ```bash
-  # Cursor
-  export LAUNCH_EDITOR=cursor
-
-  # WebStorm
-  export LAUNCH_EDITOR=webstorm
-
-  # Sublime Text
-  export LAUNCH_EDITOR=subl
-  ```
-
----
-
-## 系统架构
-
-Uni DevTools 采用**双消费者（人类开发者 UI + AI Coding Agent）**的现代化解耦架构：
-
-```text
-                          ┌─────────────────────────────┐
-                          │   构建工具 (Vite / Webpack)  │
-                          │   - 编译期 AST 插桩注入      │
-                          │   - 注入 __file / 闭包 / 探针 │
-                          └──────────────┬──────────────┘
-                                         │ 编译注入
-                                         ▼
-                          ┌─────────────────────────────┐
-                          │   小程序运行时探针 (Probe)   │
-                          │  - 沙箱运行时 (Vue 2 / Vue 3) │
-                          │  - 组件树 / 状态 / 路由 / 网络  │
-                          └──────────────┬──────────────┘
-                                         │ WebSocket
-                                         ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           本地 Node 进程 (Devframe Sidecar)                       │
-│                                                                                 │
-│  ┌─────────────────────────┐          ┌──────────────────────────────────────┐  │
-│  │   AgentRegistry Relay   │ ◄──────► │     Devframe 核心定义 (@uni-helper/    │  │
-│  │     (WebSocket 中继)    │          │      devtools-core)                  │  │
-│  └─────────────────────────┘          │  - 21 个 agent 工具（描述+参数 schema）│  │
-│                                       │  - Vite Inspect 静态托管             │  │
-│                                       └──────────────────┬───────────────────┘  │
-└───────────────────────┬──────────────────────────────────┼──────────────────────┘
-                        │ Devframe WS RPC                  │ MCP Protocol
-                        ▼                                  ▼
-      ┌───────────────────────────────────┐    ┌──────────────────────────────────┐
-      │        浏览器端 (Human Dev)       │    │      外部 AI Agent (AI Coding)   │
-      │                                   │    │                                  │
-      │  ┌─────────────────────────────┐  │    │  Cursor / Claude / Windsurf /    │
-      │  │  协议适配层 (Adapter)        │  │    │  Antigravity 等                  │
-      │  │  - Devframe RPC ➔ Kit 翻译   │  │    │                                  │
-      │  └──────────────┬──────────────┘  │    │  - 自动化读取组件树 / 状态 / 路由 │
-      │                 │ DevtoolsRpcClient    │  - 分析请求时序与网络异常        │
-      │  ┌──────────────▼──────────────┐  │    │  (由 @uni-helper/devtools-mcp    │
-      │  │  官方 UI 面板 (Client SPA)   │  │    │   自动暴露 stdio / fetch 端点)   │
-      │  │  (Vue DevTools v9 Client)   │  │    └──────────────────────────────────┘
-      │  └─────────────────────────────┘  │
-      └───────────────────────────────────┘
+```json
+{
+  "mcpServers": {
+    "uni-devtools": {
+      "command": "npx",
+      "args": ["-y", "@uni-helper/devtools", "connect"]
+    }
+  }
+}
 ```
 
-### 核心分层与数据流转
+每个运行中的 dev server 都会登记到本机的实例注册表（`~/.devframe/instances/`），`connect` 从这里找到它们，再把工具调用转发给对应的 dev server。所以端口变了、dev 重启了、同时开着多个项目，都不用改配置。它基于 devframe 的 connect 网关，与 Vue DevTools 等 devframe 工具的接入方式一致。
 
-1. **编译期 AST 插桩（Vite / Webpack）**：
-   在打包阶段自动注入运行时探针，并为组件补齐编译期丢失的关键元信息（如 SFC 源码路径 `__file`、Setup 闭包变量捕获及 Render 钩子包装）。
-2. **小程序沙箱探针（Probe，运行在小程序逻辑层）**：
-   轻量级沙箱采集器，适配 Vue 3 与 Vue 2 运行时，拦截组件树、Pinia / Vuex 状态、路由栈与网络请求，通过标准 WebSocket 与本地 Node 端双向通信。
-3. **Node 核心中继与服务（Core / Devframe Sidecar）**：
-   - **AgentRegistry Relay**：管理探针 WebSocket 连接。**同一时刻只认一个探针——最新连上的那个**：模拟器与真机（或多台真机）同时在线时，读写都只落到最后连上的设备，其余设备的推送被丢弃；它断开后回落到仍在线的次新设备，并主动从新设备重新拉取组件树与网络记录。
-   - **Devframe RPC**：20 个面板 / Agent 可调的公开 RPC 外加 `ping` 健康检查，均带 Agent 描述、参数 schema（运行时校验 + MCP 的 JSON Schema）与读写安全标注；另有 4 个探针 → node 的内部推送入口，不暴露给 MCP。同时托管 Vite Inspect 静态报告与面板资产。
-4. **双路消费者架构（Dual Consumers）**：
-   - **人类开发者（浏览器 UI）**：**协议适配层（Adapter）与 UI 面板（Client）均运行在浏览器端**。Adapter 负责将 Devframe RPC 翻译为 `@vue/devtools-kit` 的领域契约（扁平树拓扑、多 App 映射、版本去陈旧），无缝驱动官方 Vue DevTools v9 SPA。
-   - **AI Coding Agent（MCP 端点）**：通过 `@uni-helper/devtools-mcp` 将 Core RPC 暴露为标准的 Model Context Protocol (MCP) 接口，供外部 AI 编程助手直接获取小程序运行期上下文。
+`connect` 只暴露两个工具，Agent 按这个流程调用：
 
-> 深入的设计决策与协议映射逻辑，请查阅 [架构与核心设计（白话版）](docs/ARCHITECTURE_PLAIN.md)。
+1. `devframe_connect_list-instances`：列出运行中的实例，每个实例带 `rootDir`、端口和工具列表；
+2. 按 `rootDir` 选出要调试的项目（monorepo 里 MCP 客户端的工作目录与 uni 项目不在同一层也没关系）；
+3. `devframe_connect_call-tool`：传 `port`、`tool`（如 `uni-helper-devtools_get-component-tree`）和 `args`。参数对象按 devframe 约定放在 `args.arg0` 里，例如 `get-component-state` 传 `{ "arg0": { "id": "<route>#<uid>" } }`。
 
----
+**可选：HTTP 直连**（Streamable HTTP，仅接受本机请求）。启动日志会打印地址：
+
+```text
+http://localhost:<端口>/__mcp
+```
+
+地址要用 `localhost`，不要照抄控制台打印的局域网 IP：路由只接受本机进程的请求，经局域网 IP 访问会被拒绝（401）。端口变化时需要手动改配置。
+
+**`mcp` 子命令**：
+
+```bash
+npx @uni-helper/devtools mcp
+```
+
+它是独立的 stdio 进程，**连不到小程序**，只有源码层面的 `get-registered-routes`（解析 pages.json）与 `get-inspect-status` 能返回真实结果；依赖探针的工具会报错并提示改用 `connect`（网络记录类工具不报错，但只能返回空的或过期的记录）。
+
+## 配置
+
+插件选项（Vite 与 Webpack 相同）：
+
+| 选项   | 默认值                             | 说明                                              |
+| ------ | ---------------------------------- | ------------------------------------------------- |
+| `port` | `9999`，被占用时自动换一个空闲端口 | DevTools 服务端口。显式指定的端口被占用时启动失败 |
+| `host` | 自动选取本机局域网 IP              | 打印的面板地址与注入探针的连接地址所用主机名      |
+| `auth` | `false`                            | 开启 token 鉴权，见下文                           |
+
+环境变量：`UNI_DEVTOOLS_PORT`、`UNI_DEVTOOLS_HOST` 与上面的 `port`、`host` 等价，选项优先。
+
+**鉴权**：DevTools 服务默认对局域网开放、不做鉴权（真机调试需要局域网可达）。不希望同一局域网的其他设备访问时，开启 `auth`：
+
+```ts
+UniDevtoolsPlugin({ auth: true }) // Webpack：uniDevtoolsWebpack(config, { auth: true })
+```
+
+开启后每次启动随机生成 token，打印的面板地址会带上它（`?devframe_auth_token=xxxxxx`）。面板页面本身谁都能打开，但读取调试数据和 inspect 报告需要这个 token。
+
+**在编辑器里打开**：VS Code 用户执行命令 `Shell Command: Install 'code' command in PATH` 即可。其他编辑器设置环境变量 `LAUNCH_EDITOR`，例如 `export LAUNCH_EDITOR=cursor`（WebStorm 为 `webstorm`，Sublime Text 为 `subl`）。
+
+## 注意事项
+
+- **同一时刻只连一台设备**：模拟器和真机（或多台真机）同时在线时，面板与 Agent 只读写最后连上的那台；它断开后回落到仍在线的上一台。
+- **node 服务重启后**（开启 `auth` 时）旧的小程序编译产物带的是旧 token，会被拒绝，重新编译小程序即可。
 
 ## 参与贡献
 
-欢迎提交 Issue 与 Pull Request！
-
-- 本地开发指南、Monorepo 目录职责以及调试测试流程，请参阅 [贡献指南 (CONTRIBUTING.md)](CONTRIBUTING.md)。
-- 更多底层技术细节与交接规范，请查阅 [docs/ 目录文档](docs/)。
-
----
+欢迎提交 Issue 与 Pull Request。本地开发、仓库结构与测试流程见 [贡献指南](CONTRIBUTING.md)；架构设计见 [架构与核心设计](docs/ARCHITECTURE_PLAIN.md)，更多技术文档在 [docs/](docs/)。
 
 ## 赞助
 

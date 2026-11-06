@@ -5,7 +5,7 @@ import { readAuthTokenFromUrl } from '@uni-helper/devtools-adapter'
 const showBanner = ref(true)
 
 const iframeSrc = computed(() => {
-  if (typeof window === 'undefined') return '/__uni-devtools/inspect/'
+  if (typeof window === 'undefined') return '/inspect/'
   const pathname = window.location.pathname
   const normalized = pathname.endsWith('/')
     ? pathname
