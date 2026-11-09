@@ -1,8 +1,6 @@
-# Uni DevTools
+<img src="logo.svg" alt="Uni DevTools logo" width="77" height="60" align="right" />
 
-<p align="center">
-  <img src="logo.svg" alt="Uni DevTools logo" width="128" height="128">
-</p>
+# Uni DevTools
 
 <p align="center">
   <a href="https://github.com/uni-helper/devtools/blob/main/LICENSE"><img src="https://img.shields.io/github/license/uni-helper/devtools?style=for-the-badge&labelColor=005947&color=eee" alt="License"></a>
