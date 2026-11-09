@@ -1,4 +1,4 @@
-<img src="logo.svg" alt="Uni DevTools logo" width="77" height="60" align="right" />
+<img src="logo.svg" alt="Uni DevTools logo" width="77"  align="right" />
 
 # Uni DevTools
 
