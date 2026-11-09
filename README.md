@@ -1,15 +1,23 @@
 # Uni DevTools
 
 <p align="center">
-  <b>为 uni-app（尤其是小程序场景）打造的现代化 DevTools</b><br>
-  将官方 Vue DevTools v9 的原生体验与强大能力带入跨端生态。
+  <img src="logo.svg" alt="Uni DevTools logo" width="128" height="128">
 </p>
 
 <p align="center">
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <img src="https://img.shields.io/badge/Vue-2%20%7C%203-brightgreen.svg" alt="Vue 2 & 3">
-  <img src="https://img.shields.io/badge/uni--app-Vite%20%7C%20Webpack-orange.svg" alt="uni-app Vite & Webpack">
-  <img src="https://img.shields.io/badge/MCP-Supported-purple.svg" alt="Model Context Protocol">
+  <a href="https://github.com/uni-helper/devtools/blob/main/LICENSE"><img src="https://img.shields.io/github/license/uni-helper/devtools?style=for-the-badge&labelColor=005947&color=eee" alt="License"></a>
+  <a href="https://github.com/uni-helper/devtools/stargazers"><img src="https://img.shields.io/github/stars/uni-helper/devtools?style=for-the-badge&labelColor=005947&color=eee" alt="Stars"></a>
+  <a href="https://npmx.dev/package/@uni-helper/devtools"><img src="https://img.shields.io/npm/v/@uni-helper/devtools?style=for-the-badge&labelColor=005947&color=eee" alt="NPM Version"></a>
+  <a href="https://npmx.dev/package/@uni-helper/devtools"><img src="https://img.shields.io/npm/dm/@uni-helper/devtools?style=for-the-badge&labelColor=005947&color=eee" alt="NPM Downloads"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/FliPPeDround"><img src="https://img.shields.io/badge/Author-FliPPeDround-blue?style=for-the-badge" alt="Author"></a>
+</p>
+
+<p align="center">
+  <b>为 uni-app（尤其是小程序场景）打造的现代化 DevTools</b><br>
+  将官方 Vue DevTools v9 的原生体验与强大能力带入跨端生态。
 </p>
 
 <p align="center">
@@ -169,6 +177,18 @@ UniDevtoolsPlugin({ auth: true }) // Webpack：uniDevtoolsWebpack(config, { auth
 开启后每次启动随机生成 token，打印的面板地址会带上它（`?devframe_auth_token=xxxxxx`）。面板页面本身谁都能打开，但读取调试数据和 inspect 报告需要这个 token。
 
 **在编辑器里打开**：VS Code 用户执行命令 `Shell Command: Install 'code' command in PATH` 即可。其他编辑器设置环境变量 `LAUNCH_EDITOR`，例如 `export LAUNCH_EDITOR=cursor`（WebStorm 为 `webstorm`，Sublime Text 为 `subl`）。
+
+## 包
+
+| 包                                                                                    | 说明                                          |
+| ------------------------------------------------------------------------------------- | --------------------------------------------- |
+| [@uni-helper/devtools](https://npmx.dev/package/@uni-helper/devtools)                 | 门面包：插件、探针、面板、MCP 与 CLI 都在里面 |
+| [@uni-helper/devtools-vite](https://npmx.dev/package/@uni-helper/devtools-vite)       | Vue 3 + Vite 插件                             |
+| [@uni-helper/devtools-webpack](https://npmx.dev/package/@uni-helper/devtools-webpack) | Vue 2 + Webpack 4 插件                        |
+| [@uni-helper/devtools-mcp](https://npmx.dev/package/@uni-helper/devtools-mcp)         | MCP 暴露面（stdio / HTTP）                    |
+| [@uni-helper/devtools-core](https://npmx.dev/package/@uni-helper/devtools-core)       | node 侧：Devframe 定义、探针中继、面板托管    |
+| [@uni-helper/devtools-probes](https://npmx.dev/package/@uni-helper/devtools-probes)   | 小程序运行时探针                              |
+| [@uni-helper/devtools-shared](https://npmx.dev/package/@uni-helper/devtools-shared)   | 跨端协议类型与契约常量                        |
 
 ## 注意事项
 
