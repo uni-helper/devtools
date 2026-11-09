@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 256 256">
+  <title>uni-helper/devtools logo</title>
+  <rect x="26" y="38" width="204" height="180" rx="28" fill="none" stroke="#2B9939" stroke-width="12"/>
+  <g fill="none" stroke="#8ACB9B" stroke-width="10" stroke-linecap="round">
+    <path d="M 98 88 V 168"/>
+    <path d="M 98 88 H 148"/>
+    <path d="M 98 128 H 148"/>
+    <path d="M 98 168 H 148"/>
+  </g>
+  <g fill="#8ACB9B">
+    <circle cx="162" cy="88" r="10"/>
+    <circle cx="162" cy="128" r="10"/>
+    <circle cx="162" cy="168" r="10"/>
+  </g>
+  <circle cx="98" cy="128" r="13" fill="#2B9939"/>
+</svg>
